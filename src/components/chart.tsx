@@ -71,7 +71,7 @@ export function TimeSeriesAreaChart({
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+      <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
         <defs>
           <linearGradient id={`gradient-${color}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity={0.3} />
@@ -95,7 +95,7 @@ export function TimeSeriesAreaChart({
           tickFormatter={(v) =>
             `${valuePrefix}${formatValue(v, compact)}${valueSuffix}`
           }
-          width={50}
+          width={40}
         />
         <Tooltip
           contentStyle={{
@@ -151,7 +151,7 @@ export function TimeSeriesBarChart({
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+      <BarChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
         <XAxis
           dataKey="date"
@@ -169,7 +169,7 @@ export function TimeSeriesBarChart({
           tickFormatter={(v) =>
             `${valuePrefix}${formatValue(v, compact)}${valueSuffix}`
           }
-          width={50}
+          width={40}
         />
         <Tooltip
           contentStyle={{
@@ -220,7 +220,7 @@ export function HorizontalBarChart({
       <BarChart
         data={data}
         layout="vertical"
-        margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
+        margin={{ top: 5, right: 10, bottom: 5, left: 0 }}
       >
         <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
         <XAxis
@@ -240,7 +240,7 @@ export function HorizontalBarChart({
           fontSize={9}
           tickLine={false}
           axisLine={false}
-          width={110}
+          width={80}
         />
         <Tooltip
           contentStyle={{
@@ -303,7 +303,7 @@ export function MultiSeriesLineChart({
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: 5 }}>
+      <LineChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
         <XAxis
           dataKey="date"
@@ -323,7 +323,7 @@ export function MultiSeriesLineChart({
             const s = leftSeries[0];
             return `${s?.prefix || ""}${formatValue(v, true)}${s?.suffix || ""}`;
           }}
-          width={55}
+          width={40}
         />
         {dualAxis && rightSeries.length > 0 && (
           <YAxis
@@ -337,7 +337,7 @@ export function MultiSeriesLineChart({
               const s = rightSeries[0];
               return `${s?.prefix || ""}${formatValue(v, true)}${s?.suffix || ""}`;
             }}
-            width={55}
+            width={40}
           />
         )}
         <Tooltip
@@ -407,7 +407,7 @@ export function StackedAreaChart({
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+      <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
         <XAxis
           dataKey="date"
@@ -423,7 +423,7 @@ export function StackedAreaChart({
           tickLine={false}
           axisLine={false}
           tickFormatter={(v) => formatValue(v, compact)}
-          width={55}
+          width={40}
         />
         <Tooltip
           contentStyle={{
@@ -498,7 +498,7 @@ export function NeighbourhoodBarChart({
       <BarChart
         data={data}
         layout="vertical"
-        margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
+        margin={{ top: 5, right: 10, bottom: 5, left: 0 }}
       >
         <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
         <XAxis
@@ -518,9 +518,9 @@ export function NeighbourhoodBarChart({
           fontSize={9}
           tickLine={false}
           axisLine={false}
-          width={130}
+          width={100}
           tickFormatter={(v) =>
-            v.length > 18 ? v.slice(0, 16) + "…" : v
+            v.length > 14 ? v.slice(0, 12) + "…" : v
           }
         />
         <Tooltip

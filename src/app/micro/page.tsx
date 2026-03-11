@@ -130,7 +130,7 @@ function NeighbourhoodCard({ zone }: { zone: TransformationSignal }) {
             <span className="text-sm font-medium">{zone.neighbourhood}</span>
             <SignalBadge signal={zone.signal} />
           </div>
-          <div className="flex gap-4 mt-1 text-[10px] text-muted">
+          <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-[10px] text-muted">
             <span>Avg: {formatMoney(zone.avgAssessment)}</span>
             <span>{zone.permitCount} permits</span>
             <span>{zone.unitsAdded} units</span>
@@ -270,7 +270,7 @@ async function RenovationROISection() {
                   {r.assessmentPercentile}th pctl
                 </span>
               </div>
-              <div className="flex gap-4 text-[10px] text-muted mb-1.5">
+              <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[10px] text-muted mb-1.5">
                 <span>{r.renovationPermits} reno permits</span>
                 <span>Avg reno: {formatMoney(r.avgRenovationValue)}</span>
                 <span>Avg home: {formatMoney(r.avgAssessment)}</span>
@@ -395,7 +395,7 @@ function SectionLoading() {
 
 export default function MicroSignalsPage() {
   return (
-    <main className="min-h-screen p-6 max-w-5xl mx-auto space-y-6">
+    <main className="min-h-screen p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
       <header>
         <div className="flex items-center gap-2 mb-1">
           <Microscope size={20} className="text-accent" />

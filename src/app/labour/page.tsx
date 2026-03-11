@@ -303,7 +303,7 @@ function LabourContext() {
 
 export default function LabourPage() {
   return (
-    <main className="min-h-screen p-6 max-w-7xl mx-auto space-y-6">
+    <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       <header>
         <div className="flex items-center gap-2 mb-1">
           <HardHat size={20} className="text-blue-400" />

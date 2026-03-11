@@ -33,7 +33,7 @@ export default function RootLayout({
         {/* Mobile top bar spacer */}
         <div className="lg:hidden h-[52px]" />
         {/* Content offset for desktop sidebar */}
-        <div className="lg:pl-56">
+        <div className="lg:pl-56 overflow-x-hidden">
           {children}
         </div>
       </body>

@@ -703,7 +703,7 @@ function LoadingTable() {
 
 export default function RealEstatePage() {
   return (
-    <main className="min-h-screen p-6 max-w-7xl mx-auto space-y-6">
+    <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       <header>
         <h1 className="text-xl font-semibold tracking-tight">
           Real Estate Intelligence

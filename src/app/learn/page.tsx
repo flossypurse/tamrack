@@ -328,7 +328,7 @@ function StoryLoading() {
 
 export default function LearnPage() {
   return (
-    <main className="min-h-screen p-6 max-w-4xl mx-auto space-y-8">
+    <main className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto space-y-8">
       <header>
         <div className="flex items-center gap-2 mb-1">
           <GraduationCap size={20} className="text-accent" />

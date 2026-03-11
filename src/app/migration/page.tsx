@@ -347,7 +347,7 @@ function MigrationContext() {
 
 export default function MigrationPage() {
   return (
-    <main className="min-h-screen p-6 max-w-7xl mx-auto space-y-6">
+    <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       <header>
         <div className="flex items-center gap-2 mb-1">
           <Plane size={20} className="text-blue-400" />

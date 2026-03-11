@@ -904,7 +904,7 @@ const categories: Category[] = [
 
 export default function SourcesPage() {
   return (
-    <main className="min-h-screen p-6 max-w-5xl mx-auto">
+    <main className="min-h-screen p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold tracking-tight mb-2">
           Data Sources

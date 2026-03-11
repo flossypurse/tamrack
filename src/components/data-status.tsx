@@ -9,7 +9,7 @@ const sources = [
 
 export function DataSourceStatus() {
   return (
-    <div className="flex items-center gap-4 text-xs">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
       {sources.map((s) => (
         <div key={s.name} className="flex items-center gap-1.5">
           <s.icon size={12} className={s.color} />
