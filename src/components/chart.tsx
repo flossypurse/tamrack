@@ -473,7 +473,7 @@ export function NeighbourhoodBarChart({
   valueSuffix = "",
   tooltipLabel = "Value",
 }: {
-  data: (HotNeighbourhood | NeighbourhoodAssessment | RedevelopingArea | StrathconaSubdivisionActivity | StrathconaAssessment | StAlbertAssessment)[];
+  data: (HotNeighbourhood | NeighbourhoodAssessment | RedevelopingArea | StrathconaSubdivisionActivity | StrathconaAssessment | StAlbertAssessment | Record<string, unknown>)[];
   dataKey: string;
   labelKey?: string;
   color?: string;

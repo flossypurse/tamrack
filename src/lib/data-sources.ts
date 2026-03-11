@@ -674,8 +674,8 @@ export async function fetchHomeImprovementHotspots(): Promise<
 // STRATHCONA COUNTY (ArcGIS REST — Sherwood Park & area)
 // ============================================================
 
-const STRATHCONA_PERMITS =
-  "https://services.arcgis.com/B7ZrK1Hv4P1dsm9R/arcgis/rest/services/Building_Permits/FeatureServer/0";
+const STRATHCONA_DEV_PERMITS =
+  "https://services.arcgis.com/B7ZrK1Hv4P1dsm9R/arcgis/rest/services/Development_Permits/FeatureServer/0";
 const STRATHCONA_ASSESSMENTS =
   "https://services.arcgis.com/B7ZrK1Hv4P1dsm9R/arcgis/rest/services/2025%20Property%20Tax%20Assessment/FeatureServer/0";
 
@@ -712,10 +712,10 @@ export async function fetchStrathconaResidentialPermits(
   limit: number = 20
 ): Promise<StrathconaPermit[]> {
   try {
-    const data = await fetchArcGIS(STRATHCONA_PERMITS, {
-      where: "BUILDINGTYPE='Residential' AND ISSUEYEAR>=2025",
+    const data = await fetchArcGIS(STRATHCONA_DEV_PERMITS, {
+      where: "CATEGORY='RESIDENTIAL' AND ISSUE_YEAR>=2024",
       outFields:
-        "EXTERNALFILENUM,DESCRIPTION,SUBDIVISION,CIVICADDRESS,STATUS,ISSUEDATE,VALUEOFCONSTRUCTION,NUMBEROFUNITS",
+        "EXTERNALFILENUM,DESCRIPTION,SUBDIVISION,CIVICADDRESS,STATUS,ISSUEDATE,DEVELOPMENTUSE,SQUAREFOOTAGE",
       orderByFields: "ISSUEDATE DESC",
       resultRecordCount: String(limit),
     });
@@ -725,8 +725,8 @@ export async function fetchStrathconaResidentialPermits(
       subdivision: String(a.SUBDIVISION || ""),
       address: String(a.CIVICADDRESS || ""),
       status: String(a.STATUS || ""),
-      value: Number(a.VALUEOFCONSTRUCTION || 0),
-      units: String(a.NUMBEROFUNITS || ""),
+      value: Number(a.SQUAREFOOTAGE || 0),
+      units: String(a.DEVELOPMENTUSE || ""),
       date: a.ISSUEDATE
         ? new Date(Number(a.ISSUEDATE)).toISOString().split("T")[0]
         : "",
@@ -746,9 +746,9 @@ export async function fetchStrathconaHotSubdivisions(): Promise<
   StrathconaSubdivisionActivity[]
 > {
   try {
-    const data = await fetchArcGIS(STRATHCONA_PERMITS, {
-      where: "BUILDINGTYPE='Residential' AND ISSUEYEAR>=2025",
-      outFields: "SUBDIVISION,VALUEOFCONSTRUCTION",
+    const data = await fetchArcGIS(STRATHCONA_DEV_PERMITS, {
+      where: "CATEGORY='RESIDENTIAL' AND ISSUE_YEAR>=2024",
+      outFields: "SUBDIVISION,SQUAREFOOTAGE",
       resultRecordCount: "2000",
     });
     // Aggregate by subdivision
@@ -760,7 +760,7 @@ export async function fetchStrathconaHotSubdivisions(): Promise<
       const sub = String(row.SUBDIVISION || "Unknown");
       const existing = map.get(sub) || { permits: 0, totalValue: 0 };
       existing.permits++;
-      existing.totalValue += Number(row.VALUEOFCONSTRUCTION || 0);
+      existing.totalValue += Number(row.SQUAREFOOTAGE || 0);
       map.set(sub, existing);
     }
     return Array.from(map.entries())
@@ -878,6 +878,29 @@ export interface StAlbertAssessment {
   avgValue: number;
 }
 
+export async function fetchStAlbertDevPermitsSummary(): Promise<TimeSeriesPoint[]> {
+  try {
+    const data = await fetchArcGIS(ST_ALBERT_DEV_PERMITS_CURRENT, {
+      where: "1=1",
+      outFields: "TYPE,STATUS,APPROVED_DATE",
+      resultRecordCount: "2000",
+    });
+    // Count by month
+    const counts: Record<string, number> = {};
+    for (const row of data) {
+      if (!row.APPROVED_DATE) continue;
+      const d = new Date(Number(row.APPROVED_DATE));
+      const month = d.toISOString().slice(0, 7);
+      counts[month] = (counts[month] || 0) + 1;
+    }
+    return Object.entries(counts)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, count]) => ({ date: `${month}-01`, value: count }));
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchStAlbertAssessmentsByNeighbourhood(): Promise<
   StAlbertAssessment[]
 > {
@@ -907,6 +930,600 @@ export async function fetchStAlbertAssessmentsByNeighbourhood(): Promise<
       .filter((a) => a.count >= 5)
       .sort((a, b) => b.avgValue - a.avgValue)
       .slice(0, 15);
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
+// PARKLAND COUNTY (ArcGIS REST — MapServer)
+// ============================================================
+
+const PARKLAND_PARCELS =
+  "https://maps.parklandcounty.com/arcgis/rest/services/discoverParkland/Query/MapServer/2000";
+const PARKLAND_LAND_USE =
+  "https://maps.parklandcounty.com/arcgis/rest/services/Dynamics/DynamicsCRM/MapServer/29";
+const PARKLAND_SUBDIVISIONS =
+  "https://maps.parklandcounty.com/arcgis/rest/services/Dynamics/DynamicsCRM/MapServer/18";
+
+// MapServer query works identically to FeatureServer — reuse fetchArcGIS
+
+export interface ParklandSubdivisionAssessment {
+  subdivision: string;
+  count: number;
+  avgAssessment: number;
+  minAssessment: number;
+  maxAssessment: number;
+}
+
+export async function fetchParklandAssessmentsBySubdivision(): Promise<
+  ParklandSubdivisionAssessment[]
+> {
+  try {
+    const data = await fetchArcGIS(PARKLAND_PARCELS, {
+      where: "Subdivision IS NOT NULL AND Assessment IS NOT NULL",
+      outFields: "Subdivision,Assessment,AssessmentYear",
+      returnGeometry: "false",
+      resultRecordCount: "5000",
+    });
+    const map = new Map<
+      string,
+      { count: number; total: number; min: number; max: number }
+    >();
+    for (const row of data) {
+      const sub = String(row.Subdivision || "Unknown").trim();
+      const val = parseFloat(String(row.Assessment || "0").replace(/[,$]/g, ""));
+      if (isNaN(val) || val <= 0) continue;
+      const existing = map.get(sub) || {
+        count: 0,
+        total: 0,
+        min: Infinity,
+        max: 0,
+      };
+      existing.count++;
+      existing.total += val;
+      existing.min = Math.min(existing.min, val);
+      existing.max = Math.max(existing.max, val);
+      map.set(sub, existing);
+    }
+    return Array.from(map.entries())
+      .map(([subdivision, stats]) => ({
+        subdivision,
+        count: stats.count,
+        avgAssessment: Math.round(stats.total / stats.count),
+        minAssessment: stats.min === Infinity ? 0 : Math.round(stats.min),
+        maxAssessment: Math.round(stats.max),
+      }))
+      .filter((a) => a.count >= 3)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 25);
+  } catch {
+    return [];
+  }
+}
+
+export interface ParklandParcel {
+  address: string;
+  subdivision: string;
+  assessment: number;
+  assessmentYear: number;
+  zoning: string;
+  acreage: number;
+  rollNo: string;
+}
+
+export async function fetchParklandRecentParcels(
+  limit: number = 20
+): Promise<ParklandParcel[]> {
+  try {
+    const data = await fetchArcGIS(PARKLAND_PARCELS, {
+      where: "Subdivision IS NOT NULL AND Assessment IS NOT NULL",
+      outFields:
+        "MunicipalAddress,Subdivision,Assessment,AssessmentYear,Zoning,AreaAcre,RollNo",
+      returnGeometry: "false",
+      resultRecordCount: String(limit),
+      orderByFields: "Assessment DESC",
+    });
+    return data.map((a) => ({
+      address: String(a.MunicipalAddress || ""),
+      subdivision: String(a.Subdivision || ""),
+      assessment: parseFloat(String(a.Assessment || "0").replace(/[,$]/g, "")),
+      assessmentYear: Number(a.AssessmentYear || 0),
+      zoning: String(a.Zoning || ""),
+      acreage: Number(a.AreaAcre || 0),
+      rollNo: String(a.RollNo || ""),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export interface ParklandZoningSummary {
+  zoning: string;
+  zoningAbbr: string;
+  areaHa: number;
+}
+
+export async function fetchParklandZoningSummary(): Promise<
+  ParklandZoningSummary[]
+> {
+  try {
+    const data = await fetchArcGIS(PARKLAND_LAND_USE, {
+      where: "1=1",
+      outFields: "Zoning,Zoning_Abbr,Hectares",
+      returnGeometry: "false",
+      resultRecordCount: "200",
+    });
+    // Aggregate by zoning type (multiple polygons per zone)
+    const map = new Map<string, { abbr: string; totalHa: number }>();
+    for (const row of data) {
+      const zone = String(row.Zoning || "Unknown");
+      const abbr = String(row.Zoning_Abbr || "");
+      const ha = Number(row.Hectares || 0);
+      const existing = map.get(zone) || { abbr, totalHa: 0 };
+      existing.totalHa += ha;
+      map.set(zone, existing);
+    }
+    return Array.from(map.entries())
+      .map(([zoning, stats]) => ({
+        zoning,
+        zoningAbbr: stats.abbr,
+        areaHa: Math.round(stats.totalHa),
+      }))
+      .sort((a, b) => b.areaHa - a.areaHa);
+  } catch {
+    return [];
+  }
+}
+
+export interface ParklandSubdivisionInfo {
+  name: string;
+}
+
+export async function fetchParklandSubdivisions(): Promise<
+  ParklandSubdivisionInfo[]
+> {
+  try {
+    const data = await fetchArcGIS(PARKLAND_SUBDIVISIONS, {
+      where: "SubName IS NOT NULL",
+      outFields: "SubName",
+      returnGeometry: "false",
+      resultRecordCount: "200",
+    });
+    const names = new Set<string>();
+    for (const row of data) {
+      const name = String(row.SubName || "").trim();
+      if (name) names.add(name);
+    }
+    return Array.from(names)
+      .sort()
+      .map((name) => ({ name }));
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchParklandParcelCount(): Promise<number> {
+  try {
+    const res = await fetch(
+      `${PARKLAND_PARCELS}/query?where=1%3D1&returnCountOnly=true&f=json`,
+      { next: { revalidate: 86400 } }
+    );
+    const data = await res.json();
+    return data.count || 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function fetchParklandAssessmentsByZoning(): Promise<
+  { zoning: string; count: number; avgAssessment: number }[]
+> {
+  try {
+    const data = await fetchArcGIS(PARKLAND_PARCELS, {
+      where: "Assessment IS NOT NULL AND Zoning IS NOT NULL",
+      outFields: "Zoning,Assessment",
+      returnGeometry: "false",
+      resultRecordCount: "5000",
+    });
+    const map = new Map<string, { count: number; total: number }>();
+    for (const row of data) {
+      const zone = String(row.Zoning || "").trim();
+      if (!zone) continue;
+      const val = parseFloat(String(row.Assessment || "0").replace(/[,$]/g, ""));
+      if (isNaN(val) || val <= 0) continue;
+      const existing = map.get(zone) || { count: 0, total: 0 };
+      existing.count++;
+      existing.total += val;
+      map.set(zone, existing);
+    }
+    return Array.from(map.entries())
+      .map(([zoning, stats]) => ({
+        zoning,
+        count: stats.count,
+        avgAssessment: Math.round(stats.total / stats.count),
+      }))
+      .sort((a, b) => b.count - a.count);
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
+// STONY PLAIN (ArcGIS Online — FeatureServer)
+// ============================================================
+
+const STONY_PLAIN_BASE =
+  "https://services.arcgis.com/ScgF04sks0ZKbWe3/arcgis/rest/services";
+const STONY_PLAIN_PARCELS = `${STONY_PLAIN_BASE}/Land_Development_Dashboard_Parcels_Public_View/FeatureServer/0`;
+const STONY_PLAIN_ASSESSMENTS = `${STONY_PLAIN_BASE}/2026_Assessments/FeatureServer/0`;
+const STONY_PLAIN_BUSINESSES = `${STONY_PLAIN_BASE}/ToSP_Businesses/FeatureServer/0`;
+const STONY_PLAIN_VACANT = `${STONY_PLAIN_BASE}/Vacant_Lots/FeatureServer/0`;
+const STONY_PLAIN_CONSTRUCTION = `${STONY_PLAIN_BASE}/Construction_Projects/FeatureServer/0`;
+const STONY_PLAIN_NEIGHBOURHOODS = `${STONY_PLAIN_BASE}/Land_Development_Base_Layers_WFL1/FeatureServer/7`;
+const STONY_PLAIN_LUB = `${STONY_PLAIN_BASE}/Land_Development_Base_Layers_WFL1/FeatureServer/11`;
+
+export interface StonyPlainParcel {
+  address: string;
+  zoning: string;
+  zoningName: string;
+  yearBuilt: number;
+  salePrice: number;
+  assessment: number;
+  assessmentYear: number;
+  areaAcre: number;
+  isDevelopable: boolean;
+}
+
+export async function fetchStonyPlainAssessmentsByZoning(): Promise<
+  { zoning: string; zoningName: string; count: number; avgAssessment: number }[]
+> {
+  try {
+    const data = await fetchArcGIS(STONY_PLAIN_PARCELS, {
+      where: "TASS > 0 AND PMZONC IS NOT NULL",
+      outFields: "PMZONC,TASS",
+      returnGeometry: "false",
+      resultRecordCount: "5000",
+    });
+    const map = new Map<string, { count: number; total: number }>();
+    for (const row of data) {
+      const zone = String(row.PMZONC || "").trim();
+      if (!zone) continue;
+      const val = Number(row.TASS || 0);
+      if (val <= 0) continue;
+      const existing = map.get(zone) || { count: 0, total: 0 };
+      existing.count++;
+      existing.total += val;
+      map.set(zone, existing);
+    }
+    return Array.from(map.entries())
+      .map(([zoning, stats]) => ({
+        zoning,
+        zoningName: zoning,
+        count: stats.count,
+        avgAssessment: Math.round(stats.total / stats.count),
+      }))
+      .sort((a, b) => b.count - a.count);
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchStonyPlainHighValueParcels(
+  limit: number = 20
+): Promise<StonyPlainParcel[]> {
+  try {
+    const data = await fetchArcGIS(STONY_PLAIN_PARCELS, {
+      where: "TASS > 0",
+      outFields:
+        "PMNSD,PMZONC,PMYRBL,TXSLAM,TASS,PMYRAS,Area_Acre",
+      returnGeometry: "false",
+      resultRecordCount: String(limit),
+      orderByFields: "TASS DESC",
+    });
+    return data.map((a) => ({
+      address: String(a.PMNSD || ""),
+      zoning: String(a.PMZONC || ""),
+      zoningName: String(a.PMZONC || ""),
+      yearBuilt: Number(a.PMYRBL || 0),
+      salePrice: Number(a.TXSLAM || 0),
+      assessment: Number(a.TASS || 0),
+      assessmentYear: Number(a.PMYRAS || 0),
+      areaAcre: Number(a.Area_Acre || 0),
+      isDevelopable: false,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export interface StonyPlainBusiness {
+  name: string;
+  category: string;
+  address: string;
+}
+
+export async function fetchStonyPlainBusinesses(): Promise<StonyPlainBusiness[]> {
+  try {
+    const data = await fetchArcGIS(STONY_PLAIN_BUSINESSES, {
+      where: "1=1",
+      outFields: "NAME,CATEGORY,Number,Street_Name,Street_Type",
+      returnGeometry: "false",
+      resultRecordCount: "500",
+    });
+    return data.map((a) => ({
+      name: String(a.NAME || ""),
+      category: String(a.CATEGORY || ""),
+      address: `${a.Number || ""} ${a.Street_Name || ""} ${a.Street_Type || ""}`.trim(),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchStonyPlainBusinessesByCategory(): Promise<
+  { category: string; count: number }[]
+> {
+  try {
+    const businesses = await fetchStonyPlainBusinesses();
+    const map = new Map<string, number>();
+    for (const b of businesses) {
+      const cat = b.category || "Uncategorized";
+      map.set(cat, (map.get(cat) || 0) + 1);
+    }
+    return Array.from(map.entries())
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => b.count - a.count);
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchStonyPlainVacantLots(): Promise<
+  { zoning: string; count: number; avgAssessment: number }[]
+> {
+  try {
+    const data = await fetchArcGIS(STONY_PLAIN_VACANT, {
+      where: "1=1",
+      outFields: "PMZNC1,PMZND1,ASSES",
+      returnGeometry: "false",
+      resultRecordCount: "500",
+    });
+    const map = new Map<string, { count: number; total: number }>();
+    for (const row of data) {
+      const zone = String(row.PMZND1 || row.PMZNC1 || "Unknown");
+      const val = Number(row.ASSES || 0);
+      const existing = map.get(zone) || { count: 0, total: 0 };
+      existing.count++;
+      existing.total += val;
+      map.set(zone, existing);
+    }
+    return Array.from(map.entries())
+      .map(([zoning, stats]) => ({
+        zoning,
+        count: stats.count,
+        avgAssessment: stats.count > 0 ? Math.round(stats.total / stats.count) : 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+  } catch {
+    return [];
+  }
+}
+
+export interface StonyPlainConstruction {
+  project: string;
+  phase: string;
+  manager: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+}
+
+export async function fetchStonyPlainConstructionProjects(): Promise<
+  StonyPlainConstruction[]
+> {
+  try {
+    const data = await fetchArcGIS(STONY_PLAIN_CONSTRUCTION, {
+      where: "1=1",
+      outFields: "Program,Project_Phase,Project_Manager,Start_Date,End_date,Location",
+      returnGeometry: "false",
+      resultRecordCount: "50",
+    });
+    return data.map((a) => ({
+      project: String(a.Program || ""),
+      phase: String(a.Project_Phase || ""),
+      manager: String(a.Project_Manager || ""),
+      startDate: a.Start_Date ? String(a.Start_Date) : "",
+      endDate: a.End_date ? String(a.End_date) : "",
+      location: String(a.Location || ""),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchStonyPlainParcelCount(): Promise<number> {
+  try {
+    const res = await fetch(
+      `${STONY_PLAIN_PARCELS}/query?where=1%3D1&returnCountOnly=true&f=json`,
+      { next: { revalidate: 86400 } }
+    );
+    const data = await res.json();
+    return data.count || 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function fetchStonyPlainVacantCount(): Promise<number> {
+  try {
+    const res = await fetch(
+      `${STONY_PLAIN_VACANT}/query?where=1%3D1&returnCountOnly=true&f=json`,
+      { next: { revalidate: 86400 } }
+    );
+    const data = await res.json();
+    return data.count || 0;
+  } catch {
+    return 0;
+  }
+}
+
+// ============================================================
+// SPRUCE GROVE (ArcGIS Server — MapServer + FeatureServer)
+// ============================================================
+
+const SPRUCE_GROVE_ADDRESSES =
+  "https://gisinfo.sprucegrove.org/gis/rest/services/Integrations/MRFEnforcementCentreWFS/FeatureServer/0";
+const SPRUCE_GROVE_ZONING =
+  "https://gisinfo.sprucegrove.org/gis/rest/services/BusinessPartners/CorporateWMS/MapServer/30";
+const SPRUCE_GROVE_DEV_STAGES =
+  "https://gisinfo.sprucegrove.org/gis/rest/services/BusinessPartners/CorporateWMS/MapServer/40";
+
+
+export async function fetchSpruceGroveAddressesBySubdivision(): Promise<
+  { subdivision: string; count: number }[]
+> {
+  try {
+    const data = await fetchArcGIS(SPRUCE_GROVE_ADDRESSES, {
+      where: "SUBDIVISION IS NOT NULL",
+      outFields: "SUBDIVISION",
+      returnGeometry: "false",
+      resultRecordCount: "5000",
+    });
+    const map = new Map<string, number>();
+    for (const row of data) {
+      const sub = String(row.SUBDIVISION || "").trim();
+      if (!sub) continue;
+      map.set(sub, (map.get(sub) || 0) + 1);
+    }
+    return Array.from(map.entries())
+      .map(([subdivision, count]) => ({ subdivision, count }))
+      .sort((a, b) => b.count - a.count);
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchSpruceGroveByPropertyType(): Promise<
+  { type: string; count: number }[]
+> {
+  try {
+    const data = await fetchArcGIS(SPRUCE_GROVE_ADDRESSES, {
+      where: "ASSESS_DESC IS NOT NULL",
+      outFields: "ASSESS_DESC",
+      returnGeometry: "false",
+      resultRecordCount: "5000",
+    });
+    const map = new Map<string, number>();
+    for (const row of data) {
+      const type = String(row.ASSESS_DESC || "").trim();
+      if (!type) continue;
+      map.set(type, (map.get(type) || 0) + 1);
+    }
+    return Array.from(map.entries())
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count);
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchSpruceGroveZoning(): Promise<
+  { zoneClass: string; zoneDesc: string; count: number }[]
+> {
+  try {
+    const data = await fetchArcGIS(SPRUCE_GROVE_ZONING, {
+      where: "ZONECLASS IS NOT NULL",
+      outFields: "ZONECLASS,ZONEDESC",
+      returnGeometry: "false",
+      resultRecordCount: "2000",
+    });
+    const map = new Map<string, { desc: string; count: number }>();
+    for (const row of data) {
+      const cls = String(row.ZONECLASS || "").trim();
+      const desc = String(row.ZONEDESC || "").trim();
+      if (!cls) continue;
+      const existing = map.get(cls) || { desc, count: 0 };
+      existing.count++;
+      map.set(cls, existing);
+    }
+    return Array.from(map.entries())
+      .map(([zoneClass, stats]) => ({
+        zoneClass,
+        zoneDesc: stats.desc,
+        count: stats.count,
+      }))
+      .sort((a, b) => b.count - a.count);
+  } catch {
+    return [];
+  }
+}
+
+export interface SpruceGroveDevelopmentStage {
+  name: string;
+  developer: string;
+  residentialLots: number;
+  totalLots: number;
+  year: number;
+  plan: string;
+}
+
+export async function fetchSprucGroveDevelopmentStages(): Promise<
+  SpruceGroveDevelopmentStage[]
+> {
+  try {
+    const data = await fetchArcGIS(SPRUCE_GROVE_DEV_STAGES, {
+      where: "1=1",
+      outFields:
+        "StageFullName,DevelopmentName,Developer,ResidentialLotCount,TotalLotCount,Year,RegisteredPlan",
+      returnGeometry: "false",
+      resultRecordCount: "300",
+      orderByFields: "Year DESC",
+    });
+    return data.map((a) => ({
+      name: String(a.StageFullName || a.DevelopmentName || ""),
+      developer: String(a.Developer || ""),
+      residentialLots: Number(a.ResidentialLotCount || 0),
+      totalLots: Number(a.TotalLotCount || 0),
+      year: Number(a.Year || 0),
+      plan: String(a.RegisteredPlan || ""),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchSpruceGroveAddressCount(): Promise<number> {
+  try {
+    const res = await fetch(
+      `${SPRUCE_GROVE_ADDRESSES}/query?where=1%3D1&returnCountOnly=true&f=json`,
+      { next: { revalidate: 86400 } }
+    );
+    const data = await res.json();
+    return data.count || 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function fetchSpruceGroveVacantParcels(): Promise<
+  { subdivision: string; count: number }[]
+> {
+  try {
+    const data = await fetchArcGIS(SPRUCE_GROVE_ADDRESSES, {
+      where: "ASSESS_DESC = 'VACANT RESIDENTIAL LAND' OR ASSESS_DESC = 'VACANT COMMERCIAL LAND'",
+      outFields: "ASSESS_DESC,SUBDIVISION",
+      returnGeometry: "false",
+      resultRecordCount: "2000",
+    });
+    const map = new Map<string, number>();
+    for (const row of data) {
+      const type = String(row.ASSESS_DESC || "Unknown").trim();
+      map.set(type, (map.get(type) || 0) + 1);
+    }
+    return Array.from(map.entries())
+      .map(([subdivision, count]) => ({ subdivision, count }))
+      .sort((a, b) => b.count - a.count);
   } catch {
     return [];
   }

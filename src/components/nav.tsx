@@ -20,6 +20,9 @@ import {
   ChevronDown,
   Menu,
   X,
+  Building2,
+  TreePine,
+  Landmark,
 } from "lucide-react";
 
 // ============================================================
@@ -56,6 +59,17 @@ const sections: NavSection[] = [
     items: [
       { href: "/real-estate", label: "Market Intel", icon: Home },
       { href: "/micro", label: "Neighbourhoods", icon: MapPin },
+    ],
+  },
+  {
+    label: "Municipalities",
+    icon: Building2,
+    items: [
+      { href: "/parkland-county", label: "Parkland County", icon: TreePine },
+      { href: "/stony-plain", label: "Stony Plain", icon: Building2 },
+      { href: "/spruce-grove", label: "Spruce Grove", icon: Landmark },
+      { href: "/strathcona", label: "Strathcona County", icon: Building2 },
+      { href: "/st-albert", label: "St. Albert", icon: Building2 },
     ],
   },
   {

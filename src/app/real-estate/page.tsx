@@ -394,7 +394,7 @@ async function StrathconaSubdivisionsChart() {
     <Card>
       <CardHeader
         title="Strathcona County — Hot Subdivisions"
-        subtitle="Residential building permits by subdivision, 2025"
+        subtitle="Residential development permits by subdivision, 2024+"
         badge="LIVE"
       />
       <NeighbourhoodBarChart
@@ -435,8 +435,8 @@ async function StrathconaPermitsTable() {
   return (
     <Card>
       <CardHeader
-        title="Strathcona County — Recent Residential Permits"
-        subtitle="Latest residential building permits"
+        title="Strathcona County — Recent Development Permits"
+        subtitle="Latest residential development permits"
         badge="LIVE"
       />
       <div className="overflow-x-auto">
@@ -445,7 +445,7 @@ async function StrathconaPermitsTable() {
             <tr className="border-b border-card-border text-muted text-left">
               <th className="pb-2 pr-3 font-medium">Date</th>
               <th className="pb-2 pr-3 font-medium">Subdivision</th>
-              <th className="pb-2 pr-3 font-medium">Value</th>
+              <th className="pb-2 pr-3 font-medium">Use</th>
               <th className="pb-2 pr-3 font-medium">Address</th>
               <th className="pb-2 font-medium">Description</th>
             </tr>
@@ -461,7 +461,7 @@ async function StrathconaPermitsTable() {
                 </td>
                 <td className="py-2 pr-3 whitespace-nowrap">{p.subdivision}</td>
                 <td className="py-2 pr-3 text-accent-green whitespace-nowrap">
-                  ${p.value.toLocaleString()}
+                  {p.units || "—"}
                 </td>
                 <td className="py-2 pr-3 text-muted whitespace-nowrap font-mono text-[10px]">
                   {p.address}
