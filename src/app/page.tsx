@@ -1,650 +1,162 @@
-import { Suspense } from "react";
-import { Card, CardHeader, MetricCard } from "@/components/card";
-import { TimeSeriesAreaChart, TimeSeriesBarChart, HorizontalBarChart } from "@/components/chart";
-import { DataSourceStatus } from "@/components/data-status";
+import Link from "next/link";
 import {
-  fetchBoCTimeSeries,
-  fetchBoCObservations,
-  fetchEdmontonPermitsSummary,
-  fetchEdmontonBusinessLicences,
-  fetchEdmontonDevPermits,
-  fetchEdmontonAssessmentsByWard,
-  fetchStatCanTimeSeries,
-  fetchAlbertaCKANResource,
-  BOC_SERIES,
-  STATSCAN_SERIES,
-} from "@/lib/data-sources";
-import { TrendingUp, Building2, Briefcase, BarChart3, Activity } from "lucide-react";
+  Activity,
+  BarChart3,
+  Building2,
+  MapPin,
+  Radar,
+  Wheat,
+  Users,
+  Flame,
+  Key,
+  ArrowRight,
+  Check,
+} from "lucide-react";
 
-// ============================================================
-// Server-side data fetching
-// ============================================================
+const features = [
+  { icon: BarChart3, title: "Macro Dashboard", desc: "BoC rates, GDP, CPI, unemployment — all live, all Alberta" },
+  { icon: Flame, title: "Energy Tracker", desc: "BCPI energy index, CAD/USD correlation, oil & gas GDP" },
+  { icon: Building2, title: "5 Municipalities", desc: "Parkland County, Stony Plain, Spruce Grove, Strathcona, St. Albert" },
+  { icon: MapPin, title: "Neighbourhood Intel", desc: "Permit hotspots, assessment trends, teardown detection" },
+  { icon: Radar, title: "Leading Signals", desc: "Cross-indicator analysis separating leading from lagging" },
+  { icon: Wheat, title: "Agriculture", desc: "Farm cash receipts, commodity indexes, ag GDP trends" },
+  { icon: Users, title: "Labour & Migration", desc: "Employment, participation, interprovincial flows" },
+  { icon: Key, title: "REST API", desc: "Permits, assessments, signals, macro data — programmatic access" },
+];
 
-async function getKeyMetrics() {
-  const [policyRateData, cadUsdData, mortgageData, unemploymentData, populationData, cpiData] = await Promise.all([
-    fetchBoCObservations(BOC_SERIES.POLICY_RATE, 1).catch(() => null),
-    fetchBoCObservations(BOC_SERIES.CAD_USD, 2).catch(() => null),
-    fetchBoCObservations(BOC_SERIES.MORTGAGE_5Y_FIXED, 1).catch(() => null),
-    fetchStatCanTimeSeries(
-      STATSCAN_SERIES.AB_UNEMPLOYMENT_RATE.tableId,
-      STATSCAN_SERIES.AB_UNEMPLOYMENT_RATE.coordinate,
-      2
-    ).catch(() => []),
-    fetchStatCanTimeSeries(
-      STATSCAN_SERIES.AB_POPULATION.tableId,
-      STATSCAN_SERIES.AB_POPULATION.coordinate,
-      2
-    ).catch(() => []),
-    fetchStatCanTimeSeries(
-      STATSCAN_SERIES.AB_CPI.tableId,
-      STATSCAN_SERIES.AB_CPI.coordinate,
-      2
-    ).catch(() => []),
-  ]);
+const included = [
+  "20+ live data dashboards",
+  "5 municipality deep-dives",
+  "Neighbourhood-level signals",
+  "Leading indicator analysis",
+  "REST API with 1,000 req/day",
+  "Daily data snapshots",
+  "Historical trend tracking",
+  "New data sources added monthly",
+];
 
-  const policyRate =
-    policyRateData?.observations?.[0]?.[BOC_SERIES.POLICY_RATE]?.v;
-  const cadUsdCurrent =
-    cadUsdData?.observations?.at(-1)?.[BOC_SERIES.CAD_USD]?.v;
-  const cadUsdPrev =
-    cadUsdData?.observations?.at(-2)?.[BOC_SERIES.CAD_USD]?.v;
-  const mortgage5y =
-    mortgageData?.observations?.[0]?.[BOC_SERIES.MORTGAGE_5Y_FIXED]?.v;
-
-  const cadChange =
-    cadUsdCurrent && cadUsdPrev
-      ? (
-          (parseFloat(cadUsdCurrent) - parseFloat(cadUsdPrev)) *
-          100
-        ).toFixed(2)
-      : null;
-
-  const latestUnemployment = unemploymentData.at(-1);
-  const prevUnemployment = unemploymentData.at(-2);
-  const unemploymentChange = latestUnemployment && prevUnemployment
-    ? (latestUnemployment.value - prevUnemployment.value).toFixed(1)
-    : null;
-
-  const latestPop = populationData.at(-1);
-  const prevPop = populationData.at(-2);
-  const popChange = latestPop && prevPop
-    ? ((latestPop.value - prevPop.value) / prevPop.value * 100).toFixed(1)
-    : null;
-
-  const latestCpi = cpiData.at(-1);
-  const prevCpi = cpiData.at(-2);
-  const cpiChange = latestCpi && prevCpi
-    ? (latestCpi.value - prevCpi.value).toFixed(1)
-    : null;
-
-  return {
-    policyRate: policyRate ? `${policyRate}%` : "—",
-    cadUsd: cadUsdCurrent
-      ? `$${parseFloat(cadUsdCurrent).toFixed(4)}`
-      : "—",
-    cadChange: cadChange
-      ? `${parseFloat(cadChange) >= 0 ? "+" : ""}${cadChange}¢`
-      : undefined,
-    mortgage5y: mortgage5y ? `${mortgage5y}%` : "—",
-    unemployment: latestUnemployment ? `${latestUnemployment.value}%` : "—",
-    unemploymentChange: unemploymentChange
-      ? `${parseFloat(unemploymentChange) >= 0 ? "+" : ""}${unemploymentChange}pp`
-      : undefined,
-    population: latestPop
-      ? `${(latestPop.value / 1_000_000).toFixed(2)}M`
-      : "—",
-    popChange: popChange
-      ? `+${popChange}%`
-      : undefined,
-    cpi: latestCpi ? `${latestCpi.value}` : "—",
-    cpiChange: cpiChange
-      ? `${parseFloat(cpiChange) >= 0 ? "+" : ""}${cpiChange}`
-      : undefined,
-  };
-}
-
-// ============================================================
-// Dashboard sections
-// ============================================================
-
-async function KeyMetrics() {
-  const metrics = await getKeyMetrics();
-
+export default function LandingPage() {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-      <MetricCard
-        title="BoC Policy Rate"
-        value={metrics.policyRate}
-        source="Bank of Canada Valet API"
-      />
-      <MetricCard
-        title="CAD/USD"
-        value={metrics.cadUsd}
-        change={metrics.cadChange}
-        changeLabel="vs prev day"
-        source="Bank of Canada Valet API"
-      />
-      <MetricCard
-        title="5Y Fixed Mortgage"
-        value={metrics.mortgage5y}
-        source="Bank of Canada Valet API"
-      />
-      <MetricCard
-        title="AB Unemployment"
-        value={metrics.unemployment}
-        change={metrics.unemploymentChange}
-        changeLabel="vs prev month"
-        source="StatsCan 14-10-0287"
-      />
-      <MetricCard
-        title="Alberta Population"
-        value={metrics.population}
-        change={metrics.popChange}
-        changeLabel="YoY"
-        source="StatsCan 17-10-0005"
-      />
-      <MetricCard
-        title="Alberta CPI"
-        value={metrics.cpi}
-        change={metrics.cpiChange}
-        changeLabel="vs prev month"
-        source="StatsCan 18-10-0004"
-      />
-    </div>
-  );
-}
-
-async function InterestRateChart() {
-  const data = await fetchBoCTimeSeries(BOC_SERIES.POLICY_RATE, 120);
-  return (
-    <Card>
-      <CardHeader
-        title="BoC Policy Interest Rate"
-        subtitle="Last 120 observations"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#3b82f6" valueSuffix="%" />
-    </Card>
-  );
-}
-
-async function ExchangeRateChart() {
-  const data = await fetchBoCTimeSeries(BOC_SERIES.CAD_USD, 120);
-  return (
-    <Card>
-      <CardHeader
-        title="CAD/USD Exchange Rate"
-        subtitle="Last 120 observations"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#10b981" valuePrefix="$" />
-    </Card>
-  );
-}
-
-async function BuildingPermitsChart() {
-  const data = await fetchEdmontonPermitsSummary();
-  return (
-    <Card>
-      <CardHeader
-        title="Edmonton Building Permits"
-        subtitle="Monthly count since 2023"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#f59e0b" />
-    </Card>
-  );
-}
-
-async function BusinessLicencesChart() {
-  const data = await fetchEdmontonBusinessLicences();
-  return (
-    <Card>
-      <CardHeader
-        title="Edmonton Business Licences Issued"
-        subtitle="Monthly since 2024"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#8b5cf6" />
-    </Card>
-  );
-}
-
-async function MortgageRateChart() {
-  const data = await fetchBoCTimeSeries(BOC_SERIES.MORTGAGE_5Y_FIXED, 120);
-  return (
-    <Card>
-      <CardHeader
-        title="5-Year Fixed Mortgage Rate"
-        subtitle="Posted rate, last 120 observations"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#ef4444" valueSuffix="%" />
-    </Card>
-  );
-}
-
-async function DevPermitsChart() {
-  const data = await fetchEdmontonDevPermits();
-  return (
-    <Card>
-      <CardHeader
-        title="Edmonton Development Permits"
-        subtitle="Monthly count since 2023"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#06b6d4" />
-    </Card>
-  );
-}
-
-async function PropertyAssessmentsChart() {
-  const data = await fetchEdmontonAssessmentsByWard();
-  return (
-    <Card>
-      <CardHeader
-        title="Avg Residential Assessment by Ward"
-        subtitle="Current assessment year"
-        badge="LIVE"
-      />
-      <HorizontalBarChart data={data} color="#ec4899" valuePrefix="$" height={350} />
-    </Card>
-  );
-}
-
-async function UnemploymentChart() {
-  const { tableId, coordinate } = STATSCAN_SERIES.AB_UNEMPLOYMENT_RATE;
-  const data = await fetchStatCanTimeSeries(tableId, coordinate, 36);
-  return (
-    <Card>
-      <CardHeader
-        title="Alberta Unemployment Rate"
-        subtitle="Seasonally adjusted, last 3 years"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#f97316" valueSuffix="%" />
-    </Card>
-  );
-}
-
-async function CpiChart() {
-  const { tableId, coordinate } = STATSCAN_SERIES.AB_CPI;
-  const data = await fetchStatCanTimeSeries(tableId, coordinate, 36);
-  return (
-    <Card>
-      <CardHeader
-        title="Alberta CPI (All Items)"
-        subtitle="Index (2002=100), last 3 years"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#a855f7" />
-    </Card>
-  );
-}
-
-async function PopulationChart() {
-  const { tableId, coordinate } = STATSCAN_SERIES.AB_POPULATION;
-  const data = await fetchStatCanTimeSeries(tableId, coordinate, 20);
-  return (
-    <Card>
-      <CardHeader
-        title="Alberta Population"
-        subtitle="Annual estimates, last 20 years"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#14b8a6" compact />
-    </Card>
-  );
-}
-
-async function GdpChart() {
-  const { tableId, coordinate } = STATSCAN_SERIES.AB_GDP;
-  const data = await fetchStatCanTimeSeries(tableId, coordinate, 24);
-  return (
-    <Card>
-      <CardHeader
-        title="Alberta GDP"
-        subtitle="Real GDP by province (Table 36-10-0402)"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#10b981" compact />
-    </Card>
-  );
-}
-
-async function RetailSalesChart() {
-  const { tableId, coordinate } = STATSCAN_SERIES.AB_RETAIL_SALES;
-  const data = await fetchStatCanTimeSeries(tableId, coordinate, 24);
-  return (
-    <Card>
-      <CardHeader
-        title="Alberta Retail Sales"
-        subtitle="Monthly retail trade (Table 20-10-0008)"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#3b82f6" compact />
-    </Card>
-  );
-}
-
-async function HousingStartsChart() {
-  const { tableId, coordinate } = STATSCAN_SERIES.EDMONTON_HOUSING_STARTS;
-  const data = await fetchStatCanTimeSeries(tableId, coordinate, 24);
-  return (
-    <Card>
-      <CardHeader
-        title="Edmonton Housing Starts"
-        subtitle="CMHC via StatsCan (Table 34-10-0143)"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#f59e0b" />
-    </Card>
-  );
-}
-
-async function HousingCompletionsChart() {
-  const { tableId, coordinate } = STATSCAN_SERIES.EDMONTON_HOUSING_COMPLETIONS;
-  const data = await fetchStatCanTimeSeries(tableId, coordinate, 24);
-  return (
-    <Card>
-      <CardHeader
-        title="Edmonton Housing Completions"
-        subtitle="CMHC via StatsCan (Table 34-10-0145)"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#06b6d4" />
-    </Card>
-  );
-}
-
-async function UnderConstructionChart() {
-  const { tableId, coordinate } = STATSCAN_SERIES.EDMONTON_UNDER_CONSTRUCTION;
-  const data = await fetchStatCanTimeSeries(tableId, coordinate, 24);
-  return (
-    <Card>
-      <CardHeader
-        title="Edmonton Under Construction"
-        subtitle="CMHC via StatsCan (Table 34-10-0147)"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#ec4899" />
-    </Card>
-  );
-}
-
-function LoadingCard() {
-  return (
-    <Card>
-      <div className="animate-pulse space-y-3">
-        <div className="h-4 bg-card-border rounded w-1/3" />
-        <div className="h-[200px] bg-card-border/50 rounded" />
-      </div>
-    </Card>
-  );
-}
-
-// ============================================================
-// Page
-// ============================================================
-
-export default function Dashboard() {
-  return (
-    <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <p className="text-sm text-muted">
-          Economic intelligence for Parkland County &amp; Edmonton Metro
-        </p>
-        <DataSourceStatus />
-      </header>
-
-      {/* Key Metrics */}
-      <section>
-        <Suspense
-          fallback={
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-              {[...Array(6)].map((_, i) => (
-                <Card key={i}>
-                  <div className="animate-pulse space-y-2">
-                    <div className="h-3 bg-card-border rounded w-1/2" />
-                    <div className="h-7 bg-card-border rounded w-2/3" />
-                  </div>
-                </Card>
-              ))}
-            </div>
-          }
-        >
-          <KeyMetrics />
-        </Suspense>
-      </section>
-
-      {/* Section: Monetary & Financial */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp size={16} className="text-accent" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Monetary &amp; Financial
-          </h2>
-        </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Suspense fallback={<LoadingCard />}>
-            <InterestRateChart />
-          </Suspense>
-          <Suspense fallback={<LoadingCard />}>
-            <ExchangeRateChart />
-          </Suspense>
-          <Suspense fallback={<LoadingCard />}>
-            <MortgageRateChart />
-          </Suspense>
-        </div>
-      </section>
-
-      {/* Section: Provincial Economy (StatsCan) */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <BarChart3 size={16} className="text-accent-green" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Provincial Economy (Alberta)
-          </h2>
-        </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Suspense fallback={<LoadingCard />}>
-            <UnemploymentChart />
-          </Suspense>
-          <Suspense fallback={<LoadingCard />}>
-            <CpiChart />
-          </Suspense>
-          <Suspense fallback={<LoadingCard />}>
-            <PopulationChart />
-          </Suspense>
-        </div>
-      </section>
-
-      {/* Section: Provincial Economy — Deep Dive */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Activity size={16} className="text-accent" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Provincial Economy &mdash; Deep Dive
-          </h2>
-        </div>
-        <div className="grid md:grid-cols-2 gap-4">
-          <Suspense fallback={<LoadingCard />}>
-            <GdpChart />
-          </Suspense>
-          <Suspense fallback={<LoadingCard />}>
-            <RetailSalesChart />
-          </Suspense>
-        </div>
-      </section>
-
-      {/* Section: CMHC Housing Pipeline */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Building2 size={16} className="text-accent-green" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            CMHC Housing Pipeline (Edmonton CMA)
-          </h2>
-        </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Suspense fallback={<LoadingCard />}>
-            <HousingStartsChart />
-          </Suspense>
-          <Suspense fallback={<LoadingCard />}>
-            <HousingCompletionsChart />
-          </Suspense>
-          <Suspense fallback={<LoadingCard />}>
-            <UnderConstructionChart />
-          </Suspense>
-        </div>
-      </section>
-
-      {/* Section: Development & Business */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Building2 size={16} className="text-accent-amber" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Development &amp; Business Activity
-          </h2>
-        </div>
-        <div className="grid md:grid-cols-2 gap-4">
-          <Suspense fallback={<LoadingCard />}>
-            <BuildingPermitsChart />
-          </Suspense>
-          <Suspense fallback={<LoadingCard />}>
-            <BusinessLicencesChart />
-          </Suspense>
-          <Suspense fallback={<LoadingCard />}>
-            <DevPermitsChart />
-          </Suspense>
-          <Suspense fallback={<LoadingCard />}>
-            <PropertyAssessmentsChart />
-          </Suspense>
-        </div>
-      </section>
-
-      {/* Section: Data Catalog */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Briefcase size={16} className="text-accent-green" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Data Sources Connected
-          </h2>
-        </div>
-        <Card>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-            <DataSourceItem
-              name="Bank of Canada Valet API"
-              datasets={[
-                "Policy rate",
-                "CAD/USD",
-                "Mortgage rates",
-                "CPI measures",
-              ]}
-              status="live"
-            />
-            <DataSourceItem
-              name="Edmonton Open Data (SODA)"
-              datasets={[
-                "Building permits",
-                "Business licences",
-                "Dev permits",
-                "Property assessments",
-              ]}
-              status="live"
-            />
-            <DataSourceItem
-              name="Statistics Canada WDS"
-              datasets={[
-                "Population",
-                "Unemployment rate",
-                "CPI",
-                "GDP",
-                "Retail sales",
-              ]}
-              status="live"
-            />
-            <DataSourceItem
-              name="Alberta Open Data (CKAN)"
-              datasets={[
-                "Economic indicators",
-                "Energy data",
-                "Agriculture",
-                "Labour market",
-              ]}
-              status="live"
-            />
-            <DataSourceItem
-              name="AER / Petrinex"
-              datasets={[
-                "Well licences",
-                "Production volumes",
-                "Pipeline data",
-              ]}
-              status="planned"
-            />
-            <DataSourceItem
-              name="CMHC Housing"
-              datasets={[
-                "Housing starts",
-                "Completions",
-                "Under construction",
-              ]}
-              status="live"
-            />
+    <main className="min-h-screen">
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-accent/5 via-transparent to-transparent" />
+        <div className="relative max-w-5xl mx-auto px-4 py-20 sm:py-32 text-center space-y-6">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Activity size={32} className="text-accent" />
+            <span className="text-xl font-bold">Alberta Pulse Check</span>
           </div>
-        </Card>
+          <h1 className="text-3xl sm:text-5xl font-bold leading-tight">
+            Real-time economic intelligence
+            <br />
+            <span className="text-accent">for Alberta decision-makers</span>
+          </h1>
+          <p className="text-muted text-lg max-w-2xl mx-auto">
+            Live data from Bank of Canada, Statistics Canada, Edmonton Open Data,
+            and 5 municipality APIs — processed, cross-analyzed, and delivered to your dashboard.
+          </p>
+          <div className="flex items-center justify-center gap-4 pt-4">
+            <Link
+              href="/login"
+              className="flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-lg font-semibold hover:bg-accent/90 transition-colors"
+            >
+              Start 14-day free trial
+              <ArrowRight size={16} />
+            </Link>
+            <Link
+              href="#pricing"
+              className="px-6 py-3 border border-card-border rounded-lg text-foreground hover:bg-card transition-colors"
+            >
+              See pricing
+            </Link>
+          </div>
+          <p className="text-xs text-muted/50">No credit card required</p>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="max-w-5xl mx-auto px-4 py-16">
+        <h2 className="text-center text-sm font-medium text-muted uppercase tracking-wider mb-8">
+          What&apos;s inside
+        </h2>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {features.map((f) => (
+            <div key={f.title} className="bg-card border border-card-border rounded-xl p-5 space-y-2">
+              <f.icon size={20} className="text-accent" />
+              <h3 className="font-semibold text-sm">{f.title}</h3>
+              <p className="text-xs text-muted leading-relaxed">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Data Sources */}
+      <section className="max-w-5xl mx-auto px-4 py-16">
+        <h2 className="text-center text-sm font-medium text-muted uppercase tracking-wider mb-2">
+          Live data from
+        </h2>
+        <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted/70 py-6">
+          <span>Bank of Canada</span>
+          <span className="text-card-border">|</span>
+          <span>Statistics Canada</span>
+          <span className="text-card-border">|</span>
+          <span>Edmonton Open Data</span>
+          <span className="text-card-border">|</span>
+          <span>Alberta Open Data</span>
+          <span className="text-card-border">|</span>
+          <span>CMHC</span>
+          <span className="text-card-border">|</span>
+          <span>5 Municipal APIs</span>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing" className="max-w-5xl mx-auto px-4 py-16">
+        <h2 className="text-center text-sm font-medium text-muted uppercase tracking-wider mb-8">
+          Simple pricing
+        </h2>
+        <div className="max-w-md mx-auto bg-card border-2 border-accent/30 rounded-xl p-8 space-y-6">
+          <div className="text-center space-y-1">
+            <h3 className="text-lg font-bold">Alberta Pulse Pro</h3>
+            <div className="flex items-baseline justify-center gap-1">
+              <span className="text-4xl font-bold">$29</span>
+              <span className="text-muted">/month CAD</span>
+            </div>
+            <p className="text-xs text-muted">14-day free trial — no credit card required</p>
+          </div>
+
+          <ul className="space-y-2">
+            {included.map((item) => (
+              <li key={item} className="flex items-start gap-2 text-sm">
+                <Check size={14} className="text-accent-green mt-0.5 shrink-0" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+
+          <Link
+            href="/login"
+            className="block text-center px-6 py-3 bg-accent text-white rounded-lg font-semibold hover:bg-accent/90 transition-colors"
+          >
+            Start free trial
+          </Link>
+        </div>
       </section>
 
       {/* Footer */}
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check v0.1 — Data refreshed hourly — All sources are free and
-        public
+      <footer className="border-t border-card-border">
+        <div className="max-w-5xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted/50">
+          <div className="flex items-center gap-2">
+            <Activity size={14} className="text-accent" />
+            <span>Alberta Pulse Check</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+            <Link href="/login" className="hover:text-foreground transition-colors">Sign in</Link>
+          </div>
+        </div>
       </footer>
     </main>
-  );
-}
-
-function DataSourceItem({
-  name,
-  datasets,
-  status,
-}: {
-  name: string;
-  datasets: string[];
-  status: "live" | "ready" | "planned";
-}) {
-  const statusColors = {
-    live: "bg-accent-green",
-    ready: "bg-accent",
-    planned: "bg-accent-amber",
-  };
-  const statusLabels = {
-    live: "Live",
-    ready: "Ready",
-    planned: "Planned",
-  };
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-2">
-        <span
-          className={`w-1.5 h-1.5 rounded-full ${statusColors[status]}`}
-        />
-        <span className="font-medium text-foreground">{name}</span>
-        <span className="text-[10px] text-muted font-mono">
-          {statusLabels[status]}
-        </span>
-      </div>
-      <div className="flex flex-wrap gap-1 pl-3.5">
-        {datasets.map((d) => (
-          <span
-            key={d}
-            className="text-[10px] bg-card-border/50 text-muted px-1.5 py-0.5 rounded"
-          >
-            {d}
-          </span>
-        ))}
-      </div>
-    </div>
   );
 }

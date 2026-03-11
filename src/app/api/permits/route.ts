@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { authenticateApiRequest } from "@/lib/api-auth";
 import {
   fetchHotNeighbourhoods,
   fetchRecentResidentialDevPermits,
@@ -15,6 +16,9 @@ import {
 // Optional: ?type=summary|recent (default: summary)
 
 export async function GET(request: NextRequest) {
+  const authResult = await authenticateApiRequest(request);
+  if (!authResult.authorized) return authResult.response;
+
   const municipality = request.nextUrl.searchParams.get("municipality");
   const type = request.nextUrl.searchParams.get("type") || "summary";
 

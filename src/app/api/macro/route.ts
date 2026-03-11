@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { authenticateApiRequest } from "@/lib/api-auth";
 import {
   fetchBoCTimeSeries,
   fetchStatCanTimeSeries,
@@ -80,6 +81,9 @@ const INDICATOR_MAP: Record<
 };
 
 export async function GET(request: NextRequest) {
+  const authResult = await authenticateApiRequest(request);
+  if (!authResult.authorized) return authResult.response;
+
   const indicator = request.nextUrl.searchParams.get("indicator");
   const periods = parseInt(request.nextUrl.searchParams.get("periods") || "24");
 

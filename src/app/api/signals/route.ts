@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { authenticateApiRequest } from "@/lib/api-auth";
 import {
   analyzeTransformationZones,
   analyzeTeardownZones,
@@ -10,7 +11,10 @@ import {
 // Returns cross-analysis signals for Edmonton neighbourhoods
 // These are the "value-add" computations built on top of raw municipal APIs
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authResult = await authenticateApiRequest(request);
+  if (!authResult.authorized) return authResult.response;
+
   try {
     const [transformation, teardowns, renovationROI, convergence] =
       await Promise.all([

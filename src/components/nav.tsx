@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useSession, signOut } from "next-auth/react";
 import {
   Activity,
   LayoutDashboard,
@@ -14,6 +15,7 @@ import {
   Plane,
   Wheat,
   Home,
+  Target,
   MapPin,
   GraduationCap,
   Database,
@@ -23,6 +25,10 @@ import {
   Building2,
   TreePine,
   Landmark,
+  CreditCard,
+  User,
+  LogOut,
+  Shield,
 } from "lucide-react";
 
 // ============================================================
@@ -37,7 +43,7 @@ const sections: NavSection[] = [
     label: "Overview",
     icon: LayoutDashboard,
     items: [
-      { href: "/", label: "Dashboard", icon: Activity },
+      { href: "/dashboard", label: "Dashboard", icon: Activity },
       { href: "/signals", label: "Signals", icon: Radar },
     ],
   },
@@ -57,6 +63,7 @@ const sections: NavSection[] = [
     label: "Real Estate",
     icon: Home,
     items: [
+      { href: "/prospects", label: "Prospect Leads", icon: Target },
       { href: "/real-estate", label: "Market Intel", icon: Home },
       { href: "/micro", label: "Neighbourhoods", icon: MapPin },
     ],
@@ -88,12 +95,15 @@ const sections: NavSection[] = [
 
 export function Nav() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   // Close mobile nav on route change
   useEffect(() => {
     setMobileOpen(false);
+    setUserMenuOpen(false);
   }, [pathname]);
 
   // Prevent body scroll when mobile nav is open
@@ -113,25 +123,37 @@ export function Nav() {
   };
 
   const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
+    if (href === "/dashboard") return pathname === "/dashboard";
     return pathname.startsWith(href);
   };
 
   const isSectionActive = (section: NavSection) =>
     section.items.some((item) => isActive(item.href));
 
+  const isAdmin = session?.user?.role === "admin";
+  const isTrialing = session?.user?.subscriptionStatus === "trialing";
+  const trialEnd = session?.user?.trialEnd ? new Date(session.user.trialEnd) : null;
+  const daysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
+
   // Shared nav content
   const navContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="px-4 py-5 border-b border-card-border">
-        <Link href="/" className="flex items-center gap-2.5">
+        <Link href="/dashboard" className="flex items-center gap-2.5">
           <Activity size={22} className="text-accent shrink-0" />
           <span className="text-base font-semibold tracking-tight">
             Alberta Pulse Check
           </span>
         </Link>
       </div>
+
+      {/* Trial banner */}
+      {isTrialing && daysLeft <= 7 && (
+        <Link href="/billing" className="mx-2 mt-2 px-3 py-2 bg-accent-amber/10 border border-accent-amber/20 rounded-lg text-xs text-accent-amber hover:bg-accent-amber/15 transition-colors">
+          {daysLeft} day{daysLeft !== 1 ? "s" : ""} left in trial — <span className="font-medium">Subscribe</span>
+        </Link>
+      )}
 
       {/* Sections */}
       <div className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
@@ -191,11 +213,63 @@ export function Nav() {
         })}
       </div>
 
-      {/* Footer */}
-      <div className="px-4 py-3 border-t border-card-border">
-        <p className="text-[10px] text-muted/50 leading-relaxed">
-          Live data from Bank of Canada, StatsCan, Edmonton Open Data &amp; more
-        </p>
+      {/* User section */}
+      <div className="border-t border-card-border">
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className={`flex items-center gap-2.5 mx-2 mt-2 px-3 py-1.5 rounded-md text-sm transition-colors ${
+              pathname === "/admin"
+                ? "bg-accent/10 text-accent font-medium"
+                : "text-muted hover:text-foreground hover:bg-white/[0.03]"
+            }`}
+          >
+            <Shield size={14} />
+            Admin
+          </Link>
+        )}
+        <div className="relative px-2 py-2">
+          <button
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-white/[0.03] transition-colors text-left"
+          >
+            <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+              <User size={14} className="text-accent" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium truncate">{session?.user?.name || session?.user?.email || "Account"}</p>
+              <p className="text-[10px] text-muted/60 truncate">{session?.user?.email}</p>
+            </div>
+            <ChevronDown size={12} className={`text-muted transition-transform ${userMenuOpen ? "rotate-180" : ""}`} />
+          </button>
+
+          {/* User dropdown */}
+          {userMenuOpen && (
+            <div className="absolute bottom-full left-2 right-2 mb-1 bg-card border border-card-border rounded-lg shadow-lg overflow-hidden z-50">
+              <Link
+                href="/account"
+                className="flex items-center gap-2.5 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-white/[0.03] transition-colors"
+              >
+                <User size={14} />
+                Account
+              </Link>
+              <Link
+                href="/billing"
+                className="flex items-center gap-2.5 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-white/[0.03] transition-colors"
+              >
+                <CreditCard size={14} />
+                Billing & API Keys
+              </Link>
+              <button
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-accent-red/70 hover:text-accent-red hover:bg-accent-red/5 transition-colors"
+              >
+                <LogOut size={14} />
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -205,7 +279,7 @@ export function Nav() {
       {/* ── Mobile top bar ── */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-b border-card-border">
         <div className="flex items-center justify-between px-4 py-3">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/dashboard" className="flex items-center gap-2">
             <Activity size={18} className="text-accent" />
             <span className="text-sm font-semibold">Alberta Pulse Check</span>
           </Link>
