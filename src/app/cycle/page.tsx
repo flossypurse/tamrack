@@ -537,7 +537,7 @@ export default function CyclePage() {
       </section>
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse &mdash; Cycle Tracker &mdash; All data from free public APIs
+        Alberta Pulse Check &mdash; Cycle Tracker &mdash; All data from free public APIs
       </footer>
     </main>
   );

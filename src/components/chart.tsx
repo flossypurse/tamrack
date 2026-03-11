@@ -78,17 +78,17 @@ export function TimeSeriesAreaChart({
             <stop offset="100%" stopColor={color} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
         <XAxis
           dataKey="date"
           tickFormatter={formatDate}
-          stroke="#475569"
+          stroke="#71717a"
           fontSize={10}
           tickLine={false}
           axisLine={false}
         />
         <YAxis
-          stroke="#475569"
+          stroke="#71717a"
           fontSize={10}
           tickLine={false}
           axisLine={false}
@@ -99,11 +99,11 @@ export function TimeSeriesAreaChart({
         />
         <Tooltip
           contentStyle={{
-            backgroundColor: "#1e293b",
-            border: "1px solid #334155",
+            backgroundColor: "#27272a",
+            border: "1px solid #3f3f46",
             borderRadius: "8px",
             fontSize: "12px",
-            color: "#e2e8f0",
+            color: "#fafafa",
           }}
           formatter={(value) => [
             `${valuePrefix}${formatValue(Number(value), false)}${valueSuffix}`,
@@ -152,17 +152,17 @@ export function TimeSeriesBarChart({
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
         <XAxis
           dataKey="date"
           tickFormatter={formatDate}
-          stroke="#475569"
+          stroke="#71717a"
           fontSize={10}
           tickLine={false}
           axisLine={false}
         />
         <YAxis
-          stroke="#475569"
+          stroke="#71717a"
           fontSize={10}
           tickLine={false}
           axisLine={false}
@@ -173,11 +173,11 @@ export function TimeSeriesBarChart({
         />
         <Tooltip
           contentStyle={{
-            backgroundColor: "#1e293b",
-            border: "1px solid #334155",
+            backgroundColor: "#27272a",
+            border: "1px solid #3f3f46",
             borderRadius: "8px",
             fontSize: "12px",
-            color: "#e2e8f0",
+            color: "#fafafa",
           }}
           formatter={(value) => [
             `${valuePrefix}${formatValue(Number(value), false)}${valueSuffix}`,
@@ -222,10 +222,10 @@ export function HorizontalBarChart({
         layout="vertical"
         margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
       >
-        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
         <XAxis
           type="number"
-          stroke="#475569"
+          stroke="#71717a"
           fontSize={10}
           tickLine={false}
           axisLine={false}
@@ -236,7 +236,7 @@ export function HorizontalBarChart({
         <YAxis
           type="category"
           dataKey="ward"
-          stroke="#475569"
+          stroke="#71717a"
           fontSize={9}
           tickLine={false}
           axisLine={false}
@@ -244,11 +244,11 @@ export function HorizontalBarChart({
         />
         <Tooltip
           contentStyle={{
-            backgroundColor: "#1e293b",
-            border: "1px solid #334155",
+            backgroundColor: "#27272a",
+            border: "1px solid #3f3f46",
             borderRadius: "8px",
             fontSize: "12px",
-            color: "#e2e8f0",
+            color: "#fafafa",
           }}
           formatter={(value) => [
             `${valuePrefix}${formatValue(Number(value), false)}${valueSuffix}`,
@@ -304,18 +304,18 @@ export function MultiSeriesLineChart({
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
         <XAxis
           dataKey="date"
           tickFormatter={formatDate}
-          stroke="#475569"
+          stroke="#71717a"
           fontSize={10}
           tickLine={false}
           axisLine={false}
         />
         <YAxis
           yAxisId="left"
-          stroke="#475569"
+          stroke="#71717a"
           fontSize={10}
           tickLine={false}
           axisLine={false}
@@ -329,7 +329,7 @@ export function MultiSeriesLineChart({
           <YAxis
             yAxisId="right"
             orientation="right"
-            stroke="#475569"
+            stroke="#71717a"
             fontSize={10}
             tickLine={false}
             axisLine={false}
@@ -342,11 +342,11 @@ export function MultiSeriesLineChart({
         )}
         <Tooltip
           contentStyle={{
-            backgroundColor: "#1e293b",
-            border: "1px solid #334155",
+            backgroundColor: "#27272a",
+            border: "1px solid #3f3f46",
             borderRadius: "8px",
             fontSize: "12px",
-            color: "#e2e8f0",
+            color: "#fafafa",
           }}
           labelFormatter={formatDate}
           formatter={(value: unknown, name: unknown) => {
@@ -359,7 +359,7 @@ export function MultiSeriesLineChart({
           }}
         />
         <Legend
-          wrapperStyle={{ fontSize: "11px", color: "#94a3b8" }}
+          wrapperStyle={{ fontSize: "11px", color: "#a1a1aa" }}
           formatter={(value) => {
             const s = series.find((s) => s.key === value);
             return s?.label || String(value);
@@ -408,17 +408,17 @@ export function StackedAreaChart({
   return (
     <ResponsiveContainer width="100%" height={height}>
       <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
         <XAxis
           dataKey="date"
           tickFormatter={formatDate}
-          stroke="#475569"
+          stroke="#71717a"
           fontSize={10}
           tickLine={false}
           axisLine={false}
         />
         <YAxis
-          stroke="#475569"
+          stroke="#71717a"
           fontSize={10}
           tickLine={false}
           axisLine={false}
@@ -427,11 +427,11 @@ export function StackedAreaChart({
         />
         <Tooltip
           contentStyle={{
-            backgroundColor: "#1e293b",
-            border: "1px solid #334155",
+            backgroundColor: "#27272a",
+            border: "1px solid #3f3f46",
             borderRadius: "8px",
             fontSize: "12px",
-            color: "#e2e8f0",
+            color: "#fafafa",
           }}
           labelFormatter={formatDate}
           formatter={(value: unknown, name: unknown) => {
@@ -441,7 +441,7 @@ export function StackedAreaChart({
           }}
         />
         <Legend
-          wrapperStyle={{ fontSize: "11px", color: "#94a3b8" }}
+          wrapperStyle={{ fontSize: "11px", color: "#a1a1aa" }}
           formatter={(value) => {
             const s = series.find((s) => s.key === value);
             return s?.label || String(value);
@@ -500,10 +500,10 @@ export function NeighbourhoodBarChart({
         layout="vertical"
         margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
       >
-        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
         <XAxis
           type="number"
-          stroke="#475569"
+          stroke="#71717a"
           fontSize={10}
           tickLine={false}
           axisLine={false}
@@ -514,7 +514,7 @@ export function NeighbourhoodBarChart({
         <YAxis
           type="category"
           dataKey={labelKey}
-          stroke="#475569"
+          stroke="#71717a"
           fontSize={9}
           tickLine={false}
           axisLine={false}
@@ -525,11 +525,11 @@ export function NeighbourhoodBarChart({
         />
         <Tooltip
           contentStyle={{
-            backgroundColor: "#1e293b",
-            border: "1px solid #334155",
+            backgroundColor: "#27272a",
+            border: "1px solid #3f3f46",
             borderRadius: "8px",
             fontSize: "12px",
-            color: "#e2e8f0",
+            color: "#fafafa",
           }}
           formatter={(value) => [
             `${valuePrefix}${formatValue(Number(value), false)}${valueSuffix}`,

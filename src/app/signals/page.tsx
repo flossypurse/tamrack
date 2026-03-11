@@ -459,7 +459,7 @@ export default function SignalsPage() {
 
       {/* Footer */}
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse &mdash; Signals &mdash; All data from free public APIs
+        Alberta Pulse Check &mdash; Signals &mdash; All data from free public APIs
       </footer>
     </main>
   );

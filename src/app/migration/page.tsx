@@ -444,7 +444,7 @@ export default function MigrationPage() {
       </section>
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse &mdash; Migration &mdash; All data from free public APIs
+        Alberta Pulse Check &mdash; Migration &mdash; All data from free public APIs
       </footer>
     </main>
   );

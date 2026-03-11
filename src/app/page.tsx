@@ -597,7 +597,7 @@ export default function Dashboard() {
 
       {/* Footer */}
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse v0.1 — Data refreshed hourly — All sources are free and
+        Alberta Pulse Check v0.1 — Data refreshed hourly — All sources are free and
         public
       </footer>
     </main>

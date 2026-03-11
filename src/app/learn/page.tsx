@@ -415,7 +415,7 @@ export default function LearnPage() {
 
       {/* Footer */}
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse &mdash; Learn &mdash; Built for self-directed economic
+        Alberta Pulse Check &mdash; Learn &mdash; Built for self-directed economic
         education
       </footer>
     </main>

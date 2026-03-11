@@ -421,7 +421,7 @@ export default function LabourPage() {
       </section>
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse &mdash; Labour &mdash; All data from free public APIs
+        Alberta Pulse Check &mdash; Labour &mdash; All data from free public APIs
       </footer>
     </main>
   );

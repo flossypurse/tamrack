@@ -114,7 +114,7 @@ export function Nav() {
         <Link href="/" className="flex items-center gap-2.5">
           <Activity size={22} className="text-accent shrink-0" />
           <span className="text-base font-semibold tracking-tight">
-            Alberta Pulse
+            Alberta Pulse Check
           </span>
         </Link>
       </div>
@@ -193,7 +193,7 @@ export function Nav() {
         <div className="flex items-center justify-between px-4 py-3">
           <Link href="/" className="flex items-center gap-2">
             <Activity size={18} className="text-accent" />
-            <span className="text-sm font-semibold">Alberta Pulse</span>
+            <span className="text-sm font-semibold">Alberta Pulse Check</span>
           </Link>
           <button
             onClick={() => setMobileOpen(!mobileOpen)}

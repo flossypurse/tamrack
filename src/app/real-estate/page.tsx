@@ -937,7 +937,7 @@ export default function RealEstatePage() {
 
       {/* Footer */}
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse — Real Estate Intelligence — Data refreshed hourly — All
+        Alberta Pulse Check — Real Estate Intelligence — Data refreshed hourly — All
         sources free &amp; public
       </footer>
     </main>

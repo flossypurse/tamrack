@@ -910,7 +910,7 @@ export default function SourcesPage() {
           Data Sources
         </h1>
         <p className="text-muted text-sm leading-relaxed max-w-3xl">
-          Everything Alberta Pulse looks at, explained in plain English. Each
+          Everything Alberta Pulse Check looks at, explained in plain English. Each
           data source includes what it is, why it matters for making economic
           decisions, and how we access it. Sources marked{" "}
           <span className="text-accent-green font-medium">API</span> can be
@@ -1017,7 +1017,7 @@ export default function SourcesPage() {
       </Card>
 
       <footer className="text-center text-xs text-muted/40 pt-6 pb-8">
-        Alberta Pulse v0.1 — All sources verified March 2026
+        Alberta Pulse Check v0.1 — All sources verified March 2026
       </footer>
     </main>
   );

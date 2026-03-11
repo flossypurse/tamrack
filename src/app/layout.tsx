@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Alberta Pulse — Economic Intelligence Dashboard",
+  title: "Alberta Pulse Check — Economic Intelligence Dashboard",
   description:
     "Real-time economic, business, and development data for Alberta. Built for decision-makers in Parkland County and the Edmonton metro region.",
 };

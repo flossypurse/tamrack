@@ -428,7 +428,7 @@ export default function AgriculturePage() {
       </section>
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse &mdash; Agriculture &mdash; All data from free public APIs
+        Alberta Pulse Check &mdash; Agriculture &mdash; All data from free public APIs
       </footer>
     </main>
   );

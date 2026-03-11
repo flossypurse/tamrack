@@ -427,7 +427,7 @@ export default function EnergyPage() {
       </section>
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse &mdash; Energy &mdash; All data from free public APIs
+        Alberta Pulse Check &mdash; Energy &mdash; All data from free public APIs
       </footer>
     </main>
   );

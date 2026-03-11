@@ -499,7 +499,7 @@ export default function MicroSignalsPage() {
       </Card>
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse &mdash; Micro Signals &mdash; Neighbourhood-level
+        Alberta Pulse Check &mdash; Micro Signals &mdash; Neighbourhood-level
         cross-analysis
       </footer>
     </main>
