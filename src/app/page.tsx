@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Activity,
@@ -39,6 +40,13 @@ const dataSources = [
   "CMHC",
   "ArcGIS (12 municipalities)",
 ];
+
+export const metadata: Metadata = {
+  title: "Alberta Pulse Check — Real-Time Economic Intelligence for Alberta",
+  description:
+    "Live economic data from 8+ government sources across 22 Alberta municipalities. Building permits, assessments, energy prices, labour market, migration, and more — updated daily.",
+  alternates: { canonical: "https://albertapulsecheck.ca" },
+};
 
 export default function LandingPage() {
   return (

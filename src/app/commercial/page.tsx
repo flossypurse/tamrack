@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+
+export const metadata: Metadata = {
+  title: "Alberta Commercial Real Estate Pulse",
+  description: "Commercial property assessments, business formation trends, retail sales, and commercial zoning analysis across Alberta municipalities.",
+};
 import {
   TimeSeriesBarChart,
   TimeSeriesAreaChart,

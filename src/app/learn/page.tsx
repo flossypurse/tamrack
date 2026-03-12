@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader } from "@/components/card";
 import {
@@ -325,6 +326,11 @@ function StoryLoading() {
 // ============================================================
 // Page
 // ============================================================
+
+export const metadata: Metadata = {
+  title: "Learn Alberta Economics",
+  description: "Interactive educational tools for understanding Alberta's economy — interest rates, economic cycles, and data literacy using live dashboard data.",
+};
 
 export default function LearnPage() {
   return (

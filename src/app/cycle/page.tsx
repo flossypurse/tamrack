@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
+
+export const metadata: Metadata = {
+  title: "Alberta Boom-Bust Cycle Tracker",
+  description: "Track where Alberta is in its economic cycle. Live analysis of oil prices, employment, migration, and construction against historical boom-bust patterns.",
+};
 import {
   TimeSeriesAreaChart,
   MultiSeriesLineChart,

@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ChartCard } from "@/components/chart-card";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+
+export const metadata: Metadata = {
+  title: "Alberta Economic Diversification Tracker",
+  description: "Is Alberta diversifying beyond oil and gas? Live GDP breakdown by industry, tech sector growth, and non-energy economic indicators.",
+};
 import {
   TimeSeriesAreaChart,
   MultiSeriesLineChart,

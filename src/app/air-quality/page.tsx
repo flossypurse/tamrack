@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { Wind, AlertTriangle, CheckCircle2, Shield } from "lucide-react";
@@ -242,6 +243,11 @@ function WhatAffectsAirQuality() {
 // ============================================================
 // Page
 // ============================================================
+
+export const metadata: Metadata = {
+  title: "Alberta Air Quality Index (AQHI)",
+  description: "Real-time Air Quality Health Index monitoring across Alberta stations. Track particulate matter, ozone, and nitrogen dioxide levels.",
+};
 
 export default function AirQualityPage() {
   return (

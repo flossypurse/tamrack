@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Activity } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description: "Privacy Policy for Alberta Pulse Check. We respect your data privacy under PIPEDA and Alberta PIPA.",
+};
 
 export default function PrivacyPage() {
   return (

@@ -2,40 +2,104 @@
  * Cross-analysis functions — combine multiple data sources at the
  * neighbourhood level to surface signals that no single dataset reveals.
  *
- * These work in two modes:
- * 1. Live API cross-analysis (no DB needed) — combines current API data
- * 2. Historical analysis (DB needed) — detects changes over time
+ * Supports Edmonton (SODA) and Calgary (Socrata) — both use the same
+ * SoQL query language with different field names.
  */
 
 import { fetchEdmontonData, EDMONTON_DATASETS } from "./data-sources";
 
 // ============================================================
-// LIVE CROSS-ANALYSIS (no database required)
+// Calgary Socrata (same API pattern as Edmonton)
 // ============================================================
 
-/**
- * Assessment Gap Analysis
- * Find neighbourhoods where assessments are moderate but construction
- * activity is HIGH — these are transformation zones where values
- * haven't caught up to the activity yet. Early mover advantage.
- *
- * The inverse (high assessments, low permits) = stable/mature areas.
- */
+const CALGARY_BASE = "https://data.calgary.ca/resource";
+const CALGARY_DATASETS = {
+  BUILDING_PERMITS: "c2es-76ed",
+  PROPERTY_ASSESSMENTS: "4bsw-nn7w",
+  BUSINESS_LICENCES: "vdjc-pybd",
+  DEVELOPMENT_PERMITS: "6933-unw5",
+} as const;
+
+async function fetchCalgaryData(
+  datasetId: string,
+  params?: Record<string, string>
+): Promise<unknown[]> {
+  const url = new URL(`${CALGARY_BASE}/${datasetId}.json`);
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  }
+  const res = await fetch(url.toString(), { next: { revalidate: 3600 } });
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+// ============================================================
+// Types
+// ============================================================
+
 export interface TransformationSignal {
   neighbourhood: string;
+  city: string;
   avgAssessment: number;
   permitCount: number;
   unitsAdded: number;
   constructionValue: number;
   devPermitCount: number;
   renovationCount: number;
-  score: number; // composite signal score
+  score: number;
   signal: "hot" | "warming" | "stable" | "cooling";
   whyItMatters: string;
 }
 
-export async function analyzeTransformationZones(): Promise<TransformationSignal[]> {
-  // Fetch three datasets in parallel and cross-reference by neighbourhood
+export interface TeardownZone {
+  neighbourhood: string;
+  city: string;
+  devPermits: number;
+  newConstructionPermits: number;
+  avgAssessment: number;
+  avgConstructionValue: number;
+  ratio: number;
+  signal: string;
+}
+
+export interface RenovationSignal {
+  neighbourhood: string;
+  city: string;
+  renovationPermits: number;
+  totalRenovationValue: number;
+  avgRenovationValue: number;
+  avgAssessment: number;
+  assessmentPercentile: number;
+  signal: "strong" | "moderate" | "caution";
+  interpretation: string;
+}
+
+export interface ConvergenceSignal {
+  neighbourhood: string;
+  city: string;
+  businessLicences: number;
+  residentialPermits: number;
+  devPermits: number;
+  combinedScore: number;
+  interpretation: string;
+}
+
+// ============================================================
+// Utility
+// ============================================================
+
+function median(arr: number[]): number {
+  if (arr.length === 0) return 0;
+  const sorted = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+// ============================================================
+// 1. Transformation Zones
+// ============================================================
+
+async function analyzeEdmontonTransformations(): Promise<TransformationSignal[]> {
   const [permits, assessments, devPermits, renovations] = await Promise.all([
     fetchEdmontonData(EDMONTON_DATASETS.BUILDING_PERMITS, {
       $query: `SELECT neighbourhood, count(*) as cnt, sum(units_added) as total_units, sum(construction_value) as total_val WHERE issue_date > '2024-06-01' AND neighbourhood IS NOT NULL GROUP BY neighbourhood`,
@@ -51,10 +115,43 @@ export async function analyzeTransformationZones(): Promise<TransformationSignal
     }).catch(() => []),
   ]);
 
-  // Build lookup maps
+  return buildTransformationSignals("Edmonton", permits, assessments, devPermits, renovations, "neighbourhood");
+}
+
+async function analyzeCalgaryTransformations(): Promise<TransformationSignal[]> {
+  const [permits, assessments, devPermits] = await Promise.all([
+    fetchCalgaryData(CALGARY_DATASETS.BUILDING_PERMITS, {
+      $query: `SELECT communityname, count(*) as cnt, sum(estprojectcost) as total_val WHERE issueddate > '2024-06-01' AND communityname IS NOT NULL GROUP BY communityname`,
+    }).catch(() => []),
+    fetchCalgaryData(CALGARY_DATASETS.PROPERTY_ASSESSMENTS, {
+      $query: `SELECT comm_name, count(*) as cnt, avg(assessed_value) as avg_val WHERE assessment_class = 'Residential' AND comm_name IS NOT NULL GROUP BY comm_name HAVING count(*) > 20`,
+    }).catch(() => []),
+    fetchCalgaryData(CALGARY_DATASETS.DEVELOPMENT_PERMITS, {
+      $query: `SELECT communityname, count(*) as cnt WHERE applieddate > '2024-06-01' AND communityname IS NOT NULL GROUP BY communityname`,
+    }).catch(() => []),
+  ]);
+
+  // Calgary doesn't have a separate "Home Improvement" category easily queryable,
+  // so we pass empty renovations
+  return buildTransformationSignals("Calgary", permits, assessments, devPermits, [], "communityname", "comm_name");
+}
+
+function buildTransformationSignals(
+  city: string,
+  permits: unknown[],
+  assessments: unknown[],
+  devPermits: unknown[],
+  renovations: unknown[],
+  permitHoodField: string,
+  assessHoodField?: string
+): TransformationSignal[] {
+  const aField = assessHoodField || permitHoodField;
+
   const permitMap = new Map<string, { count: number; units: number; value: number }>();
-  for (const row of permits as { neighbourhood: string; cnt: string; total_units: string; total_val: string }[]) {
-    permitMap.set(row.neighbourhood, {
+  for (const row of permits as Record<string, string>[]) {
+    const hood = (row[permitHoodField] || "").toUpperCase();
+    if (!hood) continue;
+    permitMap.set(hood, {
       count: parseInt(row.cnt || "0"),
       units: parseInt(row.total_units || "0"),
       value: parseInt(row.total_val || "0"),
@@ -62,28 +159,32 @@ export async function analyzeTransformationZones(): Promise<TransformationSignal
   }
 
   const assessMap = new Map<string, { count: number; avg: number }>();
-  for (const row of assessments as { neighbourhood: string; cnt: string; avg_val: string }[]) {
-    assessMap.set(row.neighbourhood, {
+  for (const row of assessments as Record<string, string>[]) {
+    const hood = (row[aField] || "").toUpperCase();
+    if (!hood) continue;
+    assessMap.set(hood, {
       count: parseInt(row.cnt || "0"),
       avg: parseFloat(row.avg_val || "0"),
     });
   }
 
   const devMap = new Map<string, number>();
-  for (const row of devPermits as { neighbourhood: string; cnt: string }[]) {
-    devMap.set(row.neighbourhood, parseInt(row.cnt || "0"));
+  for (const row of devPermits as Record<string, string>[]) {
+    const hood = (row[permitHoodField] || "").toUpperCase();
+    if (!hood) continue;
+    devMap.set(hood, parseInt(row.cnt || "0"));
   }
 
   const renoMap = new Map<string, number>();
-  for (const row of renovations as { neighbourhood: string; cnt: string }[]) {
-    renoMap.set(row.neighbourhood, parseInt(row.cnt || "0"));
+  for (const row of renovations as Record<string, string>[]) {
+    const hood = (row[permitHoodField] || "").toUpperCase();
+    if (!hood) continue;
+    renoMap.set(hood, parseInt(row.cnt || "0"));
   }
 
-  // Cross-reference: only neighbourhoods that appear in assessments
   const allHoods = new Set(assessMap.keys());
   const results: TransformationSignal[] = [];
 
-  // Calculate medians for scoring
   const allAvgAssessments = Array.from(assessMap.values()).map((a) => a.avg);
   const medianAssessment = median(allAvgAssessments);
   const allPermitCounts = Array.from(permitMap.values()).map((p) => p.count);
@@ -95,28 +196,28 @@ export async function analyzeTransformationZones(): Promise<TransformationSignal
     const devCount = devMap.get(hood) || 0;
     const renoCount = renoMap.get(hood) || 0;
 
-    // Skip very small neighbourhoods
     if (assess.count < 30) continue;
 
-    // Score: activity relative to assessment level
-    // High activity + moderate assessments = high score
-    // Activity is normalized by median to get relative measure
     const activityScore =
       (permit.count / Math.max(medianPermits, 1)) * 0.4 +
       (devCount / Math.max(medianPermits, 1)) * 0.3 +
       (renoCount / Math.max(medianPermits, 1)) * 0.3;
 
-    // Assessment factor: moderate assessments score higher (more room to grow)
-    // Very cheap or very expensive both score lower
     const assessRatio = assess.avg / medianAssessment;
     const assessFactor =
       assessRatio > 0.5 && assessRatio < 1.5
-        ? 1.2 // sweet spot — near median
+        ? 1.2
         : assessRatio <= 0.5
-          ? 0.8 // very cheap — may have issues
-          : 0.6; // expensive — less upside
+          ? 0.8
+          : 0.6;
 
     const score = activityScore * assessFactor;
+
+    // Display-friendly name (title case the uppercased hood)
+    const displayHood = hood
+      .split(" ")
+      .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
+      .join(" ");
 
     let signal: TransformationSignal["signal"];
     let whyItMatters: string;
@@ -127,6 +228,9 @@ export async function analyzeTransformationZones(): Promise<TransformationSignal
     } else if (activityScore > 1 && renoCount > medianPermits) {
       signal = "warming";
       whyItMatters = `Renovation activity is high (${renoCount} permits) alongside new development. Existing homeowners are investing — a confidence signal that the neighbourhood is improving.`;
+    } else if (activityScore > 1) {
+      signal = "warming";
+      whyItMatters = `Above-average permit activity (${permit.count} building, ${devCount} development permits). Community is seeing investment — watch for assessment growth.`;
     } else if (activityScore < 0.3 && assessRatio > 1.3) {
       signal = "cooling";
       whyItMatters = `High assessments ($${Math.round(assess.avg).toLocaleString()}) but low new activity. Mature/stable area — or possibly overvalued with declining interest.`;
@@ -136,7 +240,8 @@ export async function analyzeTransformationZones(): Promise<TransformationSignal
     }
 
     results.push({
-      neighbourhood: hood,
+      neighbourhood: displayHood,
+      city,
       avgAssessment: Math.round(assess.avg),
       permitCount: permit.count,
       unitsAdded: permit.units,
@@ -152,23 +257,20 @@ export async function analyzeTransformationZones(): Promise<TransformationSignal
   return results.sort((a, b) => b.score - a.score);
 }
 
-/**
- * Teardown Detector
- * Find properties/neighbourhoods where redevelopment is happening —
- * older homes being replaced with new construction.
- * Signal: high dev permits with "Redeveloping" classification + new construction permits.
- */
-export interface TeardownZone {
-  neighbourhood: string;
-  devPermits: number;
-  newConstructionPermits: number;
-  avgAssessment: number;
-  avgConstructionValue: number;
-  ratio: number; // construction value vs assessment — high = big investment relative to current value
-  signal: string;
+export async function analyzeTransformationZones(): Promise<TransformationSignal[]> {
+  const [edmonton, calgary] = await Promise.all([
+    analyzeEdmontonTransformations(),
+    analyzeCalgaryTransformations(),
+  ]);
+
+  return [...edmonton, ...calgary].sort((a, b) => b.score - a.score);
 }
 
-export async function analyzeTeardownZones(): Promise<TeardownZone[]> {
+// ============================================================
+// 2. Teardown Zones
+// ============================================================
+
+async function analyzeEdmontonTeardowns(): Promise<TeardownZone[]> {
   const [redevPermits, newConstruction, assessments] = await Promise.all([
     fetchEdmontonData(EDMONTON_DATASETS.DEVELOPMENT_PERMITS, {
       $query: `SELECT neighbourhood, count(*) as cnt WHERE permit_date > '2024-01-01' AND neighbourhood_classification = 'Redeveloping' GROUP BY neighbourhood ORDER BY cnt DESC LIMIT 30`,
@@ -181,29 +283,66 @@ export async function analyzeTeardownZones(): Promise<TeardownZone[]> {
     }).catch(() => []),
   ]);
 
+  return buildTeardownZones("Edmonton", redevPermits, newConstruction, assessments, "neighbourhood");
+}
+
+async function analyzeCalgaryTeardowns(): Promise<TeardownZone[]> {
+  const [devPermits, permits, assessments] = await Promise.all([
+    fetchCalgaryData(CALGARY_DATASETS.DEVELOPMENT_PERMITS, {
+      $query: `SELECT communityname, count(*) as cnt WHERE applieddate > '2024-01-01' AND communityname IS NOT NULL GROUP BY communityname ORDER BY cnt DESC LIMIT 30`,
+    }).catch(() => []),
+    fetchCalgaryData(CALGARY_DATASETS.BUILDING_PERMITS, {
+      $query: `SELECT communityname, count(*) as cnt, avg(estprojectcost) as avg_val WHERE issueddate > '2024-01-01' AND workclassgroup = 'Housing - New' AND communityname IS NOT NULL GROUP BY communityname`,
+    }).catch(() => []),
+    fetchCalgaryData(CALGARY_DATASETS.PROPERTY_ASSESSMENTS, {
+      $query: `SELECT comm_name, avg(assessed_value) as avg_val WHERE assessment_class = 'Residential' AND comm_name IS NOT NULL GROUP BY comm_name HAVING count(*) > 20`,
+    }).catch(() => []),
+  ]);
+
+  return buildTeardownZones("Calgary", devPermits, permits, assessments, "communityname", "comm_name");
+}
+
+function buildTeardownZones(
+  city: string,
+  devPermitData: unknown[],
+  constructionData: unknown[],
+  assessmentData: unknown[],
+  hoodField: string,
+  assessHoodField?: string
+): TeardownZone[] {
+  const aField = assessHoodField || hoodField;
+
   const constructionMap = new Map<string, { count: number; avgValue: number }>();
-  for (const row of newConstruction as { neighbourhood: string; cnt: string; avg_val: string }[]) {
-    constructionMap.set(row.neighbourhood, {
+  for (const row of constructionData as Record<string, string>[]) {
+    const hood = (row[hoodField] || "").toUpperCase();
+    if (!hood) continue;
+    constructionMap.set(hood, {
       count: parseInt(row.cnt || "0"),
       avgValue: parseFloat(row.avg_val || "0"),
     });
   }
 
   const assessMap = new Map<string, number>();
-  for (const row of assessments as { neighbourhood: string; avg_val: string }[]) {
-    assessMap.set(row.neighbourhood, parseFloat(row.avg_val || "0"));
+  for (const row of assessmentData as Record<string, string>[]) {
+    const hood = (row[aField] || "").toUpperCase();
+    if (!hood) continue;
+    assessMap.set(hood, parseFloat(row.avg_val || "0"));
   }
 
   const results: TeardownZone[] = [];
-  for (const row of redevPermits as { neighbourhood: string; cnt: string }[]) {
-    const hood = row.neighbourhood;
+  for (const row of devPermitData as Record<string, string>[]) {
+    const hood = (row[hoodField] || "").toUpperCase();
     const devCount = parseInt(row.cnt || "0");
+    if (!hood || devCount < 3) continue;
+
     const construction = constructionMap.get(hood) || { count: 0, avgValue: 0 };
     const avgAssessment = assessMap.get(hood) || 0;
-
-    if (devCount < 3) continue;
-
     const ratio = avgAssessment > 0 ? construction.avgValue / avgAssessment : 0;
+
+    const displayHood = hood
+      .split(" ")
+      .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
+      .join(" ");
 
     let signal: string;
     if (ratio > 1.5 && devCount > 10) {
@@ -211,13 +350,14 @@ export async function analyzeTeardownZones(): Promise<TeardownZone[]> {
     } else if (ratio > 1) {
       signal = "Emerging teardown activity — new builds are worth more than existing homes. Transition underway.";
     } else if (devCount > 15) {
-      signal = "High dev permit activity in redeveloping area — watch for construction permits to follow.";
+      signal = "High dev permit activity — watch for construction permits to follow.";
     } else {
       signal = "Early-stage redevelopment — scattered activity, not yet a clear pattern.";
     }
 
     results.push({
-      neighbourhood: hood,
+      neighbourhood: displayHood,
+      city,
       devPermits: devCount,
       newConstructionPermits: construction.count,
       avgAssessment: Math.round(avgAssessment),
@@ -230,24 +370,20 @@ export async function analyzeTeardownZones(): Promise<TeardownZone[]> {
   return results.sort((a, b) => b.devPermits - a.devPermits);
 }
 
-/**
- * Renovation ROI Signal
- * Neighbourhoods where renovation activity is high AND assessments
- * are rising suggest that homeowner investment is paying off.
- * Neighbourhoods with high renovation but flat/falling assessments = caution.
- */
-export interface RenovationSignal {
-  neighbourhood: string;
-  renovationPermits: number;
-  totalRenovationValue: number;
-  avgRenovationValue: number;
-  avgAssessment: number;
-  assessmentPercentile: number; // where this hood sits relative to city
-  signal: "strong" | "moderate" | "caution";
-  interpretation: string;
+export async function analyzeTeardownZones(): Promise<TeardownZone[]> {
+  const [edmonton, calgary] = await Promise.all([
+    analyzeEdmontonTeardowns(),
+    analyzeCalgaryTeardowns(),
+  ]);
+
+  return [...edmonton, ...calgary].sort((a, b) => b.devPermits - a.devPermits);
 }
 
-export async function analyzeRenovationROI(): Promise<RenovationSignal[]> {
+// ============================================================
+// 3. Renovation ROI
+// ============================================================
+
+async function analyzeEdmontonRenovationROI(): Promise<RenovationSignal[]> {
   const [renovations, assessments] = await Promise.all([
     fetchEdmontonData(EDMONTON_DATASETS.BUILDING_PERMITS, {
       $query: `SELECT neighbourhood, count(*) as cnt, sum(construction_value) as total_val, avg(construction_value) as avg_val WHERE issue_date > '2024-06-01' AND job_category='Home Improvement' AND neighbourhood IS NOT NULL GROUP BY neighbourhood HAVING count(*) >= 5 ORDER BY cnt DESC LIMIT 50`,
@@ -257,18 +393,46 @@ export async function analyzeRenovationROI(): Promise<RenovationSignal[]> {
     }).catch(() => []),
   ]);
 
+  return buildRenovationSignals("Edmonton", renovations, assessments, "neighbourhood");
+}
+
+async function analyzeCalgaryRenovationROI(): Promise<RenovationSignal[]> {
+  const [renovations, assessments] = await Promise.all([
+    fetchCalgaryData(CALGARY_DATASETS.BUILDING_PERMITS, {
+      $query: `SELECT communityname, count(*) as cnt, sum(estprojectcost) as total_val, avg(estprojectcost) as avg_val WHERE issueddate > '2024-06-01' AND workclassgroup = 'Improvement' AND communityname IS NOT NULL GROUP BY communityname HAVING count(*) >= 5 ORDER BY cnt DESC LIMIT 50`,
+    }).catch(() => []),
+    fetchCalgaryData(CALGARY_DATASETS.PROPERTY_ASSESSMENTS, {
+      $query: `SELECT comm_name, avg(assessed_value) as avg_val WHERE assessment_class = 'Residential' AND comm_name IS NOT NULL GROUP BY comm_name HAVING count(*) > 30`,
+    }).catch(() => []),
+  ]);
+
+  return buildRenovationSignals("Calgary", renovations, assessments, "communityname", "comm_name");
+}
+
+function buildRenovationSignals(
+  city: string,
+  renoData: unknown[],
+  assessData: unknown[],
+  hoodField: string,
+  assessHoodField?: string
+): RenovationSignal[] {
+  const aField = assessHoodField || hoodField;
+
   const assessMap = new Map<string, number>();
   const allAssessments: number[] = [];
-  for (const row of assessments as { neighbourhood: string; avg_val: string }[]) {
+  for (const row of assessData as Record<string, string>[]) {
+    const hood = (row[aField] || "").toUpperCase();
+    if (!hood) continue;
     const val = parseFloat(row.avg_val || "0");
-    assessMap.set(row.neighbourhood, val);
+    assessMap.set(hood, val);
     allAssessments.push(val);
   }
   allAssessments.sort((a, b) => a - b);
 
   const results: RenovationSignal[] = [];
-  for (const row of renovations as { neighbourhood: string; cnt: string; total_val: string; avg_val: string }[]) {
-    const hood = row.neighbourhood;
+  for (const row of renoData as Record<string, string>[]) {
+    const hood = (row[hoodField] || "").toUpperCase();
+    if (!hood) continue;
     const permits = parseInt(row.cnt || "0");
     const totalValue = parseInt(row.total_val || "0");
     const avgRenoValue = parseFloat(row.avg_val || "0");
@@ -276,13 +440,16 @@ export async function analyzeRenovationROI(): Promise<RenovationSignal[]> {
 
     if (avgAssessment === 0) continue;
 
-    // What percentile is this neighbourhood's assessment?
     const percentile = Math.round(
       (allAssessments.filter((a) => a <= avgAssessment).length / allAssessments.length) * 100
     );
 
-    // Renovation-to-assessment ratio — how much are people investing relative to home value?
     const renoRatio = avgRenoValue / avgAssessment;
+
+    const displayHood = hood
+      .split(" ")
+      .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
+      .join(" ");
 
     let signal: RenovationSignal["signal"];
     let interpretation: string;
@@ -305,7 +472,8 @@ export async function analyzeRenovationROI(): Promise<RenovationSignal[]> {
     }
 
     results.push({
-      neighbourhood: hood,
+      neighbourhood: displayHood,
+      city,
       renovationPermits: permits,
       totalRenovationValue: totalValue,
       avgRenovationValue: Math.round(avgRenoValue),
@@ -325,22 +493,26 @@ export async function analyzeRenovationROI(): Promise<RenovationSignal[]> {
   });
 }
 
-/**
- * Business + Residential Convergence
- * Neighbourhoods where BOTH new business licences AND residential permits
- * are active — signals an emerging complete community. These tend to
- * appreciate faster because they become self-sustaining.
- */
-export interface ConvergenceSignal {
-  neighbourhood: string;
-  businessLicences: number;
-  residentialPermits: number;
-  devPermits: number;
-  combinedScore: number;
-  interpretation: string;
+export async function analyzeRenovationROI(): Promise<RenovationSignal[]> {
+  const [edmonton, calgary] = await Promise.all([
+    analyzeEdmontonRenovationROI(),
+    analyzeCalgaryRenovationROI(),
+  ]);
+
+  return [...edmonton, ...calgary].sort((a, b) => {
+    const signalOrder = { strong: 0, moderate: 1, caution: 2 };
+    if (signalOrder[a.signal] !== signalOrder[b.signal]) {
+      return signalOrder[a.signal] - signalOrder[b.signal];
+    }
+    return b.renovationPermits - a.renovationPermits;
+  });
 }
 
-export async function analyzeBusinessResidentialConvergence(): Promise<ConvergenceSignal[]> {
+// ============================================================
+// 4. Business + Residential Convergence
+// ============================================================
+
+async function analyzeEdmontonConvergence(): Promise<ConvergenceSignal[]> {
   const [licences, permits, devPermits] = await Promise.all([
     fetchEdmontonData(EDMONTON_DATASETS.BUSINESS_LICENCES, {
       $query: `SELECT neighbourhood, count(*) as cnt WHERE most_recent_issue_date > '2024-06-01' AND neighbourhood IS NOT NULL GROUP BY neighbourhood HAVING count(*) >= 3 ORDER BY cnt DESC LIMIT 100`,
@@ -353,19 +525,51 @@ export async function analyzeBusinessResidentialConvergence(): Promise<Convergen
     }).catch(() => []),
   ]);
 
+  return buildConvergenceSignals("Edmonton", licences, permits, devPermits, "neighbourhood");
+}
+
+async function analyzeCalgaryConvergence(): Promise<ConvergenceSignal[]> {
+  const [licences, permits, devPermits] = await Promise.all([
+    fetchCalgaryData(CALGARY_DATASETS.BUSINESS_LICENCES, {
+      $query: `SELECT communityname, count(*) as cnt WHERE communityname IS NOT NULL GROUP BY communityname HAVING count(*) >= 3 ORDER BY cnt DESC LIMIT 100`,
+    }).catch(() => []),
+    fetchCalgaryData(CALGARY_DATASETS.BUILDING_PERMITS, {
+      $query: `SELECT communityname, count(*) as cnt WHERE issueddate > '2024-06-01' AND workclassgroup = 'Housing - New' AND communityname IS NOT NULL GROUP BY communityname`,
+    }).catch(() => []),
+    fetchCalgaryData(CALGARY_DATASETS.DEVELOPMENT_PERMITS, {
+      $query: `SELECT communityname, count(*) as cnt WHERE applieddate > '2024-06-01' AND communityname IS NOT NULL GROUP BY communityname`,
+    }).catch(() => []),
+  ]);
+
+  return buildConvergenceSignals("Calgary", licences, permits, devPermits, "communityname");
+}
+
+function buildConvergenceSignals(
+  city: string,
+  licenceData: unknown[],
+  permitData: unknown[],
+  devPermitData: unknown[],
+  hoodField: string
+): ConvergenceSignal[] {
   const licenceMap = new Map<string, number>();
-  for (const row of licences as { neighbourhood: string; cnt: string }[]) {
-    licenceMap.set(row.neighbourhood, parseInt(row.cnt || "0"));
+  for (const row of licenceData as Record<string, string>[]) {
+    const hood = (row[hoodField] || "").toUpperCase();
+    if (!hood) continue;
+    licenceMap.set(hood, parseInt(row.cnt || "0"));
   }
 
   const permitMap = new Map<string, number>();
-  for (const row of permits as { neighbourhood: string; cnt: string }[]) {
-    permitMap.set(row.neighbourhood, parseInt(row.cnt || "0"));
+  for (const row of permitData as Record<string, string>[]) {
+    const hood = (row[hoodField] || "").toUpperCase();
+    if (!hood) continue;
+    permitMap.set(hood, parseInt(row.cnt || "0"));
   }
 
   const devMap = new Map<string, number>();
-  for (const row of devPermits as { neighbourhood: string; cnt: string }[]) {
-    devMap.set(row.neighbourhood, parseInt(row.cnt || "0"));
+  for (const row of devPermitData as Record<string, string>[]) {
+    const hood = (row[hoodField] || "").toUpperCase();
+    if (!hood) continue;
+    devMap.set(hood, parseInt(row.cnt || "0"));
   }
 
   const allHoods = new Set([...licenceMap.keys(), ...permitMap.keys()]);
@@ -376,11 +580,15 @@ export async function analyzeBusinessResidentialConvergence(): Promise<Convergen
     const res = permitMap.get(hood) || 0;
     const dev = devMap.get(hood) || 0;
 
-    // Need activity in at least 2 categories
     const categories = [biz > 0, res > 0, dev > 0].filter(Boolean).length;
     if (categories < 2) continue;
 
     const score = biz * 1.5 + res * 2 + dev;
+
+    const displayHood = hood
+      .split(" ")
+      .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
+      .join(" ");
 
     let interpretation: string;
     if (biz > 5 && res > 3) {
@@ -394,7 +602,8 @@ export async function analyzeBusinessResidentialConvergence(): Promise<Convergen
     }
 
     results.push({
-      neighbourhood: hood,
+      neighbourhood: displayHood,
+      city,
       businessLicences: biz,
       residentialPermits: res,
       devPermits: dev,
@@ -408,13 +617,13 @@ export async function analyzeBusinessResidentialConvergence(): Promise<Convergen
     .slice(0, 30);
 }
 
-// ============================================================
-// Utility
-// ============================================================
+export async function analyzeBusinessResidentialConvergence(): Promise<ConvergenceSignal[]> {
+  const [edmonton, calgary] = await Promise.all([
+    analyzeEdmontonConvergence(),
+    analyzeCalgaryConvergence(),
+  ]);
 
-function median(arr: number[]): number {
-  if (arr.length === 0) return 0;
-  const sorted = [...arr].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  return [...edmonton, ...calgary]
+    .sort((a, b) => b.combinedScore - a.combinedScore)
+    .slice(0, 40);
 }

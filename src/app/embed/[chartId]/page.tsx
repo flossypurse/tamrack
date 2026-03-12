@@ -797,8 +797,11 @@ function resolveChart(chartId: string): ChartDef | null {
 export async function generateMetadata({ params }: { params: Promise<{ chartId: string }> }) {
   const { chartId } = await params;
   const chart = resolveChart(chartId);
+  const title = chart?.title || "Chart — Alberta Pulse Check";
   return {
-    title: chart?.title || "Chart — Alberta Pulse Check",
+    title,
+    description: `Embeddable chart: ${title}. Live Alberta economic data powered by Alberta Pulse Check.`,
+    robots: { index: true, follow: true },
   };
 }
 

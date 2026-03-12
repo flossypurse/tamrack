@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import {
@@ -171,6 +172,11 @@ async function ActiveAlertsCounts() {
 // ============================================================
 // Page
 // ============================================================
+
+export const metadata: Metadata = {
+  title: "Alberta Emergency & Weather Alerts",
+  description: "Real-time emergency alerts and severe weather warnings for Alberta from the Canadian Alert Ready system.",
+};
 
 export default function EmergenciesPage() {
   return (

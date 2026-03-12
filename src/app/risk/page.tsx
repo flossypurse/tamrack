@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+
+export const metadata: Metadata = {
+  title: "Alberta Market Risk Dashboard",
+  description: "Composite risk scoring for Alberta municipalities — employment dependency, vacancy, supply pipeline, rate sensitivity, and insolvency trends.",
+};
 import {
   MultiSeriesLineChart,
   TimeSeriesAreaChart,

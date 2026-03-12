@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
+
+export const metadata: Metadata = {
+  title: "Alberta Energy Data — Oil, Gas & Commodities",
+  description: "Real-time Alberta energy data including BCPI energy index, oil prices, CAD/USD exchange rate, and natural gas commodity trends.",
+};
 import {
   TimeSeriesAreaChart,
   TimeSeriesBarChart,

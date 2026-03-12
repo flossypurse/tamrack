@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
+
+export const metadata: Metadata = {
+  title: "Alberta Migration & Population Growth",
+  description: "Who is moving to Alberta and why? International immigration, interprovincial migration flows, and population growth data updated quarterly.",
+};
 import {
   TimeSeriesAreaChart,
   TimeSeriesBarChart,

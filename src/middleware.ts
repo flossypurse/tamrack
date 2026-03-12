@@ -2,7 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 // Routes that don't require auth
-const publicRoutes = ["/", "/login", "/terms", "/privacy", "/pricing", "/municipalities", "/coverage"];
+// SEO strategy: macro pages are public to be indexed by Google.
+// Users see value → hit paywall on municipality deep-dives → sign up.
+const publicRoutes = [
+  "/", "/login", "/terms", "/privacy", "/pricing", "/municipalities", "/coverage",
+  // Macro economy (high SEO value — these rank for "Alberta [topic]" queries)
+  "/dashboard", "/energy", "/cycle", "/diversification", "/labour", "/migration",
+  "/agriculture", "/signals",
+  // Topic pages (rank for specific Alberta data queries)
+  "/weather", "/wildfire", "/air-quality", "/water", "/earthquakes", "/traffic",
+  "/elections", "/emergencies",
+  // Reference pages
+  "/learn", "/sources",
+];
 const publicPrefixes = ["/api/auth", "/api/webhooks", "/api/health", "/embed/"];
 
 // Free pages — visible without subscription (part of the funnel)

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import {
@@ -238,6 +239,11 @@ async function SeasonSummary() {
 // ============================================================
 // Page
 // ============================================================
+
+export const metadata: Metadata = {
+  title: "Alberta Wildfire Watch",
+  description: "Track active wildfires across Alberta in near real-time. Historical fire data, cause analysis, and regional wildfire risk indicators.",
+};
 
 export default function WildfirePage() {
   return (

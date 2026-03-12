@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { TimeSeriesAreaChart } from "@/components/chart";
@@ -185,6 +186,11 @@ function LoadingCard() {
 // ============================================================
 // Page
 // ============================================================
+
+export const metadata: Metadata = {
+  title: "Alberta Weather Conditions",
+  description: "Real-time weather conditions across Alberta — temperature, wind, humidity, and visibility from Environment Canada monitoring stations.",
+};
 
 export default function WeatherPage() {
   return (

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import {
@@ -1141,6 +1142,11 @@ function LoadingTable() {
 // Page
 // ============================================================
 
+export const metadata: Metadata = {
+  title: "Alberta Real Estate Intelligence",
+  description: "Province-wide real estate intelligence — permit hotspots, assessment trends, and teardown detection across Edmonton, Calgary, and 20+ Alberta municipalities.",
+};
+
 export default function RealEstatePage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
@@ -1150,7 +1156,9 @@ export default function RealEstatePage() {
         </h1>
         <p className="text-sm text-muted mt-1">
           Where should you be prospecting this week? Live data from Edmonton,
-          Strathcona County, St. Albert, and StatsCan (full metro).
+          Calgary, Strathcona County, St. Albert, and 20+ municipalities. See{" "}
+          <a href="/prospects" className="text-accent hover:underline">Prospect Leads</a>{" "}
+          for province-wide actionable leads.
         </p>
       </header>
 

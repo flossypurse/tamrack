@@ -310,6 +310,7 @@ async function ProspectingOpportunities() {
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{zone.neighbourhood}</span>
                       <SignalBadge signal={zone.signal} />
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent">{zone.city}</span>
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-[10px] text-muted">
                       <span>Avg: {formatMoney(zone.avgAssessment)}</span>
@@ -348,6 +349,7 @@ async function ProspectingOpportunities() {
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-sm font-medium">{zone.neighbourhood}</span>
                   <SignalBadge signal={zone.signal} />
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent">{zone.city}</span>
                   <span className="text-[10px] text-muted">
                     {formatMoney(zone.avgAssessment)} avg | {zone.permitCount} permits
                   </span>
@@ -375,7 +377,7 @@ async function ProspectingOpportunities() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-[10px] text-muted uppercase border-b border-card-border">
-                  <th className="text-left py-1.5 pr-3">Neighbourhood</th>
+                  <th className="text-left py-1.5 pr-3">Neighbourhood / City</th>
                   <th className="text-right py-1.5 px-2">Dev Permits</th>
                   <th className="text-right py-1.5 px-2">New Builds</th>
                   <th className="text-right py-1.5 px-2">Avg Assessment</th>
@@ -385,7 +387,7 @@ async function ProspectingOpportunities() {
               <tbody>
                 {topTeardowns.map((td) => (
                   <tr key={td.neighbourhood} className="border-b border-card-border/50">
-                    <td className="py-1.5 pr-3 font-medium">{td.neighbourhood}</td>
+                    <td className="py-1.5 pr-3 font-medium">{td.neighbourhood} <span className="text-[10px] text-muted font-normal">{td.city}</span></td>
                     <td className="text-right py-1.5 px-2">{td.devPermits}</td>
                     <td className="text-right py-1.5 px-2">{td.newConstructionPermits}</td>
                     <td className="text-right py-1.5 px-2">{formatMoney(td.avgAssessment)}</td>
@@ -423,6 +425,7 @@ async function ProspectingOpportunities() {
               >
                 <div>
                   <span className="text-sm font-medium">{r.neighbourhood}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent ml-1.5">{r.city}</span>
                   <span className="text-[10px] text-muted ml-2">
                     {r.renovationPermits} renos | avg {formatMoney(r.avgRenovationValue)}
                   </span>
@@ -457,6 +460,7 @@ async function ProspectingOpportunities() {
               >
                 <div>
                   <span className="text-sm font-medium">{c.neighbourhood}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent ml-1.5">{c.city}</span>
                   <span className="text-[10px] text-muted ml-2">
                     {c.businessLicences} businesses | {c.residentialPermits} residential permits
                   </span>
@@ -618,7 +622,7 @@ export default function RealtorBriefingPage() {
       <Card>
         <CardHeader
           title="Prospecting Opportunities"
-          subtitle="Edmonton neighbourhood intelligence — where to focus this week"
+          subtitle="Edmonton + Calgary neighbourhood intelligence — where to focus this week"
           badge="LIVE"
         />
         <Suspense fallback={<LoadingSection />}>
@@ -650,8 +654,8 @@ export default function RealtorBriefingPage() {
       {/* Footer */}
       <Card className="text-center">
         <p className="text-[10px] text-muted">
-          All data from Edmonton Open Data, Bank of Canada, and Statistics Canada APIs.
-          Cross-referencing permits, assessments, dev permits, and business licences.
+          Data from Edmonton + Calgary Open Data, Bank of Canada, and Statistics Canada APIs.
+          Cross-referencing permits, assessments, dev permits, and business licences across both cities.
         </p>
         <p className="text-[10px] text-muted/60 mt-1">
           This briefing pulls the same live data as the full dashboard — it just frames it for your decisions.

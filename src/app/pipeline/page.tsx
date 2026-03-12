@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+
+export const metadata: Metadata = {
+  title: "Alberta Housing Development Pipeline",
+  description: "CMHC housing starts, completions, and units under construction for Edmonton CMA. Track the residential development pipeline and absorption rates.",
+};
 import {
   TimeSeriesAreaChart,
   TimeSeriesBarChart,

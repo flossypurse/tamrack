@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { Landmark, Users, MapPin, Mail, Vote } from "lucide-react";
@@ -257,6 +258,11 @@ async function ElectoralDistrictsGrid() {
 // ============================================================
 // Main page
 // ============================================================
+
+export const metadata: Metadata = {
+  title: "Alberta Politics & Electoral Districts",
+  description: "Alberta elected officials, electoral district data, and political landscape across provincial and municipal levels.",
+};
 
 export default function ElectionsPage() {
   return (

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import {
@@ -155,6 +156,11 @@ async function WaterLevelsTable() {
 // ============================================================
 // Page
 // ============================================================
+
+export const metadata: Metadata = {
+  title: "Alberta Water Levels & River Monitoring",
+  description: "Live monitoring of Alberta's river systems, water levels, and flood risk indicators from government hydrometric stations.",
+};
 
 export default function WaterPage() {
   return (

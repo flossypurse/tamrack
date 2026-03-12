@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
+
+export const metadata: Metadata = {
+  title: "Alberta Labour Market Data",
+  description: "Alberta employment, unemployment rate, participation rate, weekly earnings, and workforce composition — live data from Statistics Canada.",
+};
 import {
   TimeSeriesAreaChart,
   TimeSeriesBarChart,

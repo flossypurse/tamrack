@@ -1,0 +1,10 @@
+# Alberta Pulse Check — albertapulsecheck.ca
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /account
+Disallow: /billing
+Disallow: /login
+
+Sitemap: https://albertapulsecheck.ca/sitemap.xml

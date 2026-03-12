@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader } from "@/components/card";
+
+export const metadata: Metadata = {
+  title: "Alberta Economic Signals & Leading Indicators",
+  description: "Cross-indicator analysis of Alberta's economy. When multiple leading indicators point the same direction, it's time to pay attention.",
+};
 import { TimeSeriesAreaChart, TimeSeriesBarChart } from "@/components/chart";
 import {
   Radar,

@@ -11,8 +11,8 @@ import {
 import { Database, CheckCircle2, XCircle, Clock, Globe } from "lucide-react";
 
 export const metadata = {
-  title: "Data Coverage — Alberta Pulse Check",
-  description: "See what data is available for every Alberta municipality on the platform.",
+  title: "Data Coverage Matrix — Alberta Municipality Data Sources",
+  description: "Coverage matrix showing which data types are available for each Alberta municipality — assessments, permits, businesses, vacant lots, construction, and zoning data.",
 };
 
 const ALL_CAPABILITIES: { key: DataCapability; label: string; icon: string }[] = [

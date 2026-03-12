@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+
+export const metadata: Metadata = {
+  title: "Alberta Drilling & Well Activity",
+  description: "AER well licence data, drilling activity trends, oil and gas production volumes, and oilfield service activity across Alberta.",
+};
 import {
   TimeSeriesAreaChart,
   MultiSeriesLineChart,

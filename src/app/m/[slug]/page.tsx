@@ -30,9 +30,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const config = getMunicipality(slug);
   if (!config) return { title: "Municipality Not Found" };
+  const title = `${config.name} Economic Data & Development Activity`;
+  const description = `${config.description} Live building permits, property assessments, business activity, and development data for ${config.name}, Alberta.`;
   return {
-    title: `${config.name} — Alberta Pulse Check`,
-    description: config.description,
+    title,
+    description,
+    openGraph: {
+      title: `${title} | Alberta Pulse Check`,
+      description,
+      url: `https://albertapulsecheck.ca/m/${slug}`,
+      type: "website",
+    },
   };
 }
 

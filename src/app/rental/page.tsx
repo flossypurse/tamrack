@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+
+export const metadata: Metadata = {
+  title: "Alberta Rental Market Intelligence",
+  description: "CMHC rental vacancy rates, average rents by unit type, and rental market trends across Alberta census metropolitan areas.",
+};
 import {
   TimeSeriesAreaChart,
   MultiSeriesLineChart,

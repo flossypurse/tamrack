@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Home,
@@ -28,25 +29,25 @@ const roles = [
     label: "Land Developer / Homebuilder",
     icon: Building,
     description: "Vacant land, development pipeline, absorption rates, permit velocity, and buildable inventory.",
-    ready: false,
+    ready: true,
     color: "text-accent",
-    datasets: ["Vacant Lots", "Housing Starts", "Dev Stages", "Population Growth"],
+    datasets: ["Housing Starts", "Building Permits", "Population", "Dwellings", "Infrastructure"],
   },
   {
     slug: "investor",
     label: "Property Investor",
     icon: TrendingUp,
     description: "Cap rate proxies, rental yield, assessment growth, and macro cycle positioning.",
-    ready: false,
+    ready: true,
     color: "text-accent-amber",
-    datasets: ["Vacancy Rates", "Rents", "Assessments", "BoC Rates", "Migration"],
+    datasets: ["Vacancy Rates", "Rents", "Assessments", "BoC Rates", "Immigration", "EI Beneficiaries"],
   },
   {
     slug: "edo",
     label: "Economic Development Officer",
     icon: Landmark,
     description: "Municipal benchmarks, investment scorecards, competitor analysis, and council-ready reports.",
-    ready: false,
+    ready: true,
     color: "text-purple-400",
     datasets: ["12 Regional Indicators", "Major Projects", "Tax Rates", "Incorporations"],
   },
@@ -87,6 +88,11 @@ const roles = [
     datasets: ["All Indicators", "Snapshot Diffs", "Compare Tool"],
   },
 ];
+
+export const metadata: Metadata = {
+  title: "Alberta Intelligence Briefings",
+  description: "Role-specific intelligence reports for Alberta decision-makers — realtors, investors, developers, and economic development officers.",
+};
 
 export default function BriefingPage() {
   return (

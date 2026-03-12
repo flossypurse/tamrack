@@ -11,8 +11,8 @@ import {
 import { Globe, Building2, ArrowRight, MapPin } from "lucide-react";
 
 export const metadata = {
-  title: "All Municipalities — Alberta Pulse Check",
-  description: "Property data for every municipality in Alberta. Assessments, permits, businesses, and development data from free public APIs.",
+  title: "Alberta Municipalities — Economic Data for 22+ Communities",
+  description: "Explore economic data across 22 live Alberta municipalities — building permits, property assessments, business activity, and development trends from Edmonton to Calgary and beyond.",
 };
 
 function MunicipalityCard({ config }: { config: MunicipalityConfig }) {

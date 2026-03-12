@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+
+export const metadata: Metadata = {
+  title: "Alberta Economic Dashboard",
+  description: "Live macro economic indicators for Alberta — GDP, unemployment, inflation, interest rates, and retail sales updated daily from government sources.",
+};
 import { TimeSeriesAreaChart, TimeSeriesBarChart, HorizontalBarChart } from "@/components/chart";
 import { DataSourceStatus } from "@/components/data-status";
 import {

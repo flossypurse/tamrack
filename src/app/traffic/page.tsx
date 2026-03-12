@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import {
@@ -422,6 +423,11 @@ async function CalgaryIncidentsSection() {
 // ============================================================
 // Page
 // ============================================================
+
+export const metadata: Metadata = {
+  title: "Alberta Highway Conditions & Traffic",
+  description: "Real-time highway conditions, road closures, and traffic events across Alberta's major transportation corridors.",
+};
 
 export default function TrafficPage() {
   return (

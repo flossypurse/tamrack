@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Card } from "@/components/card";
 import {
   Database,
@@ -901,6 +902,11 @@ const categories: Category[] = [
 // ============================================================
 // Page Component
 // ============================================================
+
+export const metadata: Metadata = {
+  title: "Data Sources — Alberta Pulse Check",
+  description: "Complete list of government data sources powering Alberta Pulse Check — Bank of Canada, Statistics Canada, Alberta Open Data, and more.",
+};
 
 export default function SourcesPage() {
   return (

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader } from "@/components/card";
 import {
@@ -234,6 +235,11 @@ function LoadingCard() {
 // ============================================================
 // Page
 // ============================================================
+
+export const metadata: Metadata = {
+  title: "Alberta Growth Corridors",
+  description: "Alberta municipalities ranked by composite growth score — population, permits, business formation, assessment growth, and migration.",
+};
 
 export default function CorridorsPage() {
   return (

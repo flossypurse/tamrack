@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import {
@@ -348,6 +349,11 @@ function InducedSeismicityContext() {
 // ============================================================
 // Page
 // ============================================================
+
+export const metadata: Metadata = {
+  title: "Alberta Seismic Activity & Earthquakes",
+  description: "Track earthquakes in Alberta including induced seismicity from oil and gas operations. Live data from Natural Resources Canada.",
+};
 
 export default function EarthquakesPage() {
   return (

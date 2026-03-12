@@ -212,13 +212,14 @@ export const BOC_SERIES = {
 export async function fetchEdmontonData(
   datasetId: string,
   params?: Record<string, string>
-) {
+): Promise<unknown[]> {
   const url = new URL(`${EDMONTON_BASE}/${datasetId}.json`);
   if (params) {
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   }
   const res = await fetch(url.toString(), { next: { revalidate: 3600 } });
-  return res.json();
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
 }
 
 // Key Edmonton dataset IDs

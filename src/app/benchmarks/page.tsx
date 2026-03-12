@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader } from "@/components/card";
 import {
@@ -288,6 +289,11 @@ function LoadingCard() {
 // ============================================================
 // Page
 // ============================================================
+
+export const metadata: Metadata = {
+  title: "Alberta Municipal Benchmarks",
+  description: "Side-by-side benchmark comparison of Alberta municipalities — permits, assessments, population, business activity, and economic indicators.",
+};
 
 export default function BenchmarksPage() {
   return (

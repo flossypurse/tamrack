@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
+
+export const metadata: Metadata = {
+  title: "Alberta Agriculture & Farm Economy",
+  description: "Alberta's agricultural sector data — farm cash receipts, commodity price indexes, crop vs livestock trends, and ag GDP contribution.",
+};
 import {
   TimeSeriesAreaChart,
   TimeSeriesBarChart,

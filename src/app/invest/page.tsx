@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+
+export const metadata: Metadata = {
+  title: "Alberta Investment Thesis",
+  description: "Macro cycle position, energy outlook, rate environment, and migration momentum — should you invest in Alberta real estate right now?",
+};
 import {
   TimeSeriesAreaChart,
   TimeSeriesBarChart,
