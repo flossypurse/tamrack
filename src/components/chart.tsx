@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   AreaChart,
   Area,
@@ -24,6 +25,7 @@ import {
   StrathconaAssessment,
   StAlbertAssessment,
 } from "@/lib/data-sources";
+import { getChartTheme } from "@/lib/chart-theme";
 import { format, parseISO } from "date-fns";
 
 function formatDate(dateStr: unknown): string {
@@ -43,6 +45,29 @@ function formatValue(value: number, compact?: boolean): string {
   return value.toLocaleString();
 }
 
+function useChartTheme() {
+  const [theme, setTheme] = useState(getChartTheme);
+  useEffect(() => {
+    // Re-read on mount and when class changes (theme toggle)
+    const update = () => setTheme(getChartTheme());
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+  return theme;
+}
+
+function tooltipStyle(t: ReturnType<typeof getChartTheme>) {
+  return {
+    backgroundColor: t.tooltipBg,
+    border: `1px solid ${t.tooltipBorder}`,
+    borderRadius: "8px",
+    fontSize: "12px",
+    color: t.tooltipText,
+  };
+}
+
 export function TimeSeriesAreaChart({
   data,
   color = "#3b82f6",
@@ -58,6 +83,8 @@ export function TimeSeriesAreaChart({
   valuePrefix?: string;
   valueSuffix?: string;
 }) {
+  const t = useChartTheme();
+
   if (!data.length) {
     return (
       <div
@@ -78,17 +105,17 @@ export function TimeSeriesAreaChart({
             <stop offset="100%" stopColor={color} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+        <CartesianGrid strokeDasharray="3 3" stroke={t.grid} />
         <XAxis
           dataKey="date"
           tickFormatter={formatDate}
-          stroke="#71717a"
+          stroke={t.axis}
           fontSize={10}
           tickLine={false}
           axisLine={false}
         />
         <YAxis
-          stroke="#71717a"
+          stroke={t.axis}
           fontSize={10}
           tickLine={false}
           axisLine={false}
@@ -98,13 +125,7 @@ export function TimeSeriesAreaChart({
           width={40}
         />
         <Tooltip
-          contentStyle={{
-            backgroundColor: "#27272a",
-            border: "1px solid #3f3f46",
-            borderRadius: "8px",
-            fontSize: "12px",
-            color: "#fafafa",
-          }}
+          contentStyle={tooltipStyle(t)}
           formatter={(value) => [
             `${valuePrefix}${formatValue(Number(value), false)}${valueSuffix}`,
             "Value",
@@ -138,6 +159,8 @@ export function TimeSeriesBarChart({
   valuePrefix?: string;
   valueSuffix?: string;
 }) {
+  const t = useChartTheme();
+
   if (!data.length) {
     return (
       <div
@@ -152,17 +175,17 @@ export function TimeSeriesBarChart({
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+        <CartesianGrid strokeDasharray="3 3" stroke={t.grid} />
         <XAxis
           dataKey="date"
           tickFormatter={formatDate}
-          stroke="#71717a"
+          stroke={t.axis}
           fontSize={10}
           tickLine={false}
           axisLine={false}
         />
         <YAxis
-          stroke="#71717a"
+          stroke={t.axis}
           fontSize={10}
           tickLine={false}
           axisLine={false}
@@ -172,13 +195,7 @@ export function TimeSeriesBarChart({
           width={40}
         />
         <Tooltip
-          contentStyle={{
-            backgroundColor: "#27272a",
-            border: "1px solid #3f3f46",
-            borderRadius: "8px",
-            fontSize: "12px",
-            color: "#fafafa",
-          }}
+          contentStyle={tooltipStyle(t)}
           formatter={(value) => [
             `${valuePrefix}${formatValue(Number(value), false)}${valueSuffix}`,
             "Value",
@@ -204,6 +221,8 @@ export function HorizontalBarChart({
   valuePrefix?: string;
   valueSuffix?: string;
 }) {
+  const t = useChartTheme();
+
   if (!data.length) {
     return (
       <div
@@ -222,10 +241,10 @@ export function HorizontalBarChart({
         layout="vertical"
         margin={{ top: 5, right: 10, bottom: 5, left: 0 }}
       >
-        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke={t.grid} horizontal={false} />
         <XAxis
           type="number"
-          stroke="#71717a"
+          stroke={t.axis}
           fontSize={10}
           tickLine={false}
           axisLine={false}
@@ -236,20 +255,14 @@ export function HorizontalBarChart({
         <YAxis
           type="category"
           dataKey="ward"
-          stroke="#71717a"
+          stroke={t.axis}
           fontSize={9}
           tickLine={false}
           axisLine={false}
           width={80}
         />
         <Tooltip
-          contentStyle={{
-            backgroundColor: "#27272a",
-            border: "1px solid #3f3f46",
-            borderRadius: "8px",
-            fontSize: "12px",
-            color: "#fafafa",
-          }}
+          contentStyle={tooltipStyle(t)}
           formatter={(value) => [
             `${valuePrefix}${formatValue(Number(value), false)}${valueSuffix}`,
             "Avg Assessment",
@@ -287,6 +300,8 @@ export function MultiSeriesLineChart({
   height?: number;
   dualAxis?: boolean;
 }) {
+  const t = useChartTheme();
+
   if (!data.length) {
     return (
       <div
@@ -304,18 +319,18 @@ export function MultiSeriesLineChart({
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+        <CartesianGrid strokeDasharray="3 3" stroke={t.grid} />
         <XAxis
           dataKey="date"
           tickFormatter={formatDate}
-          stroke="#71717a"
+          stroke={t.axis}
           fontSize={10}
           tickLine={false}
           axisLine={false}
         />
         <YAxis
           yAxisId="left"
-          stroke="#71717a"
+          stroke={t.axis}
           fontSize={10}
           tickLine={false}
           axisLine={false}
@@ -329,7 +344,7 @@ export function MultiSeriesLineChart({
           <YAxis
             yAxisId="right"
             orientation="right"
-            stroke="#71717a"
+            stroke={t.axis}
             fontSize={10}
             tickLine={false}
             axisLine={false}
@@ -341,13 +356,7 @@ export function MultiSeriesLineChart({
           />
         )}
         <Tooltip
-          contentStyle={{
-            backgroundColor: "#27272a",
-            border: "1px solid #3f3f46",
-            borderRadius: "8px",
-            fontSize: "12px",
-            color: "#fafafa",
-          }}
+          contentStyle={tooltipStyle(t)}
           labelFormatter={formatDate}
           formatter={(value: unknown, name: unknown) => {
             const n = String(name);
@@ -359,7 +368,7 @@ export function MultiSeriesLineChart({
           }}
         />
         <Legend
-          wrapperStyle={{ fontSize: "11px", color: "#a1a1aa" }}
+          wrapperStyle={{ fontSize: "11px", color: t.axis }}
           formatter={(value) => {
             const s = series.find((s) => s.key === value);
             return s?.label || String(value);
@@ -394,6 +403,8 @@ export function StackedAreaChart({
   height?: number;
   compact?: boolean;
 }) {
+  const t = useChartTheme();
+
   if (!data.length) {
     return (
       <div
@@ -408,17 +419,17 @@ export function StackedAreaChart({
   return (
     <ResponsiveContainer width="100%" height={height}>
       <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+        <CartesianGrid strokeDasharray="3 3" stroke={t.grid} />
         <XAxis
           dataKey="date"
           tickFormatter={formatDate}
-          stroke="#71717a"
+          stroke={t.axis}
           fontSize={10}
           tickLine={false}
           axisLine={false}
         />
         <YAxis
-          stroke="#71717a"
+          stroke={t.axis}
           fontSize={10}
           tickLine={false}
           axisLine={false}
@@ -426,13 +437,7 @@ export function StackedAreaChart({
           width={40}
         />
         <Tooltip
-          contentStyle={{
-            backgroundColor: "#27272a",
-            border: "1px solid #3f3f46",
-            borderRadius: "8px",
-            fontSize: "12px",
-            color: "#fafafa",
-          }}
+          contentStyle={tooltipStyle(t)}
           labelFormatter={formatDate}
           formatter={(value: unknown, name: unknown) => {
             const n = String(name);
@@ -441,7 +446,7 @@ export function StackedAreaChart({
           }}
         />
         <Legend
-          wrapperStyle={{ fontSize: "11px", color: "#a1a1aa" }}
+          wrapperStyle={{ fontSize: "11px", color: t.axis }}
           formatter={(value) => {
             const s = series.find((s) => s.key === value);
             return s?.label || String(value);
@@ -482,6 +487,8 @@ export function NeighbourhoodBarChart({
   valueSuffix?: string;
   tooltipLabel?: string;
 }) {
+  const t = useChartTheme();
+
   if (!data.length) {
     return (
       <div
@@ -500,10 +507,10 @@ export function NeighbourhoodBarChart({
         layout="vertical"
         margin={{ top: 5, right: 10, bottom: 5, left: 0 }}
       >
-        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke={t.grid} horizontal={false} />
         <XAxis
           type="number"
-          stroke="#71717a"
+          stroke={t.axis}
           fontSize={10}
           tickLine={false}
           axisLine={false}
@@ -514,7 +521,7 @@ export function NeighbourhoodBarChart({
         <YAxis
           type="category"
           dataKey={labelKey}
-          stroke="#71717a"
+          stroke={t.axis}
           fontSize={9}
           tickLine={false}
           axisLine={false}
@@ -524,13 +531,7 @@ export function NeighbourhoodBarChart({
           }
         />
         <Tooltip
-          contentStyle={{
-            backgroundColor: "#27272a",
-            border: "1px solid #3f3f46",
-            borderRadius: "8px",
-            fontSize: "12px",
-            color: "#fafafa",
-          }}
+          contentStyle={tooltipStyle(t)}
           formatter={(value) => [
             `${valuePrefix}${formatValue(Number(value), false)}${valueSuffix}`,
             tooltipLabel,

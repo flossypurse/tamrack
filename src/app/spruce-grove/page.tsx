@@ -81,7 +81,7 @@ async function SubdivisionChart() {
       <NeighbourhoodBarChart
         data={chartData}
         dataKey="permits"
-        color="#14b8a6"
+        color="#3b8fdb"
         tooltipLabel="Addresses"
         height={520}
       />

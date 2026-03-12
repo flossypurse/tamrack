@@ -122,7 +122,7 @@ export default function AdminPage() {
           <CardHeader title="Recent Signups" subtitle={`${stats.signupsLast30} in last 30 days`} />
           <div className="mt-2 space-y-1 max-h-96 overflow-y-auto">
             {stats.recentUsers.map((u) => (
-              <div key={u.email} className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-white/[0.02] text-sm">
+              <div key={u.email} className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-foreground/[0.05] text-sm">
                 <div>
                   <span className="text-foreground">{u.email}</span>
                   {u.name && <span className="text-muted ml-2 text-xs">({u.name})</span>}

@@ -10,7 +10,8 @@ import {
   Flame,
   Key,
   ArrowRight,
-  Check,
+  Database,
+  Shield,
 } from "lucide-react";
 
 const features = [
@@ -24,15 +25,17 @@ const features = [
   { icon: Key, title: "REST API", desc: "Permits, assessments, signals, macro data — programmatic access" },
 ];
 
-const included = [
-  "20+ live data dashboards",
-  "5 municipality deep-dives",
-  "Neighbourhood-level signals",
-  "Leading indicator analysis",
-  "REST API with 1,000 req/day",
-  "Daily data snapshots",
-  "Historical trend tracking",
-  "New data sources added monthly",
+const dataSources = [
+  "Bank of Canada",
+  "Statistics Canada",
+  "Edmonton Open Data",
+  "Alberta Open Data",
+  "CMHC",
+  "Parkland County",
+  "Stony Plain",
+  "Spruce Grove",
+  "Strathcona County",
+  "St. Albert",
 ];
 
 export default function LandingPage() {
@@ -41,36 +44,75 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-accent/5 via-transparent to-transparent" />
-        <div className="relative max-w-5xl mx-auto px-4 py-20 sm:py-32 text-center space-y-6">
+        <div className="relative max-w-5xl mx-auto px-4 py-20 sm:py-28 text-center space-y-6">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Activity size={32} className="text-accent" />
             <span className="text-xl font-bold">Alberta Pulse Check</span>
           </div>
           <h1 className="text-3xl sm:text-5xl font-bold leading-tight">
-            Real-time economic intelligence
+            Economic intelligence
             <br />
-            <span className="text-accent">for Alberta decision-makers</span>
+            <span className="text-accent">built in Alberta, for Alberta</span>
           </h1>
           <p className="text-muted text-lg max-w-2xl mx-auto">
-            Live data from Bank of Canada, Statistics Canada, Edmonton Open Data,
-            and 5 municipality APIs — processed, cross-analyzed, and delivered to your dashboard.
+            Live data from government sources — processed, cross-analyzed, and delivered
+            to your dashboard. No guesswork, no stale reports.
           </p>
-          <div className="flex items-center justify-center gap-4 pt-4">
+
+          {/* Data sources — prominent, above CTA */}
+          <div className="max-w-3xl mx-auto pt-2">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <Database size={14} className="text-accent-gold" />
+              <span className="text-xs font-medium text-muted uppercase tracking-wider">
+                Live data from {dataSources.length} government sources
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2">
+              {dataSources.map((source) => (
+                <span
+                  key={source}
+                  className="px-3 py-1 bg-card border border-card-border rounded-full text-xs font-medium text-foreground/80"
+                >
+                  {source}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-4 pt-6">
             <Link
               href="/login"
-              className="flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-lg font-semibold hover:bg-accent/90 transition-colors"
+              className="flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-lg font-semibold hover:bg-accent-hover transition-colors"
             >
-              Start 14-day free trial
+              Try it free for 14 days
               <ArrowRight size={16} />
             </Link>
             <Link
-              href="#pricing"
+              href="/dashboard"
               className="px-6 py-3 border border-card-border rounded-lg text-foreground hover:bg-card transition-colors"
             >
-              See pricing
+              Explore the dashboard
             </Link>
           </div>
           <p className="text-xs text-muted/50">No credit card required</p>
+        </div>
+      </section>
+
+      {/* Trust bar */}
+      <section className="border-y border-card-border bg-card/50">
+        <div className="max-w-5xl mx-auto px-4 py-5 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted">
+          <div className="flex items-center gap-2">
+            <Shield size={14} className="text-accent-green" />
+            <span>100% government data sources</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Activity size={14} className="text-accent" />
+            <span>Updated daily</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <MapPin size={14} className="text-accent-gold" />
+            <span>Built in Parkland County, AB</span>
+          </div>
         </div>
       </section>
 
@@ -90,56 +132,28 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Data Sources */}
+      {/* CTA */}
       <section className="max-w-5xl mx-auto px-4 py-16">
-        <h2 className="text-center text-sm font-medium text-muted uppercase tracking-wider mb-2">
-          Live data from
-        </h2>
-        <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted/70 py-6">
-          <span>Bank of Canada</span>
-          <span className="text-card-border">|</span>
-          <span>Statistics Canada</span>
-          <span className="text-card-border">|</span>
-          <span>Edmonton Open Data</span>
-          <span className="text-card-border">|</span>
-          <span>Alberta Open Data</span>
-          <span className="text-card-border">|</span>
-          <span>CMHC</span>
-          <span className="text-card-border">|</span>
-          <span>5 Municipal APIs</span>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section id="pricing" className="max-w-5xl mx-auto px-4 py-16">
-        <h2 className="text-center text-sm font-medium text-muted uppercase tracking-wider mb-8">
-          Simple pricing
-        </h2>
-        <div className="max-w-md mx-auto bg-card border-2 border-accent/30 rounded-xl p-8 space-y-6">
-          <div className="text-center space-y-1">
-            <h3 className="text-lg font-bold">Alberta Pulse Pro</h3>
-            <div className="flex items-baseline justify-center gap-1">
-              <span className="text-4xl font-bold">$29</span>
-              <span className="text-muted">/month CAD</span>
-            </div>
-            <p className="text-xs text-muted">14-day free trial — no credit card required</p>
+        <div className="max-w-lg mx-auto text-center space-y-4">
+          <h2 className="text-xl font-bold">Start making data-driven decisions</h2>
+          <p className="text-sm text-muted">
+            14-day free trial. Plans start at $29/month CAD.
+          </p>
+          <div className="flex items-center justify-center gap-4">
+            <Link
+              href="/login"
+              className="flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-lg font-semibold hover:bg-accent-hover transition-colors"
+            >
+              Start free trial
+              <ArrowRight size={16} />
+            </Link>
+            <Link
+              href="/pricing"
+              className="px-6 py-3 border border-card-border rounded-lg text-foreground hover:bg-card transition-colors text-sm"
+            >
+              See pricing
+            </Link>
           </div>
-
-          <ul className="space-y-2">
-            {included.map((item) => (
-              <li key={item} className="flex items-start gap-2 text-sm">
-                <Check size={14} className="text-accent-green mt-0.5 shrink-0" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-
-          <Link
-            href="/login"
-            className="block text-center px-6 py-3 bg-accent text-white rounded-lg font-semibold hover:bg-accent/90 transition-colors"
-          >
-            Start free trial
-          </Link>
         </div>
       </section>
 
@@ -149,10 +163,13 @@ export default function LandingPage() {
           <div className="flex items-center gap-2">
             <Activity size={14} className="text-accent" />
             <span>Alberta Pulse Check</span>
+            <span className="text-card-border">|</span>
+            <span>Built in Parkland County, Alberta</span>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+            <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
             <Link href="/login" className="hover:text-foreground transition-colors">Sign in</Link>
           </div>
         </div>

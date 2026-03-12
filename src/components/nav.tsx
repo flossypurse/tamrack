@@ -23,13 +23,21 @@ import {
   Menu,
   X,
   Building2,
-  TreePine,
-  Landmark,
   CreditCard,
   User,
   LogOut,
   Shield,
+  Globe,
+  Sun,
+  Moon,
 } from "lucide-react";
+import { useTheme } from "next-themes";
+import {
+  getLiveMunicipalities,
+  getMunicipalitiesByRegion,
+  REGION_LABELS,
+  REGION_ORDER,
+} from "@/lib/municipality-registry";
 
 // ============================================================
 // Nav structure — add new pages here
@@ -38,7 +46,43 @@ import {
 type NavItem = { href: string; label: string; icon: React.ElementType };
 type NavSection = { label: string; icon: React.ElementType; items: NavItem[] };
 
-const sections: NavSection[] = [
+// Build municipality nav items grouped by region
+function buildMunicipalityNav(): NavSection[] {
+  const byRegion = getMunicipalitiesByRegion();
+  const sections: NavSection[] = [];
+
+  // "Explore All" link
+  sections.push({
+    label: "Municipalities",
+    icon: Globe,
+    items: [
+      { href: "/municipalities", label: `All (${getLiveMunicipalities().length})`, icon: Globe },
+      // Edmonton (special — uses SODA, not registry)
+      { href: "/dashboard", label: "Edmonton", icon: Building2 },
+    ],
+  });
+
+  for (const region of REGION_ORDER) {
+    const municipalities = byRegion[region];
+    if (!municipalities || municipalities.length === 0) continue;
+
+    sections.push({
+      label: REGION_LABELS[region],
+      icon: Building2,
+      items: municipalities
+        .sort((a, b) => (b.population || 0) - (a.population || 0))
+        .map((m) => ({
+          href: `/m/${m.slug}`,
+          label: m.name,
+          icon: Building2,
+        })),
+    });
+  }
+
+  return sections;
+}
+
+const coreSections: NavSection[] = [
   {
     label: "Overview",
     icon: LayoutDashboard,
@@ -68,17 +112,9 @@ const sections: NavSection[] = [
       { href: "/micro", label: "Neighbourhoods", icon: MapPin },
     ],
   },
-  {
-    label: "Municipalities",
-    icon: Building2,
-    items: [
-      { href: "/parkland-county", label: "Parkland County", icon: TreePine },
-      { href: "/stony-plain", label: "Stony Plain", icon: Building2 },
-      { href: "/spruce-grove", label: "Spruce Grove", icon: Landmark },
-      { href: "/strathcona", label: "Strathcona County", icon: Building2 },
-      { href: "/st-albert", label: "St. Albert", icon: Building2 },
-    ],
-  },
+];
+
+const toolsSections: NavSection[] = [
   {
     label: "Tools",
     icon: GraduationCap,
@@ -99,6 +135,28 @@ export function Nav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  // Build full section list (municipalities are dynamic from registry)
+  const municipalitySections = buildMunicipalityNav();
+  const allSections = [...coreSections, ...municipalitySections, ...toolsSections];
+
+  // Auto-collapse municipality regions by default (keep core sections open)
+  useEffect(() => {
+    const defaults: Record<string, boolean> = {};
+    for (const region of REGION_ORDER) {
+      const label = REGION_LABELS[region];
+      // Collapse regions that don't have the active page
+      const section = municipalitySections.find((s) => s.label === label);
+      if (section && !section.items.some((item) => pathname.startsWith(item.href))) {
+        defaults[label] = true;
+      }
+    }
+    setCollapsed((prev) => ({ ...defaults, ...prev }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Close mobile nav on route change
   useEffect(() => {
@@ -124,6 +182,7 @@ export function Nav() {
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
+    if (href === "/municipalities") return pathname === "/municipalities";
     return pathname.startsWith(href);
   };
 
@@ -139,13 +198,22 @@ export function Nav() {
   const navContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="px-4 py-5 border-b border-card-border">
+      <div className="px-4 py-5 border-b border-card-border flex items-center justify-between">
         <Link href="/dashboard" className="flex items-center gap-2.5">
           <Activity size={22} className="text-accent shrink-0" />
           <span className="text-base font-semibold tracking-tight">
             Alberta Pulse Check
           </span>
         </Link>
+        {mounted && (
+          <button
+            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            className="p-1.5 rounded-lg hover:bg-foreground/[0.05] text-muted hover:text-foreground transition-colors"
+            aria-label="Toggle theme"
+          >
+            {resolvedTheme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+        )}
       </div>
 
       {/* Trial banner */}
@@ -157,7 +225,7 @@ export function Nav() {
 
       {/* Sections */}
       <div className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
-        {sections.map((section) => {
+        {allSections.map((section) => {
           const isOpen = !collapsed[section.label];
           const sectionActive = isSectionActive(section);
 
@@ -185,7 +253,7 @@ export function Nav() {
               {/* Section items */}
               <div
                 className={`overflow-hidden transition-all duration-200 ${
-                  isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                  isOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
                 }`}
               >
                 <div className="ml-2 border-l border-card-border pl-1 space-y-0.5 py-0.5">
@@ -198,7 +266,7 @@ export function Nav() {
                         className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
                           active
                             ? "bg-accent/10 text-accent font-medium"
-                            : "text-muted hover:text-foreground hover:bg-white/[0.03]"
+                            : "text-muted hover:text-foreground hover:bg-foreground/[0.05]"
                         }`}
                       >
                         <item.icon size={14} className={active ? "text-accent" : ""} />
@@ -221,7 +289,7 @@ export function Nav() {
             className={`flex items-center gap-2.5 mx-2 mt-2 px-3 py-1.5 rounded-md text-sm transition-colors ${
               pathname === "/admin"
                 ? "bg-accent/10 text-accent font-medium"
-                : "text-muted hover:text-foreground hover:bg-white/[0.03]"
+                : "text-muted hover:text-foreground hover:bg-foreground/[0.05]"
             }`}
           >
             <Shield size={14} />
@@ -231,7 +299,7 @@ export function Nav() {
         <div className="relative px-2 py-2">
           <button
             onClick={() => setUserMenuOpen(!userMenuOpen)}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-white/[0.03] transition-colors text-left"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-foreground/[0.05] transition-colors text-left"
           >
             <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
               <User size={14} className="text-accent" />
@@ -248,14 +316,14 @@ export function Nav() {
             <div className="absolute bottom-full left-2 right-2 mb-1 bg-card border border-card-border rounded-lg shadow-lg overflow-hidden z-50">
               <Link
                 href="/account"
-                className="flex items-center gap-2.5 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-white/[0.03] transition-colors"
+                className="flex items-center gap-2.5 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
               >
                 <User size={14} />
                 Account
               </Link>
               <Link
                 href="/billing"
-                className="flex items-center gap-2.5 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-white/[0.03] transition-colors"
+                className="flex items-center gap-2.5 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
               >
                 <CreditCard size={14} />
                 Billing & API Keys
@@ -283,13 +351,24 @@ export function Nav() {
             <Activity size={18} className="text-accent" />
             <span className="text-sm font-semibold">Alberta Pulse Check</span>
           </Link>
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="p-1.5 rounded-lg hover:bg-white/[0.05] text-muted hover:text-foreground transition-colors"
-            aria-label="Toggle navigation"
-          >
-            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          <div className="flex items-center gap-1">
+            {mounted && (
+              <button
+                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                className="p-1.5 rounded-lg hover:bg-foreground/[0.05] text-muted hover:text-foreground transition-colors"
+                aria-label="Toggle theme"
+              >
+                {resolvedTheme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+              </button>
+            )}
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="p-1.5 rounded-lg hover:bg-foreground/[0.05] text-muted hover:text-foreground transition-colors"
+              aria-label="Toggle navigation"
+            >
+              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
         </div>
       </div>
 

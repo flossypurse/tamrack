@@ -2,8 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 // Routes that don't require auth
-const publicRoutes = ["/", "/login", "/terms", "/privacy", "/pricing"];
-const publicPrefixes = ["/api/auth", "/api/webhooks"];
+const publicRoutes = ["/", "/login", "/terms", "/privacy", "/pricing", "/municipalities"];
+const publicPrefixes = ["/api/auth", "/api/webhooks", "/embed/"];
+
+// Free pages — visible without subscription (part of the funnel)
+// Users still need to be logged in, but don't need an active subscription
+const freePages = [
+  "/dashboard",
+  "/energy",
+  "/cycle",
+  "/diversification",
+  "/labour",
+  "/migration",
+  "/agriculture",
+  "/signals",
+  "/learn",
+  "/sources",
+  "/municipalities",
+];
 
 function isPublicRoute(pathname: string) {
   if (publicRoutes.includes(pathname)) return true;
@@ -82,7 +98,12 @@ export async function middleware(req: NextRequest) {
   const status = token.subscriptionStatus as string | undefined;
   const trialEnd = token.trialEnd as string | null | undefined;
   if (!isActiveSubscription(status, trialEnd)) {
+    // Always allow billing/account pages
     if (pathname === "/billing" || pathname === "/account") {
+      return NextResponse.next();
+    }
+    // Allow free funnel pages without subscription
+    if (freePages.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
       return NextResponse.next();
     }
     return NextResponse.redirect(new URL("/billing?expired=1", req.url));

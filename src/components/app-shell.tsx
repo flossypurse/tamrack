@@ -7,7 +7,7 @@ const publicRoutes = ["/", "/login", "/terms", "/privacy", "/pricing"];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isPublic = publicRoutes.includes(pathname);
+  const isPublic = publicRoutes.includes(pathname) || pathname.startsWith("/embed/");
 
   if (isPublic) {
     return <>{children}</>;

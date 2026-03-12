@@ -292,7 +292,7 @@ async function PopulationChart() {
         subtitle="Annual estimates, last 20 years"
         badge="LIVE"
       />
-      <TimeSeriesAreaChart data={data} color="#14b8a6" compact />
+      <TimeSeriesAreaChart data={data} color="#3b8fdb" compact />
     </Card>
   );
 }
