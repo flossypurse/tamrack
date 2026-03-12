@@ -7,6 +7,7 @@ export function SQLiteAdapter(): Adapter {
 
   return {
     createUser(user) {
+      console.log(`[auth-adapter] createUser: email=${user.email}`);
       const id = randomUUID();
       db.prepare(
         `INSERT INTO users (id, email, name, image, email_verified) VALUES (?, ?, ?, ?, ?)`
@@ -41,6 +42,7 @@ export function SQLiteAdapter(): Adapter {
 
     getUserByEmail(email) {
       const row = db.prepare(`SELECT * FROM users WHERE email = ?`).get(email) as Record<string, string> | undefined;
+      console.log(`[auth-adapter] getUserByEmail: email=${email}, found=${!!row}`);
       if (!row) return null;
       return toAdapterUser(row);
     },
@@ -102,6 +104,7 @@ export function SQLiteAdapter(): Adapter {
     },
 
     createVerificationToken(token) {
+      console.log(`[auth-adapter] createVerificationToken: identifier=${token.identifier}, expires=${token.expires.toISOString()}`);
       db.prepare(
         `INSERT INTO verification_tokens (identifier, token, expires) VALUES (?, ?, ?)`
       ).run(token.identifier, token.token, token.expires.toISOString());
@@ -109,9 +112,11 @@ export function SQLiteAdapter(): Adapter {
     },
 
     useVerificationToken({ identifier, token }) {
+      console.log(`[auth-adapter] useVerificationToken: identifier=${identifier}, token=${token.substring(0, 8)}...`);
       const row = db.prepare(
         `SELECT * FROM verification_tokens WHERE identifier = ? AND token = ?`
       ).get(identifier, token) as { identifier: string; token: string; expires: string } | undefined;
+      console.log(`[auth-adapter] useVerificationToken result: ${row ? `found, expires=${row.expires}` : "NOT FOUND"}`);
       if (!row) return null;
       db.prepare(
         `DELETE FROM verification_tokens WHERE identifier = ? AND token = ?`

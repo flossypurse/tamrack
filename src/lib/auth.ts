@@ -59,6 +59,7 @@ async function sendVerificationRequest(params: {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  debug: true,
   trustHost: true,
   adapter: SQLiteAdapter(),
   session: { strategy: "jwt" },
