@@ -9,8 +9,8 @@ import {
 
 // GET /api/environment?type=water|wildfires|earthquakes
 export async function GET(request: NextRequest) {
-  const authError = await authenticateApiRequest(request);
-  if (authError) return authError;
+  const authResult = await authenticateApiRequest(request);
+  if (!authResult.authorized) return authResult.response;
 
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") || "water";
