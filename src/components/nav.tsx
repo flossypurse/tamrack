@@ -48,6 +48,7 @@ import {
   GitCompare,
   Search,
   Wrench,
+  Briefcase,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
@@ -115,6 +116,7 @@ const coreSections: NavSection[] = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: Activity },
       { href: "/signals", label: "Signals", icon: Radar },
+      { href: "/briefing", label: "Briefings", icon: Briefcase },
     ],
   },
   {

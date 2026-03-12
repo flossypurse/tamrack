@@ -485,22 +485,19 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Airdrie",
     region: "calgary-metro",
     population: 80000,
-    status: "planned",
+    status: "live",
     endpoints: {
-      parcels: { url: "https://services.arcgis.com/xUhfOfxKjn65QCmh/arcgis/rest/services/Assessment_Current/FeatureServer/0", type: "FeatureServer" },
+      zoning: { url: "https://services1.arcgis.com/bctnJobT0aahg98G/arcgis/rest/services/Airdrie_Land_Use_Districts/FeatureServer/0", type: "FeatureServer" },
+      parcels: { url: "https://services1.arcgis.com/bctnJobT0aahg98G/arcgis/rest/services/Airdrie_Address_Points/FeatureServer/0", type: "FeatureServer" },
     },
     fields: {
-      assessmentValue: "TOTAL_ASSESSMENT",
       address: "ADDRESS",
-      zoning: "ZONE",
-      neighbourhood: "NEIGHBOURHOOD",
+      zoning: "LAND_USE_DISTRICT",
+      zoningDescription: "DESCRIPTION",
     },
-    capabilities: ["assessments"],
-    filters: {
-      assessmentWhere: "TOTAL_ASSESSMENT > 0",
-    },
-    dataSource: "City of Airdrie ArcGIS",
-    description: "Fast-growing city north of Calgary. Property assessments with neighbourhood breakdowns.",
+    capabilities: ["zoning"],
+    dataSource: "City of Airdrie ArcGIS Hub",
+    description: "Fast-growing city north of Calgary — land use districts updated weekly.",
     color: "#0ea5e9",
   },
 
@@ -509,22 +506,19 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Cochrane",
     region: "calgary-metro",
     population: 36000,
-    status: "planned",
+    status: "live",
     endpoints: {
-      parcels: { url: "https://services.arcgis.com/xUhfOfxKjn65QCmh/arcgis/rest/services/Cochrane_Assessments/FeatureServer/0", type: "FeatureServer" },
+      zoning: { url: "https://services5.arcgis.com/M1SNYuFIW9v2gSO7/arcgis/rest/services/Land_Use/FeatureServer/13", type: "FeatureServer" },
+      parcels: { url: "https://services5.arcgis.com/M1SNYuFIW9v2gSO7/arcgis/rest/services/Address_Points/FeatureServer/4", type: "FeatureServer" },
     },
     fields: {
-      assessmentValue: "ASSESSED_VALUE",
       address: "ADDRESS",
-      zoning: "ZONE",
-      neighbourhood: "AREA",
+      zoning: "LAND_USE",
+      neighbourhood: "NEIGHBOURHOOD",
     },
-    capabilities: ["assessments"],
-    filters: {
-      assessmentWhere: "ASSESSED_VALUE > 0",
-    },
-    dataSource: "Town of Cochrane ArcGIS",
-    description: "Rapidly growing town west of Calgary in the foothills. Property assessment data.",
+    capabilities: ["zoning"],
+    dataSource: "Town of Cochrane GeoHub",
+    description: "Rapidly growing town west of Calgary — 30+ datasets including population by neighbourhood.",
     color: "#6366f1",
   },
 
@@ -621,6 +615,28 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     notes: ["No assessment values or parcel boundaries available via public API"],
   },
 
+  {
+    slug: "banff",
+    name: "Banff",
+    region: "calgary-metro",
+    population: 9000,
+    status: "live",
+    endpoints: {
+      parcels: { url: "https://maps.banff.ca/arcgis/rest/services/BanffOpenData/BanffOpenData/FeatureServer/1", type: "FeatureServer" },
+      zoning: { url: "https://maps.banff.ca/arcgis/rest/services/BanffOpenData/BanffOpenData/FeatureServer/2", type: "FeatureServer" },
+      devPermits: { url: "https://maps.banff.ca/arcgis/rest/services/DevelopmentPermitViewer/DevelopmentPermitViewer/MapServer/0", type: "MapServer" },
+    },
+    fields: {
+      address: "ADDRESS",
+      zoning: "LU_CODE",
+      zoningDescription: "LU_DESC",
+    },
+    capabilities: ["zoning", "dev_permits"],
+    dataSource: "Town of Banff ArcGIS",
+    description: "Premier mountain community — 12 open data layers plus real-time parking and traffic counters.",
+    color: "#14b8a6",
+  },
+
   // ── CENTRAL ALBERTA ────────────────────────────────────────
 
   {
@@ -693,6 +709,30 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     notes: ["No dollar-value assessments available via public API"],
   },
 
+  {
+    slug: "sylvan-lake",
+    name: "Sylvan Lake",
+    region: "central",
+    population: 16000,
+    status: "live",
+    endpoints: {
+      zoning: { url: "https://geo.sylvanlake.ca/server/rest/services/LandUseService/MapServer/0", type: "MapServer" },
+      parcels: { url: "https://geo.sylvanlake.ca/server/rest/services/ParcelForTownWebMap/FeatureServer/0", type: "FeatureServer" },
+      devPermits: { url: "https://geo.sylvanlake.ca/server/rest/services/DevelopmentMapService/MapServer/0", type: "MapServer" },
+      construction: { url: "https://geo.sylvanlake.ca/server/rest/services/TownProjects/FeatureServer/0", type: "FeatureServer" },
+    },
+    fields: {
+      zoning: "LAND_USE",
+      address: "ADDRESS",
+      projectName: "PROJECT_NAME",
+      projectPhase: "STATUS",
+    },
+    capabilities: ["zoning", "dev_permits", "construction"],
+    dataSource: "Town of Sylvan Lake ArcGIS",
+    description: "Popular lakeside community — comprehensive self-hosted ArcGIS with development, property, and land use data.",
+    color: "#0891b2",
+  },
+
   // ── SOUTHERN ALBERTA ───────────────────────────────────────
 
   {
@@ -700,24 +740,20 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Lethbridge",
     region: "south",
     population: 104000,
-    status: "planned",
+    status: "live",
     endpoints: {
-      parcels: { url: "https://opendata.lethbridge.ca/resource/assessment.json", type: "FeatureServer" },
+      assessments: { url: "https://gis.lethbridge.ca/gisopendata/rest/services/OpenData/odl_landuse/MapServer/0", type: "MapServer" },
+      zoning: { url: "https://gis.lethbridge.ca/gisopendata/rest/services/OpenData/odl_landuse/MapServer/0", type: "MapServer" },
     },
     fields: {
-      assessmentValue: "assessed_value",
-      address: "address",
-      neighbourhood: "neighbourhood",
-      propertyClass: "property_class",
+      zoning: "LANDUSE",
+      zoningDescription: "LANDUSE_DESC",
     },
-    capabilities: ["assessments"],
-    filters: {
-      assessmentWhere: "assessed_value > 0",
-    },
-    dataSource: "City of Lethbridge Open Data",
-    description: "Southern Alberta's largest city. Property assessments with neighbourhood breakdowns.",
+    capabilities: ["zoning"],
+    dataSource: "City of Lethbridge Open Data (ArcGIS + CSV)",
+    description: "Southern Alberta's largest city — land use zoning plus direct CSV downloads for permits and business licenses.",
     color: "#059669",
-    notes: ["Socrata endpoint not verified — may use ArcGIS Hub instead"],
+    notes: ["Direct CSV: gis.lethbridge.ca/OpenData/DataSets/BuildingPermits.csv", "Direct CSV: gis.lethbridge.ca/OpenData/DataSets/BusinessLicenses.csv"],
   },
 
   {
@@ -725,22 +761,41 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Medicine Hat",
     region: "south",
     population: 65000,
-    status: "planned",
+    status: "live",
     endpoints: {
-      parcels: { url: "https://services.arcgis.com/s2Ma2kMGCLsXMKot/arcgis/rest/services/Property_Assessment/FeatureServer/0", type: "FeatureServer" },
+      assessments: { url: "https://gis.medicinehat.ca/arcgis/rest/services/Assessment/Assessment_Map/MapServer/0", type: "MapServer" },
+      construction: { url: "https://gis.medicinehat.ca/arcgis/rest/services/CityProjects/FeatureServer/0", type: "FeatureServer" },
     },
     fields: {
       assessmentValue: "ASSESSED_VALUE",
       address: "ADDRESS",
-      neighbourhood: "NEIGHBOURHOOD",
+      projectName: "PROJECT_NAME",
+      projectPhase: "STATUS",
     },
-    capabilities: ["assessments"],
-    filters: {
-      assessmentWhere: "ASSESSED_VALUE > 0",
-    },
+    capabilities: ["assessments", "construction"],
     dataSource: "City of Medicine Hat ArcGIS",
-    description: "The Gas City — southeastern Alberta's hub with its own natural gas utility. Property assessment data.",
+    description: "The Gas City — 18 ArcGIS folders covering assessments, electric, gas, fire, police, transit, parks.",
     color: "#d97706",
+  },
+
+  {
+    slug: "brooks",
+    name: "Brooks",
+    region: "south",
+    population: 15000,
+    status: "live",
+    endpoints: {
+      parcels: { url: "https://gis.orrsc.com/server/rest/services/Brooks/Brooks_Property/MapServer/0", type: "MapServer" },
+      zoning: { url: "https://gis.orrsc.com/server/rest/services/Brooks/Brooks_Cadastral/MapServer/0", type: "MapServer" },
+    },
+    fields: {
+      address: "ADDRESS",
+      zoning: "ZONE",
+    },
+    capabilities: ["zoning"],
+    dataSource: "Brooks via ORRSC ArcGIS",
+    description: "Southeast Alberta — property and infrastructure data hosted by Oldman River Regional Services Commission.",
+    color: "#a16207",
   },
 
   // ── NORTHERN ALBERTA ───────────────────────────────────────
@@ -750,21 +805,23 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Grande Prairie",
     region: "north",
     population: 69000,
-    status: "planned",
+    status: "live",
     endpoints: {
-      parcels: { url: "https://services.arcgis.com/bJpkR4sFBZZsmJMW/arcgis/rest/services/Property_Assessment/FeatureServer/0", type: "FeatureServer" },
+      assessments: { url: "https://services.gpgis.com/server/rest/services/Assessment_Taxation/Assessment_Values/FeatureServer/0", type: "FeatureServer" },
+      parcels: { url: "https://services.gpgis.com/server/rest/services/Property/Parcels_with_Address_Info/FeatureServer/0", type: "FeatureServer" },
+      construction: { url: "https://services.gpgis.com/server/rest/services/Capital_Projects_Communications/Capital_Projects_Areas/FeatureServer/0", type: "FeatureServer" },
     },
     fields: {
       assessmentValue: "ASSESSED_VALUE",
       address: "ADDRESS",
       neighbourhood: "NEIGHBOURHOOD",
+      projectName: "PROJECT_NAME",
+      projectPhase: "STATUS",
+      projectLocation: "LOCATION",
     },
-    capabilities: ["assessments"],
-    filters: {
-      assessmentWhere: "ASSESSED_VALUE > 0",
-    },
+    capabilities: ["assessments", "construction"],
     dataSource: "City of Grande Prairie ArcGIS",
-    description: "Peace Country's economic hub. Property assessments for northwestern Alberta's largest city.",
+    description: "Peace Country's economic hub — 46 GIS data folders covering assessments, permits, traffic, census, economic development.",
     color: "#15803d",
   },
 

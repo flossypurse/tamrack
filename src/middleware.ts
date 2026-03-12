@@ -27,6 +27,8 @@ const freePages = [
   // Phase 2 — free funnel
   "/drilling",
   "/compare",
+  // Briefings — role-based intelligence reports
+  "/briefing",
 ];
 
 function isPublicRoute(pathname: string) {
