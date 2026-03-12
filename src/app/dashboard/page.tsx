@@ -392,7 +392,7 @@ export default function Dashboard() {
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <p className="text-sm text-muted">
-          Economic intelligence for Parkland County &amp; Edmonton Metro
+          Province-wide Alberta economic intelligence
         </p>
         <DataSourceStatus />
       </header>

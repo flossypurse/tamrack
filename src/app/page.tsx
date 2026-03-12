@@ -12,16 +12,20 @@ import {
   ArrowRight,
   Database,
   Shield,
+  Globe,
+  Layers,
 } from "lucide-react";
 
 const features = [
-  { icon: BarChart3, title: "Macro Dashboard", desc: "BoC rates, GDP, CPI, unemployment — all live, all Alberta" },
-  { icon: Flame, title: "Energy Tracker", desc: "BCPI energy index, CAD/USD correlation, oil & gas GDP" },
-  { icon: Building2, title: "5 Municipalities", desc: "Parkland County, Stony Plain, Spruce Grove, Strathcona, St. Albert" },
-  { icon: MapPin, title: "Neighbourhood Intel", desc: "Permit hotspots, assessment trends, teardown detection" },
-  { icon: Radar, title: "Leading Signals", desc: "Cross-indicator analysis separating leading from lagging" },
+  { icon: BarChart3, title: "Macro Dashboard", desc: "BoC rates, GDP, CPI, unemployment, retail sales — all live, all Alberta" },
+  { icon: Building2, title: "26 Municipalities", desc: "14 live across 7 regions — Edmonton metro, Calgary metro, central, south, and north" },
+  { icon: Flame, title: "Energy & Drilling", desc: "BCPI energy index, CAD/USD, oil & gas GDP, well activity, pipeline data" },
+  { icon: Globe, title: "20+ Topic Pages", desc: "Weather, wildfire, air quality, elections, water, earthquakes, traffic, rental, and more" },
+  { icon: MapPin, title: "Neighbourhood Intel", desc: "Permit hotspots, assessment trends, zoning analysis, teardown detection" },
+  { icon: Radar, title: "Leading Signals", desc: "Cross-indicator analysis separating leading from lagging across the province" },
   { icon: Wheat, title: "Agriculture", desc: "Farm cash receipts, commodity indexes, ag GDP trends" },
   { icon: Users, title: "Labour & Migration", desc: "Employment, participation, interprovincial flows" },
+  { icon: Layers, title: "Compare & Embed", desc: "Side-by-side municipality comparison, embeddable charts for any indicator" },
   { icon: Key, title: "REST API", desc: "Permits, assessments, signals, macro data — programmatic access" },
 ];
 
@@ -29,13 +33,11 @@ const dataSources = [
   "Bank of Canada",
   "Statistics Canada",
   "Edmonton Open Data",
+  "Calgary Open Data",
   "Alberta Open Data",
+  "Regional Dashboard AB",
   "CMHC",
-  "Parkland County",
-  "Stony Plain",
-  "Spruce Grove",
-  "Strathcona County",
-  "St. Albert",
+  "ArcGIS (12 municipalities)",
 ];
 
 export default function LandingPage() {
@@ -55,8 +57,8 @@ export default function LandingPage() {
             <span className="text-accent">built in Alberta, for Alberta</span>
           </h1>
           <p className="text-muted text-lg max-w-2xl mx-auto">
-            Live data from government sources — processed, cross-analyzed, and delivered
-            to your dashboard. No guesswork, no stale reports.
+            Live data from 8+ government sources across 26 municipalities — processed,
+            cross-analyzed, and delivered to your dashboard. No guesswork, no stale reports.
           </p>
 
           {/* Data sources — prominent, above CTA */}
@@ -121,7 +123,7 @@ export default function LandingPage() {
         <h2 className="text-center text-sm font-medium text-muted uppercase tracking-wider mb-8">
           What&apos;s inside
         </h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {features.map((f) => (
             <div key={f.title} className="bg-card border border-card-border rounded-xl p-5 space-y-2">
               <f.icon size={20} className="text-accent" />

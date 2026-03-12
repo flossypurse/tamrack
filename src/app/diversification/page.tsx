@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { ChartCard } from "@/components/chart-card";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import {
   TimeSeriesAreaChart,
@@ -180,28 +181,30 @@ async function GdpByIndustryChart() {
   );
 
   return (
-    <Card>
-      <CardHeader
-        title="GDP by Industry — Alberta"
-        subtitle="Real GDP by major sector (chained 2017$). Is the mix changing?"
-        badge="LIVE"
-      />
-      <MultiSeriesLineChart
-        data={merged}
-        series={[
-          { key: "oilGas", label: "Mining/Oil/Gas", color: "#f97316" },
-          { key: "construction", label: "Construction", color: "#3b82f6" },
-          { key: "manufacturing", label: "Manufacturing", color: "#8b5cf6" },
-          { key: "tech", label: "Tech/Professional", color: "#10b981" },
-          { key: "realEstate", label: "Real Estate", color: "#ec4899" },
-          { key: "agriculture", label: "Agriculture", color: "#f59e0b" },
-        ]}
-        height={350}
-      />
-      <p className="text-[10px] text-muted/60 mt-2">
-        If diversification is real, you&apos;d see non-energy lines growing faster than the orange line over time.
-      </p>
-    </Card>
+    <ChartCard chartId="macro-gdp-by-industry" title="GDP by Industry — Alberta">
+      <Card>
+        <CardHeader
+          title="GDP by Industry — Alberta"
+          subtitle="Real GDP by major sector (chained 2017$). Is the mix changing?"
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "oilGas", label: "Mining/Oil/Gas", color: "#f97316" },
+            { key: "construction", label: "Construction", color: "#3b82f6" },
+            { key: "manufacturing", label: "Manufacturing", color: "#8b5cf6" },
+            { key: "tech", label: "Tech/Professional", color: "#10b981" },
+            { key: "realEstate", label: "Real Estate", color: "#ec4899" },
+            { key: "agriculture", label: "Agriculture", color: "#f59e0b" },
+          ]}
+          height={350}
+        />
+        <p className="text-[10px] text-muted/60 mt-2">
+          If diversification is real, you&apos;d see non-energy lines growing faster than the orange line over time.
+        </p>
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -234,22 +237,24 @@ async function OilGasShareChart() {
   }
 
   return (
-    <Card>
-      <CardHeader
-        title="Oil & Gas Share of GDP"
-        subtitle="Mining/Oil/Gas as percentage of total Alberta GDP over time"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart
-        data={shareData}
-        color="#f97316"
-        valueSuffix="%"
-        height={250}
-      />
-      <p className="text-[10px] text-muted/60 mt-2">
-        A declining trend here means Alberta is genuinely diversifying — not just growing energy alongside everything else.
-      </p>
-    </Card>
+    <ChartCard chartId="macro-oil-gas-share" title="Oil & Gas Share of GDP">
+      <Card>
+        <CardHeader
+          title="Oil & Gas Share of GDP"
+          subtitle="Mining/Oil/Gas as percentage of total Alberta GDP over time"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart
+          data={shareData}
+          color="#f97316"
+          valueSuffix="%"
+          height={250}
+        />
+        <p className="text-[10px] text-muted/60 mt-2">
+          A declining trend here means Alberta is genuinely diversifying — not just growing energy alongside everything else.
+        </p>
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -257,48 +262,54 @@ async function TechGdpChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_GDP_TECH;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
   return (
-    <Card>
-      <CardHeader
-        title="Tech & Professional Services GDP"
-        subtitle="Professional, scientific & technical services — Alberta's tech proxy"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#10b981" compact height={250} />
-    </Card>
+    <ChartCard chartId="macro-tech-gdp" title="Tech & Professional Services GDP">
+      <Card>
+        <CardHeader
+          title="Tech & Professional Services GDP"
+          subtitle="Professional, scientific & technical services — Alberta's tech proxy"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#10b981" compact height={250} />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function BusinessLicencesChart() {
   const data = await fetchEdmontonBusinessLicences();
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton Business Licences"
-        subtitle="New business formation — are non-energy businesses growing?"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart
-        data={data.map((d) => ({ ...d, value: d.value }))}
-        color="#8b5cf6"
-      />
-    </Card>
+    <ChartCard chartId="macro-business-licences" title="Edmonton Business Licences">
+      <Card>
+        <CardHeader
+          title="Edmonton Business Licences"
+          subtitle="New business formation — are non-energy businesses growing?"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart
+          data={data.map((d) => ({ ...d, value: d.value }))}
+          color="#8b5cf6"
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function BuildingPermitsChart() {
   const data = await fetchEdmontonPermitsSummary();
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton Building Permits"
-        subtitle="Monthly permits — construction diversification signal"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart
-        data={data.map((d) => ({ ...d, value: d.value }))}
-        color="#f59e0b"
-      />
-    </Card>
+    <ChartCard chartId="macro-building-permits" title="Edmonton Building Permits">
+      <Card>
+        <CardHeader
+          title="Edmonton Building Permits"
+          subtitle="Monthly permits — construction diversification signal"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart
+          data={data.map((d) => ({ ...d, value: d.value }))}
+          color="#f59e0b"
+        />
+      </Card>
+    </ChartCard>
   );
 }
 

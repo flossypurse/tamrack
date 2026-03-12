@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { Card, CardHeader } from "@/components/card";
+import { ChartCard } from "@/components/chart-card";
 import {
   TimeSeriesAreaChart,
   MultiSeriesLineChart,
@@ -242,22 +243,24 @@ async function EnergyVsUnemploymentChart() {
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
   return (
-    <Card>
-      <CardHeader
-        title="Energy Price vs Unemployment"
-        subtitle="The inverse correlation — when oil drops, unemployment rises ~6 months later"
-        badge="LIVE"
-      />
-      <MultiSeriesLineChart
-        data={merged}
-        series={[
-          { key: "energy", label: "Energy Index", color: "#f97316", yAxisId: "left" },
-          { key: "unemployment", label: "Unemployment %", color: "#ef4444", suffix: "%", yAxisId: "right" },
-        ]}
-        height={300}
-        dualAxis
-      />
-    </Card>
+    <ChartCard chartId="macro-energy-vs-unemployment" title="Energy Price vs Unemployment">
+      <Card>
+        <CardHeader
+          title="Energy Price vs Unemployment"
+          subtitle="The inverse correlation — when oil drops, unemployment rises ~6 months later"
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "energy", label: "Energy Index", color: "#f97316", yAxisId: "left" },
+            { key: "unemployment", label: "Unemployment %", color: "#ef4444", suffix: "%", yAxisId: "right" },
+          ]}
+          height={300}
+          dualAxis
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -287,22 +290,24 @@ async function EnergyVsHousingChart() {
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
   return (
-    <Card>
-      <CardHeader
-        title="Energy Price vs Housing Starts"
-        subtitle="Housing lags energy prices by ~12 months — watch for divergence"
-        badge="LIVE"
-      />
-      <MultiSeriesLineChart
-        data={merged}
-        series={[
-          { key: "energy", label: "Energy Index", color: "#f97316", yAxisId: "left" },
-          { key: "housing", label: "Housing Starts", color: "#3b82f6", yAxisId: "right" },
-        ]}
-        height={300}
-        dualAxis
-      />
-    </Card>
+    <ChartCard chartId="macro-energy-vs-housing" title="Energy Price vs Housing Starts">
+      <Card>
+        <CardHeader
+          title="Energy Price vs Housing Starts"
+          subtitle="Housing lags energy prices by ~12 months — watch for divergence"
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "energy", label: "Energy Index", color: "#f97316", yAxisId: "left" },
+            { key: "housing", label: "Housing Starts", color: "#3b82f6", yAxisId: "right" },
+          ]}
+          height={300}
+          dualAxis
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -310,14 +315,16 @@ async function GdpTrendChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_GDP;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
   return (
-    <Card>
-      <CardHeader
-        title="Alberta Real GDP"
-        subtitle="Chained 2017 dollars — the broadest measure of economic output"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#10b981" compact height={250} />
-    </Card>
+    <ChartCard chartId="macro-gdp" title="Alberta Real GDP">
+      <Card>
+        <CardHeader
+          title="Alberta Real GDP"
+          subtitle="Chained 2017 dollars — the broadest measure of economic output"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#10b981" compact height={250} />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -325,14 +332,16 @@ async function CpiTrendChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_CPI;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 60);
   return (
-    <Card>
-      <CardHeader
-        title="Alberta CPI"
-        subtitle="Consumer price index — inflation pressure indicator"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#a855f7" height={250} />
-    </Card>
+    <ChartCard chartId="macro-cpi" title="Alberta CPI">
+      <Card>
+        <CardHeader
+          title="Alberta CPI"
+          subtitle="Consumer price index — inflation pressure indicator"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#a855f7" height={250} />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -342,19 +351,21 @@ async function AAXChart() {
   const data = allData.slice(-240); // ~20 years of monthly data
   const latest = data.at(-1);
   return (
-    <Card>
-      <CardHeader
-        title="Alberta Activity Index (AAX)"
-        subtitle={`Weighted composite of 9 monthly indicators (Jan 1981 = 100)${latest ? ` — Latest: ${latest.value.toFixed(1)}` : ""}`}
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#8b5cf6" height={280} />
-      <p className="text-[10px] text-muted/60 mt-2">
-        The AAX combines employment, earnings, retail, wholesale, manufacturing,
-        truck sales, housing starts, rigs drilling, and oil production into a single
-        monthly cycle measure. Dips mark recessions (2008, 2015, 2020).
-      </p>
-    </Card>
+    <ChartCard chartId="macro-aax" title="Alberta Activity Index (AAX)">
+      <Card>
+        <CardHeader
+          title="Alberta Activity Index (AAX)"
+          subtitle={`Weighted composite of 9 monthly indicators (Jan 1981 = 100)${latest ? ` — Latest: ${latest.value.toFixed(1)}` : ""}`}
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#8b5cf6" height={280} />
+        <p className="text-[10px] text-muted/60 mt-2">
+          The AAX combines employment, earnings, retail, wholesale, manufacturing,
+          truck sales, housing starts, rigs drilling, and oil production into a single
+          monthly cycle measure. Dips mark recessions (2008, 2015, 2020).
+        </p>
+      </Card>
+    </ChartCard>
   );
 }
 

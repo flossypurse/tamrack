@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+import { ChartCard } from "@/components/chart-card";
 import {
   TimeSeriesAreaChart,
   TimeSeriesBarChart,
@@ -118,18 +119,20 @@ async function UnemploymentChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_UNEMPLOYMENT_RATE;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 60);
   return (
-    <Card>
-      <CardHeader
-        title="Alberta Unemployment Rate"
-        subtitle="Seasonally adjusted — the broadest measure of labour market slack"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#ef4444" valueSuffix="%" height={280} />
-      <p className="text-[10px] text-muted/60 mt-2">
-        Below 6% = tight market (wage pressure, labour shortages in trades).
-        Above 8% = stress (layoffs, migration reversal). Alberta&apos;s natural rate is around 6-7%.
-      </p>
-    </Card>
+    <ChartCard chartId="macro-unemployment" title="Alberta Unemployment Rate">
+      <Card>
+        <CardHeader
+          title="Alberta Unemployment Rate"
+          subtitle="Seasonally adjusted — the broadest measure of labour market slack"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#ef4444" valueSuffix="%" height={280} />
+        <p className="text-[10px] text-muted/60 mt-2">
+          Below 6% = tight market (wage pressure, labour shortages in trades).
+          Above 8% = stress (layoffs, migration reversal). Alberta&apos;s natural rate is around 6-7%.
+        </p>
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -137,14 +140,16 @@ async function EmploymentChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_EMPLOYMENT;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 60);
   return (
-    <Card>
-      <CardHeader
-        title="Alberta Employment (thousands)"
-        subtitle="Total employed persons, seasonally adjusted"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#3b82f6" compact height={250} />
-    </Card>
+    <ChartCard chartId="macro-employment" title="Alberta Employment">
+      <Card>
+        <CardHeader
+          title="Alberta Employment (thousands)"
+          subtitle="Total employed persons, seasonally adjusted"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#3b82f6" compact height={250} />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -152,17 +157,19 @@ async function ParticipationChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_PARTICIPATION_RATE;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 60);
   return (
-    <Card>
-      <CardHeader
-        title="Participation Rate"
-        subtitle="% of working-age population in the labour force"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#10b981" valueSuffix="%" height={250} />
-      <p className="text-[10px] text-muted/60 mt-2">
-        Alberta typically has Canada&apos;s highest participation rate. A drop signals discouraged workers leaving the labour force — often during busts.
-      </p>
-    </Card>
+    <ChartCard chartId="macro-participation" title="Participation Rate">
+      <Card>
+        <CardHeader
+          title="Participation Rate"
+          subtitle="% of working-age population in the labour force"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#10b981" valueSuffix="%" height={250} />
+        <p className="text-[10px] text-muted/60 mt-2">
+          Alberta typically has Canada&apos;s highest participation rate. A drop signals discouraged workers leaving the labour force — often during busts.
+        </p>
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -193,22 +200,24 @@ async function EmploymentVsUnemploymentChart() {
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
   return (
-    <Card>
-      <CardHeader
-        title="Employment vs Unemployment Rate"
-        subtitle="Are new jobs keeping up with population growth?"
-        badge="LIVE"
-      />
-      <MultiSeriesLineChart
-        data={merged}
-        series={[
-          { key: "employment", label: "Employment (K)", color: "#3b82f6", yAxisId: "left" },
-          { key: "unemployment", label: "Unemployment %", color: "#ef4444", suffix: "%", yAxisId: "right" },
-        ]}
-        height={300}
-        dualAxis
-      />
-    </Card>
+    <ChartCard chartId="macro-employment-vs-unemployment" title="Employment vs Unemployment Rate">
+      <Card>
+        <CardHeader
+          title="Employment vs Unemployment Rate"
+          subtitle="Are new jobs keeping up with population growth?"
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "employment", label: "Employment (K)", color: "#3b82f6", yAxisId: "left" },
+            { key: "unemployment", label: "Unemployment %", color: "#ef4444", suffix: "%", yAxisId: "right" },
+          ]}
+          height={300}
+          dualAxis
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -216,18 +225,20 @@ async function WeeklyEarningsChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_WEEKLY_EARNINGS;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 60);
   return (
-    <Card>
-      <CardHeader
-        title="Average Weekly Earnings"
-        subtitle="All employees, Alberta — wage growth indicator"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#f59e0b" valuePrefix="$" height={250} />
-      <p className="text-[10px] text-muted/60 mt-2">
-        Alberta wages are typically 10-20% above the national average, driven by the energy sector premium.
-        When the gap narrows, Alberta loses its migration pull.
-      </p>
-    </Card>
+    <ChartCard chartId="macro-weekly-earnings" title="Average Weekly Earnings">
+      <Card>
+        <CardHeader
+          title="Average Weekly Earnings"
+          subtitle="All employees, Alberta — wage growth indicator"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#f59e0b" valuePrefix="$" height={250} />
+        <p className="text-[10px] text-muted/60 mt-2">
+          Alberta wages are typically 10-20% above the national average, driven by the energy sector premium.
+          When the gap narrows, Alberta loses its migration pull.
+        </p>
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -235,14 +246,16 @@ async function EmploymentRateChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_EMPLOYMENT_RATE;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 60);
   return (
-    <Card>
-      <CardHeader
-        title="Employment Rate"
-        subtitle="% of working-age population employed — combines participation + unemployment"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#8b5cf6" valueSuffix="%" height={250} />
-    </Card>
+    <ChartCard chartId="macro-employment-rate" title="Employment Rate">
+      <Card>
+        <CardHeader
+          title="Employment Rate"
+          subtitle="% of working-age population employed — combines participation + unemployment"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#8b5cf6" valueSuffix="%" height={250} />
+      </Card>
+    </ChartCard>
   );
 }
 

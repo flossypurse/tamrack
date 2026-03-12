@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+import { ChartCard } from "@/components/chart-card";
 import {
   TimeSeriesAreaChart,
   TimeSeriesBarChart,
@@ -120,19 +121,21 @@ async function PopulationChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_POPULATION;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
   return (
-    <Card>
-      <CardHeader
-        title="Alberta Population"
-        subtitle="Quarterly estimates — Edmonton metro is now Canada's fastest-growing CMA"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#3b82f6" compact height={280} />
-      <p className="text-[10px] text-muted/60 mt-2">
-        Alberta added 200K+ people in the last 3 years. At 3% annual growth, Edmonton
-        is outpacing Vancouver and Toronto. This drives housing demand, school enrollment,
-        retail expansion.
-      </p>
-    </Card>
+    <ChartCard chartId="macro-population" title="Alberta Population">
+      <Card>
+        <CardHeader
+          title="Alberta Population"
+          subtitle="Quarterly estimates — Edmonton metro is now Canada's fastest-growing CMA"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#3b82f6" compact height={280} />
+        <p className="text-[10px] text-muted/60 mt-2">
+          Alberta added 200K+ people in the last 3 years. At 3% annual growth, Edmonton
+          is outpacing Vancouver and Toronto. This drives housing demand, school enrollment,
+          retail expansion.
+        </p>
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -140,18 +143,20 @@ async function ImmigrationChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_IMMIGRATION;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
   return (
-    <Card>
-      <CardHeader
-        title="International Immigration to Alberta"
-        subtitle="Annual arrivals — the primary growth engine"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#10b981" height={250} />
-      <p className="text-[10px] text-muted/60 mt-2">
-        Edmonton attracted 40% more international residents than Vancouver in recent years.
-        Demographics skew young and multicultural — EAL student populations grew 105%.
-      </p>
-    </Card>
+    <ChartCard chartId="macro-immigration" title="International Immigration to Alberta">
+      <Card>
+        <CardHeader
+          title="International Immigration to Alberta"
+          subtitle="Annual arrivals — the primary growth engine"
+          badge="LIVE"
+        />
+        <TimeSeriesBarChart data={data} color="#10b981" height={250} />
+        <p className="text-[10px] text-muted/60 mt-2">
+          Edmonton attracted 40% more international residents than Vancouver in recent years.
+          Demographics skew young and multicultural — EAL student populations grew 105%.
+        </p>
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -159,19 +164,21 @@ async function InterprovincialChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_NET_INTERPROVINCIAL;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
   return (
-    <Card>
-      <CardHeader
-        title="Net Interprovincial Migration"
-        subtitle="People moving to Alberta minus people leaving — the boom-bust signal"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#f97316" height={250} />
-      <p className="text-[10px] text-muted/60 mt-2">
-        This is the boom signal. When positive: people are chasing Alberta jobs/wages.
-        When negative (as in 2015-2016): the bust has arrived and workers are fleeing.
-        For real estate, this is demand forecasting.
-      </p>
-    </Card>
+    <ChartCard chartId="macro-interprovincial" title="Net Interprovincial Migration">
+      <Card>
+        <CardHeader
+          title="Net Interprovincial Migration"
+          subtitle="People moving to Alberta minus people leaving — the boom-bust signal"
+          badge="LIVE"
+        />
+        <TimeSeriesBarChart data={data} color="#f97316" height={250} />
+        <p className="text-[10px] text-muted/60 mt-2">
+          This is the boom signal. When positive: people are chasing Alberta jobs/wages.
+          When negative (as in 2015-2016): the bust has arrived and workers are fleeing.
+          For real estate, this is demand forecasting.
+        </p>
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -223,24 +230,26 @@ async function MigrationComponentsChart() {
   );
 
   return (
-    <Card>
-      <CardHeader
-        title="Population Growth Components"
-        subtitle="Breaking down where Alberta's growth comes from (annual)"
-        badge="LIVE"
-      />
-      <MultiSeriesLineChart
-        data={merged}
-        series={[
-          { key: "immigration", label: "International Immigration", color: "#10b981" },
-          { key: "netInterprov", label: "Net Interprovincial", color: "#3b82f6" },
-          { key: "emigration", label: "Net Emigration", color: "#ef4444" },
-          { key: "births", label: "Births", color: "#f59e0b" },
-          { key: "deaths", label: "Deaths", color: "#6b7280" },
-        ]}
-        height={350}
-      />
-    </Card>
+    <ChartCard chartId="macro-migration-components" title="Population Growth Components">
+      <Card>
+        <CardHeader
+          title="Population Growth Components"
+          subtitle="Breaking down where Alberta's growth comes from (annual)"
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "immigration", label: "International Immigration", color: "#10b981" },
+            { key: "netInterprov", label: "Net Interprovincial", color: "#3b82f6" },
+            { key: "emigration", label: "Net Emigration", color: "#ef4444" },
+            { key: "births", label: "Births", color: "#f59e0b" },
+            { key: "deaths", label: "Deaths", color: "#6b7280" },
+          ]}
+          height={350}
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -275,22 +284,24 @@ async function MigrationVsEnergyChart() {
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
   return (
-    <Card>
-      <CardHeader
-        title="Net Migration vs Energy Prices"
-        subtitle="People follow the money — migration tracks energy with a lag"
-        badge="LIVE"
-      />
-      <MultiSeriesLineChart
-        data={merged}
-        series={[
-          { key: "migration", label: "Net Interprovincial", color: "#3b82f6", yAxisId: "left" },
-          { key: "energy", label: "Energy Index", color: "#f97316", yAxisId: "right" },
-        ]}
-        height={300}
-        dualAxis
-      />
-    </Card>
+    <ChartCard chartId="macro-migration-vs-energy" title="Net Migration vs Energy Prices">
+      <Card>
+        <CardHeader
+          title="Net Migration vs Energy Prices"
+          subtitle="People follow the money — migration tracks energy with a lag"
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "migration", label: "Net Interprovincial", color: "#3b82f6", yAxisId: "left" },
+            { key: "energy", label: "Energy Index", color: "#f97316", yAxisId: "right" },
+          ]}
+          height={300}
+          dualAxis
+        />
+      </Card>
+    </ChartCard>
   );
 }
 

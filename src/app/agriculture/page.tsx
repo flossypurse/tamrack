@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+import { ChartCard } from "@/components/chart-card";
 import {
   TimeSeriesAreaChart,
   TimeSeriesBarChart,
@@ -116,18 +117,20 @@ async function AgricultureMetrics() {
 async function AgCommodityChart() {
   const data = await fetchBoCTimeSeries(BOC_SERIES.BCPI_AGRICULTURE, 240);
   return (
-    <Card>
-      <CardHeader
-        title="BoC Agriculture Commodity Price Index"
-        subtitle="Tracks prices of Canadian agricultural exports — grains, oilseeds, livestock"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#f59e0b" height={280} />
-      <p className="text-[10px] text-muted/60 mt-2">
-        Alberta is Canada&apos;s largest beef producer and a major canola/wheat exporter.
-        This index tracks the prices farmers receive — drives farm income, rural spending, and land values.
-      </p>
-    </Card>
+    <ChartCard chartId="macro-ag-commodity" title="BoC Agriculture Commodity Price Index">
+      <Card>
+        <CardHeader
+          title="BoC Agriculture Commodity Price Index"
+          subtitle="Tracks prices of Canadian agricultural exports — grains, oilseeds, livestock"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#f59e0b" height={280} />
+        <p className="text-[10px] text-muted/60 mt-2">
+          Alberta is Canada&apos;s largest beef producer and a major canola/wheat exporter.
+          This index tracks the prices farmers receive — drives farm income, rural spending, and land values.
+        </p>
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -135,14 +138,16 @@ async function AgGdpChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_GDP_AGRICULTURE;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
   return (
-    <Card>
-      <CardHeader
-        title="Agriculture GDP — Alberta"
-        subtitle="Real GDP for agriculture, forestry, fishing & hunting (chained 2017$)"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#10b981" compact height={250} />
-    </Card>
+    <ChartCard chartId="macro-ag-gdp" title="Agriculture GDP — Alberta">
+      <Card>
+        <CardHeader
+          title="Agriculture GDP — Alberta"
+          subtitle="Real GDP for agriculture, forestry, fishing & hunting (chained 2017$)"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#10b981" compact height={250} />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -150,14 +155,16 @@ async function FarmCashReceiptsChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_FARM_CASH_RECEIPTS;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
   return (
-    <Card>
-      <CardHeader
-        title="Farm Cash Receipts — Alberta"
-        subtitle="Total farm revenue from crops, livestock, and direct payments"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#f59e0b" compact height={250} />
-    </Card>
+    <ChartCard chartId="macro-farm-receipts" title="Farm Cash Receipts — Alberta">
+      <Card>
+        <CardHeader
+          title="Farm Cash Receipts — Alberta"
+          subtitle="Total farm revenue from crops, livestock, and direct payments"
+          badge="LIVE"
+        />
+        <TimeSeriesBarChart data={data} color="#f59e0b" compact height={250} />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -188,21 +195,23 @@ async function CropVsLivestockChart() {
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
   return (
-    <Card>
-      <CardHeader
-        title="Crop vs Livestock Receipts"
-        subtitle="The two pillars of Alberta agriculture — do they move together?"
-        badge="LIVE"
-      />
-      <MultiSeriesLineChart
-        data={merged}
-        series={[
-          { key: "crop", label: "Crop Receipts", color: "#f59e0b" },
-          { key: "livestock", label: "Livestock Receipts", color: "#ef4444" },
-        ]}
-        height={300}
-      />
-    </Card>
+    <ChartCard chartId="macro-crop-vs-livestock" title="Crop vs Livestock Receipts">
+      <Card>
+        <CardHeader
+          title="Crop vs Livestock Receipts"
+          subtitle="The two pillars of Alberta agriculture — do they move together?"
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "crop", label: "Crop Receipts", color: "#f59e0b" },
+            { key: "livestock", label: "Livestock Receipts", color: "#ef4444" },
+          ]}
+          height={300}
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -225,22 +234,24 @@ async function AgVsEnergyChart() {
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
   return (
-    <Card>
-      <CardHeader
-        title="Agriculture vs Energy Commodity Prices"
-        subtitle="When both are strong, Alberta booms hard. When they diverge, interesting dynamics emerge."
-        badge="LIVE"
-      />
-      <MultiSeriesLineChart
-        data={merged}
-        series={[
-          { key: "agriculture", label: "Agriculture", color: "#f59e0b", yAxisId: "left" },
-          { key: "energy", label: "Energy", color: "#f97316", yAxisId: "right" },
-        ]}
-        height={300}
-        dualAxis
-      />
-    </Card>
+    <ChartCard chartId="macro-ag-vs-energy" title="Agriculture vs Energy Commodity Prices">
+      <Card>
+        <CardHeader
+          title="Agriculture vs Energy Commodity Prices"
+          subtitle="When both are strong, Alberta booms hard. When they diverge, interesting dynamics emerge."
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "agriculture", label: "Agriculture", color: "#f59e0b", yAxisId: "left" },
+            { key: "energy", label: "Energy", color: "#f97316", yAxisId: "right" },
+          ]}
+          height={300}
+          dualAxis
+        />
+      </Card>
+    </ChartCard>
   );
 }
 

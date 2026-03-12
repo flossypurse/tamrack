@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+import { ChartCard } from "@/components/chart-card";
 import {
   TimeSeriesAreaChart,
   TimeSeriesBarChart,
@@ -127,31 +128,35 @@ async function EnergyMetrics() {
 async function EnergyPriceChart() {
   const data = await fetchBoCTimeSeries(BOC_SERIES.BCPI_ENERGY, 240);
   return (
-    <Card>
-      <CardHeader
-        title="BoC Energy Commodity Price Index"
-        subtitle="The master signal for Alberta's economy — tracks crude, natural gas, coal"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#f97316" height={280} />
-      <p className="text-[10px] text-muted/60 mt-2">
-        When this falls below ~300, expect drilling slowdowns within weeks and layoffs within months.
-      </p>
-    </Card>
+    <ChartCard chartId="macro-energy-price" title="BoC Energy Commodity Price Index">
+      <Card>
+        <CardHeader
+          title="BoC Energy Commodity Price Index"
+          subtitle="The master signal for Alberta's economy — tracks crude, natural gas, coal"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#f97316" height={280} />
+        <p className="text-[10px] text-muted/60 mt-2">
+          When this falls below ~300, expect drilling slowdowns within weeks and layoffs within months.
+        </p>
+      </Card>
+    </ChartCard>
   );
 }
 
 async function AllCommoditiesChart() {
   const data = await fetchBoCTimeSeries(BOC_SERIES.BCPI_ALL, 240);
   return (
-    <Card>
-      <CardHeader
-        title="BoC All Commodities Index"
-        subtitle="Broad commodity basket — energy + agriculture + metals + forestry"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#3b82f6" />
-    </Card>
+    <ChartCard chartId="macro-all-commodities" title="BoC All Commodities Index">
+      <Card>
+        <CardHeader
+          title="BoC All Commodities Index"
+          subtitle="Broad commodity basket — energy + agriculture + metals + forestry"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#3b82f6" />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -177,36 +182,40 @@ async function EnergyVsCadChart() {
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
   return (
-    <Card>
-      <CardHeader
-        title="Energy Price vs CAD/USD"
-        subtitle="The petro-dollar correlation — when energy falls, so does the loonie"
-        badge="LIVE"
-      />
-      <MultiSeriesLineChart
-        data={merged}
-        series={[
-          { key: "energy", label: "Energy Index", color: "#f97316", yAxisId: "left" },
-          { key: "cad", label: "CAD/USD", color: "#10b981", prefix: "$", yAxisId: "right" },
-        ]}
-        height={280}
-        dualAxis
-      />
-    </Card>
+    <ChartCard chartId="macro-energy-vs-cad" title="Energy Price vs CAD/USD">
+      <Card>
+        <CardHeader
+          title="Energy Price vs CAD/USD"
+          subtitle="The petro-dollar correlation — when energy falls, so does the loonie"
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "energy", label: "Energy Index", color: "#f97316", yAxisId: "left" },
+            { key: "cad", label: "CAD/USD", color: "#10b981", prefix: "$", yAxisId: "right" },
+          ]}
+          height={280}
+          dualAxis
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function NonEnergyChart() {
   const data = await fetchBoCTimeSeries(BOC_SERIES.BCPI_NON_ENERGY, 120);
   return (
-    <Card>
-      <CardHeader
-        title="Non-Energy Commodity Index"
-        subtitle="Agriculture, metals, forestry, fish — the diversification signal"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#10b981" />
-    </Card>
+    <ChartCard chartId="macro-non-energy" title="Non-Energy Commodity Index">
+      <Card>
+        <CardHeader
+          title="Non-Energy Commodity Index"
+          subtitle="Agriculture, metals, forestry, fish — the diversification signal"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#10b981" />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -214,14 +223,16 @@ async function OilGasGdpChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_GDP_MINING_OIL_GAS;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
   return (
-    <Card>
-      <CardHeader
-        title="Alberta Mining/Oil & Gas GDP"
-        subtitle="Real GDP — mining, quarrying, oil & gas extraction (chained 2017$)"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#f59e0b" compact />
-    </Card>
+    <ChartCard chartId="macro-oil-gas-gdp" title="Alberta Mining/Oil & Gas GDP">
+      <Card>
+        <CardHeader
+          title="Alberta Mining/Oil & Gas GDP"
+          subtitle="Real GDP — mining, quarrying, oil & gas extraction (chained 2017$)"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#f59e0b" compact />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -229,28 +240,32 @@ async function ConstructionGdpChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_GDP_CONSTRUCTION;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
   return (
-    <Card>
-      <CardHeader
-        title="Alberta Construction GDP"
-        subtitle="Real GDP — construction sector (chained 2017$)"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#06b6d4" compact />
-    </Card>
+    <ChartCard chartId="macro-construction-gdp" title="Alberta Construction GDP">
+      <Card>
+        <CardHeader
+          title="Alberta Construction GDP"
+          subtitle="Real GDP — construction sector (chained 2017$)"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#06b6d4" compact />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function CadUsdChart() {
   const data = await fetchBoCTimeSeries(BOC_SERIES.CAD_USD, 240);
   return (
-    <Card>
-      <CardHeader
-        title="CAD/USD Exchange Rate"
-        subtitle="The petro-dollar — heavily correlated with oil prices"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#10b981" valuePrefix="$" />
-    </Card>
+    <ChartCard chartId="macro-cad-usd" title="CAD/USD Exchange Rate">
+      <Card>
+        <CardHeader
+          title="CAD/USD Exchange Rate"
+          subtitle="The petro-dollar — heavily correlated with oil prices"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#10b981" valuePrefix="$" />
+      </Card>
+    </ChartCard>
   );
 }
 

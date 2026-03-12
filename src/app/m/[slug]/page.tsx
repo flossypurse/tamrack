@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { NeighbourhoodBarChart } from "@/components/chart";
-import { EmbedButton } from "@/components/embed-button";
+import { ChartCard } from "@/components/chart-card";
 import {
   getMunicipality,
   getLiveMunicipalities,
@@ -104,24 +104,23 @@ async function AssessmentsByZoningChart({ slug }: { slug: string }) {
   }));
 
   return (
-    <Card>
-      <div className="flex items-start justify-between">
+    <ChartCard chartId={`${slug}-assessment-by-zone`} title={`${config.name} — Avg Assessment by Zone`}>
+      <Card>
         <CardHeader
           title="Avg Assessment by Zone"
           subtitle={`Average property value per zoning district`}
           badge="LIVE"
         />
-        <EmbedButton chartId={`${slug}-assessment-by-zone`} title={`${config.name} — Avg Assessment by Zone`} />
-      </div>
-      <NeighbourhoodBarChart
-        data={chartData}
-        dataKey="avgValue"
-        color={config.color}
-        valuePrefix="$"
-        tooltipLabel="Avg Assessment"
-        height={Math.max(250, data.slice(0, 15).length * 28)}
-      />
-    </Card>
+        <NeighbourhoodBarChart
+          data={chartData}
+          dataKey="avgValue"
+          color={config.color}
+          valuePrefix="$"
+          tooltipLabel="Avg Assessment"
+          height={Math.max(250, data.slice(0, 15).length * 28)}
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -136,23 +135,22 @@ async function AssessmentCountChart({ slug }: { slug: string }) {
   }));
 
   return (
-    <Card>
-      <div className="flex items-start justify-between">
+    <ChartCard chartId={`${slug}-properties-by-zone`} title={`${config.name} — Properties by Zone`}>
+      <Card>
         <CardHeader
           title="Properties by Zone"
           subtitle="Number of assessed parcels per zoning district"
           badge="LIVE"
         />
-        <EmbedButton chartId={`${slug}-properties-by-zone`} title={`${config.name} — Properties by Zone`} />
-      </div>
-      <NeighbourhoodBarChart
-        data={chartData}
-        dataKey="permits"
-        color="#3b82f6"
-        tooltipLabel="Properties"
-        height={Math.max(250, data.slice(0, 15).length * 28)}
-      />
-    </Card>
+        <NeighbourhoodBarChart
+          data={chartData}
+          dataKey="permits"
+          color="#3b82f6"
+          tooltipLabel="Properties"
+          height={Math.max(250, data.slice(0, 15).length * 28)}
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -175,24 +173,23 @@ async function AssessmentsByNeighbourhood({ slug }: { slug: string }) {
   const label = groupBy === "neighbourhood" ? "Neighbourhood" : "Subdivision";
 
   return (
-    <Card>
-      <div className="flex items-start justify-between">
+    <ChartCard chartId={`${slug}-assessment-by-${groupBy}`} title={`${config.name} — Avg Assessment by ${label}`}>
+      <Card>
         <CardHeader
           title={`Avg Assessment by ${label}`}
           subtitle={`Top 15 ${label.toLowerCase()}s by average property value`}
           badge="LIVE"
         />
-        <EmbedButton chartId={`${slug}-assessment-by-${groupBy}`} title={`${config.name} — Avg Assessment by ${label}`} />
-      </div>
-      <NeighbourhoodBarChart
-        data={chartData}
-        dataKey="avgValue"
-        color="#10b981"
-        valuePrefix="$"
-        tooltipLabel="Avg Assessment"
-        height={Math.max(250, chartData.length * 28)}
-      />
-    </Card>
+        <NeighbourhoodBarChart
+          data={chartData}
+          dataKey="avgValue"
+          color="#10b981"
+          valuePrefix="$"
+          tooltipLabel="Avg Assessment"
+          height={Math.max(250, chartData.length * 28)}
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -220,23 +217,22 @@ async function BusinessSection({ slug }: { slug: string }) {
           Business Activity
         </h2>
       </div>
-      <Card>
-        <div className="flex items-start justify-between">
+      <ChartCard chartId={`${slug}-businesses`} title={`${config.name} — Businesses by Category`}>
+        <Card>
           <CardHeader
             title="Businesses by Category"
             subtitle={`Registered businesses in ${config.name}`}
             badge="LIVE"
           />
-          <EmbedButton chartId={`${slug}-businesses`} title={`${config.name} — Businesses by Category`} />
-        </div>
-        <NeighbourhoodBarChart
-          data={chartData}
-          dataKey="permits"
-          color="#a855f7"
-          tooltipLabel="Businesses"
-          height={Math.max(250, chartData.length * 28)}
-        />
-      </Card>
+          <NeighbourhoodBarChart
+            data={chartData}
+            dataKey="permits"
+            color="#a855f7"
+            tooltipLabel="Businesses"
+            height={Math.max(250, chartData.length * 28)}
+          />
+        </Card>
+      </ChartCard>
     </section>
   );
 }
@@ -261,23 +257,22 @@ async function VacantSection({ slug }: { slug: string }) {
           Vacant Land
         </h2>
       </div>
-      <Card>
-        <div className="flex items-start justify-between">
+      <ChartCard chartId={`${slug}-vacant`} title={`${config.name} — Vacant Lots`}>
+        <Card>
           <CardHeader
             title="Vacant Lots by Zone"
             subtitle="Development-ready parcels by zoning type"
             badge="LIVE"
           />
-          <EmbedButton chartId={`${slug}-vacant`} title={`${config.name} — Vacant Lots`} />
-        </div>
-        <NeighbourhoodBarChart
-          data={chartData}
-          dataKey="permits"
-          color="#f59e0b"
-          tooltipLabel="Vacant Lots"
-          height={Math.max(250, chartData.length * 28)}
-        />
-      </Card>
+          <NeighbourhoodBarChart
+            data={chartData}
+            dataKey="permits"
+            color="#f59e0b"
+            tooltipLabel="Vacant Lots"
+            height={Math.max(250, chartData.length * 28)}
+          />
+        </Card>
+      </ChartCard>
     </section>
   );
 }
@@ -354,23 +349,22 @@ async function PermitSection({ slug }: { slug: string }) {
           Development Permits
         </h2>
       </div>
-      <Card>
-        <div className="flex items-start justify-between">
+      <ChartCard chartId={`${slug}-permits`} title={`${config.name} — Permits`}>
+        <Card>
           <CardHeader
             title="Permits by Area"
             subtitle="Development permit activity"
             badge="LIVE"
           />
-          <EmbedButton chartId={`${slug}-permits`} title={`${config.name} — Permits`} />
-        </div>
-        <NeighbourhoodBarChart
-          data={chartData}
-          dataKey="permits"
-          color="#3b82f6"
-          tooltipLabel="Permits"
-          height={Math.max(250, chartData.length * 28)}
-        />
-      </Card>
+          <NeighbourhoodBarChart
+            data={chartData}
+            dataKey="permits"
+            color="#3b82f6"
+            tooltipLabel="Permits"
+            height={Math.max(250, chartData.length * 28)}
+          />
+        </Card>
+      </ChartCard>
     </section>
   );
 }
