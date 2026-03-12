@@ -3,7 +3,7 @@ import { getToken } from "next-auth/jwt";
 
 // Routes that don't require auth
 const publicRoutes = ["/", "/login", "/terms", "/privacy", "/pricing", "/municipalities", "/coverage"];
-const publicPrefixes = ["/api/auth", "/api/webhooks", "/embed/"];
+const publicPrefixes = ["/api/auth", "/api/webhooks", "/api/health", "/embed/"];
 
 // Free pages — visible without subscription (part of the funnel)
 // Users still need to be logged in, but don't need an active subscription
