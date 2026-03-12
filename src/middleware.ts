@@ -72,7 +72,16 @@ export async function middleware(req: NextRequest) {
   }
 
   // Get JWT token (works in Edge Runtime — no DB access needed)
-  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+  // Must detect HTTPS so getToken looks for the correct cookie name:
+  // __Secure-authjs.session-token (HTTPS) vs authjs.session-token (HTTP)
+  const secureCookie =
+    req.headers.get("x-forwarded-proto") === "https" ||
+    req.nextUrl.protocol === "https:";
+  const token = await getToken({
+    req,
+    secret: process.env.AUTH_SECRET,
+    secureCookie,
+  });
 
   // No token — redirect to login or return 401 for API
   if (!token) {
