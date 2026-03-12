@@ -8,6 +8,8 @@ const publicRoutes = [
   "/", "/login", "/terms", "/privacy", "/pricing",
   "/dashboard", "/municipalities",
   "/municipalities/coverage",
+  // Category overview pages — rich SEO landing pages, no gated data
+  "/economy", "/real-estate", "/intelligence", "/environment", "/safety", "/tools",
 ];
 const publicPrefixes = [
   "/api/auth", "/api/webhooks", "/api/health", "/api/og", "/embed/",
@@ -23,6 +25,8 @@ const publicPrefixes = [
 const freePages = [
   "/dashboard",
   "/municipalities",
+  // Category overview pages — always free
+  "/economy", "/real-estate", "/intelligence", "/environment", "/safety", "/tools",
   // Briefings hub only — individual briefings require subscription
   "/overview/briefing",
   "/tools/learn", "/tools/docs", "/tools/sources",
