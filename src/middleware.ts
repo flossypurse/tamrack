@@ -5,46 +5,39 @@ import { getToken } from "next-auth/jwt";
 // SEO strategy: macro pages are public to be indexed by Google.
 // Users see value → hit paywall on municipality deep-dives → sign up.
 const publicRoutes = [
-  "/", "/login", "/terms", "/privacy", "/pricing", "/municipalities", "/coverage",
-  // Macro economy (high SEO value — these rank for "Alberta [topic]" queries)
-  "/dashboard", "/energy", "/cycle", "/diversification", "/labour", "/migration",
-  "/agriculture", "/signals",
-  // Topic pages (rank for specific Alberta data queries)
-  "/weather", "/wildfire", "/air-quality", "/water", "/earthquakes", "/traffic",
-  "/elections", "/emergencies",
-  // Reference pages
-  "/learn", "/sources",
+  "/", "/login", "/terms", "/privacy", "/pricing",
+  "/dashboard", "/municipalities",
+  "/municipalities/coverage",
 ];
-const publicPrefixes = ["/api/auth", "/api/webhooks", "/api/health", "/api/og", "/embed/"];
+const publicPrefixes = [
+  "/api/auth", "/api/webhooks", "/api/health", "/api/og", "/embed/",
+  // Category pages — all public for SEO (rank for "Alberta [topic]" queries)
+  "/economy/", "/environment/", "/safety/",
+  "/overview/signals",
+  // Tools
+  "/tools/learn", "/tools/sources",
+];
 
 // Free pages — visible without subscription (part of the funnel)
 // Users still need to be logged in, but don't need an active subscription
 const freePages = [
   "/dashboard",
-  "/energy",
-  "/cycle",
-  "/diversification",
-  "/labour",
-  "/migration",
-  "/agriculture",
-  "/signals",
-  "/learn",
-  "/docs",
-  "/sources",
   "/municipalities",
+  // Briefings hub only — individual briefings require subscription
+  "/overview/briefing",
+  "/tools/learn", "/tools/docs", "/tools/sources",
   // Phase 1 audience expansion — free funnel to show value
-  "/pipeline",
-  "/rental",
-  "/commercial",
+  "/real-estate/pipeline", "/real-estate/rental", "/real-estate/commercial",
   // Phase 2 — free funnel
-  "/drilling",
-  "/compare",
-  // Briefings hub only — individual briefings (/briefing/*) require subscription
-  "/briefing",
+  "/economy/drilling", "/intelligence/compare",
+];
+const freePrefixes = [
+  "/economy/", "/environment/", "/safety/",
+  "/overview/signals",
 ];
 
 // Pages where only exact match is free (sub-routes require subscription)
-const freePagesExactOnly = new Set(["/briefing"]);
+const freePagesExactOnly = new Set(["/overview/briefing"]);
 
 function isPublicRoute(pathname: string) {
   if (publicRoutes.includes(pathname)) return true;
@@ -65,6 +58,13 @@ function isActiveSubscription(status: string | undefined, trialEnd: string | nul
     return new Date(trialEnd) > new Date();
   }
   return false;
+}
+
+function isFreePage(pathname: string): boolean {
+  if (freePages.some((p) => pathname === p || (!freePagesExactOnly.has(p) && pathname.startsWith(p + "/")))) {
+    return true;
+  }
+  return freePrefixes.some((p) => pathname.startsWith(p));
 }
 
 export async function middleware(req: NextRequest) {
@@ -137,7 +137,7 @@ export async function middleware(req: NextRequest) {
       return NextResponse.next();
     }
     // Allow free funnel pages without subscription
-    if (freePages.some((p) => pathname === p || (!freePagesExactOnly.has(p) && pathname.startsWith(p + "/")))) {
+    if (isFreePage(pathname)) {
       return NextResponse.next();
     }
     return NextResponse.redirect(new URL("/billing?expired=1", req.url));

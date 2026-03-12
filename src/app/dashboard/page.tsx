@@ -6,21 +6,16 @@ export const metadata: Metadata = {
   title: "Alberta Economic Dashboard",
   description: "Live macro economic indicators for Alberta — GDP, unemployment, inflation, interest rates, and retail sales updated daily from government sources.",
 };
-import { TimeSeriesAreaChart, TimeSeriesBarChart, HorizontalBarChart } from "@/components/chart";
+import { TimeSeriesAreaChart, TimeSeriesBarChart } from "@/components/chart";
 import { DataSourceStatus } from "@/components/data-status";
 import {
   fetchBoCTimeSeries,
   fetchBoCObservations,
-  fetchEdmontonPermitsSummary,
-  fetchEdmontonBusinessLicences,
-  fetchEdmontonDevPermits,
-  fetchEdmontonAssessmentsByWard,
   fetchStatCanTimeSeries,
-  fetchAlbertaCKANResource,
   BOC_SERIES,
   STATSCAN_SERIES,
 } from "@/lib/data-sources";
-import { TrendingUp, Building2, Briefcase, BarChart3, Activity } from "lucide-react";
+import { TrendingUp, Briefcase, BarChart3, Activity } from "lucide-react";
 
 // ============================================================
 // Server-side data fetching
@@ -188,34 +183,6 @@ async function ExchangeRateChart() {
   );
 }
 
-async function BuildingPermitsChart() {
-  const data = await fetchEdmontonPermitsSummary();
-  return (
-    <Card>
-      <CardHeader
-        title="Edmonton Building Permits"
-        subtitle="Monthly count since 2023"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#f59e0b" />
-    </Card>
-  );
-}
-
-async function BusinessLicencesChart() {
-  const data = await fetchEdmontonBusinessLicences();
-  return (
-    <Card>
-      <CardHeader
-        title="Edmonton Business Licences Issued"
-        subtitle="Monthly since 2024"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#8b5cf6" />
-    </Card>
-  );
-}
-
 async function MortgageRateChart() {
   const data = await fetchBoCTimeSeries(BOC_SERIES.MORTGAGE_5Y_FIXED, 120);
   return (
@@ -226,34 +193,6 @@ async function MortgageRateChart() {
         badge="LIVE"
       />
       <TimeSeriesAreaChart data={data} color="#ef4444" valueSuffix="%" />
-    </Card>
-  );
-}
-
-async function DevPermitsChart() {
-  const data = await fetchEdmontonDevPermits();
-  return (
-    <Card>
-      <CardHeader
-        title="Edmonton Development Permits"
-        subtitle="Monthly count since 2023"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#06b6d4" />
-    </Card>
-  );
-}
-
-async function PropertyAssessmentsChart() {
-  const data = await fetchEdmontonAssessmentsByWard();
-  return (
-    <Card>
-      <CardHeader
-        title="Avg Residential Assessment by Ward"
-        subtitle="Current assessment year"
-        badge="LIVE"
-      />
-      <HorizontalBarChart data={data} color="#ec4899" valuePrefix="$" height={350} />
     </Card>
   );
 }
@@ -329,51 +268,6 @@ async function RetailSalesChart() {
         badge="LIVE"
       />
       <TimeSeriesBarChart data={data} color="#3b82f6" compact />
-    </Card>
-  );
-}
-
-async function HousingStartsChart() {
-  const { tableId, coordinate } = STATSCAN_SERIES.EDMONTON_HOUSING_STARTS;
-  const data = await fetchStatCanTimeSeries(tableId, coordinate, 24);
-  return (
-    <Card>
-      <CardHeader
-        title="Edmonton Housing Starts"
-        subtitle="CMHC via StatsCan (Table 34-10-0143)"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#f59e0b" />
-    </Card>
-  );
-}
-
-async function HousingCompletionsChart() {
-  const { tableId, coordinate } = STATSCAN_SERIES.EDMONTON_HOUSING_COMPLETIONS;
-  const data = await fetchStatCanTimeSeries(tableId, coordinate, 24);
-  return (
-    <Card>
-      <CardHeader
-        title="Edmonton Housing Completions"
-        subtitle="CMHC via StatsCan (Table 34-10-0145)"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#06b6d4" />
-    </Card>
-  );
-}
-
-async function UnderConstructionChart() {
-  const { tableId, coordinate } = STATSCAN_SERIES.EDMONTON_UNDER_CONSTRUCTION;
-  const data = await fetchStatCanTimeSeries(tableId, coordinate, 24);
-  return (
-    <Card>
-      <CardHeader
-        title="Edmonton Under Construction"
-        subtitle="CMHC via StatsCan (Table 34-10-0147)"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#ec4899" />
     </Card>
   );
 }
@@ -483,51 +377,6 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Section: CMHC Housing Pipeline */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Building2 size={16} className="text-accent-green" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            CMHC Housing Pipeline (Edmonton CMA)
-          </h2>
-        </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Suspense fallback={<LoadingCard />}>
-            <HousingStartsChart />
-          </Suspense>
-          <Suspense fallback={<LoadingCard />}>
-            <HousingCompletionsChart />
-          </Suspense>
-          <Suspense fallback={<LoadingCard />}>
-            <UnderConstructionChart />
-          </Suspense>
-        </div>
-      </section>
-
-      {/* Section: Development & Business */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Building2 size={16} className="text-accent-amber" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Development &amp; Business Activity
-          </h2>
-        </div>
-        <div className="grid md:grid-cols-2 gap-4">
-          <Suspense fallback={<LoadingCard />}>
-            <BuildingPermitsChart />
-          </Suspense>
-          <Suspense fallback={<LoadingCard />}>
-            <BusinessLicencesChart />
-          </Suspense>
-          <Suspense fallback={<LoadingCard />}>
-            <DevPermitsChart />
-          </Suspense>
-          <Suspense fallback={<LoadingCard />}>
-            <PropertyAssessmentsChart />
-          </Suspense>
-        </div>
-      </section>
-
       {/* Section: Data Catalog */}
       <section>
         <div className="flex items-center gap-2 mb-3">
@@ -545,16 +394,6 @@ export default function Dashboard() {
                 "CAD/USD",
                 "Mortgage rates",
                 "CPI measures",
-              ]}
-              status="live"
-            />
-            <DataSourceItem
-              name="Edmonton Open Data (SODA)"
-              datasets={[
-                "Building permits",
-                "Business licences",
-                "Dev permits",
-                "Property assessments",
               ]}
               status="live"
             />

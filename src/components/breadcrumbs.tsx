@@ -3,11 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
+import { getMunicipality } from "@/lib/municipality-registry";
 
-/** Map slugs → display labels for breadcrumbs */
+/** Map URL slugs → display labels */
 const LABELS: Record<string, string> = {
-  dashboard: "Dashboard",
+  // Categories
+  overview: "Overview",
+  economy: "Economy",
+  "real-estate": "Real Estate",
+  intelligence: "Intelligence",
+  environment: "Environment",
+  safety: "Public Safety",
+  municipalities: "Municipalities",
+  tools: "Tools",
+
+  // Overview pages
   signals: "Signals",
+  briefing: "Briefings",
+
+  // Economy pages
   energy: "Energy",
   drilling: "Drilling",
   cycle: "Boom-Bust Cycle",
@@ -15,65 +29,59 @@ const LABELS: Record<string, string> = {
   labour: "Labour",
   migration: "Migration",
   agriculture: "Agriculture",
+
+  // Real Estate pages
   prospects: "Prospect Leads",
-  "real-estate": "Market Intel",
-  micro: "Neighbourhoods",
+  market: "Market Intel",
+  neighbourhoods: "Neighbourhoods",
   pipeline: "Dev Pipeline",
   rental: "Rental Intel",
   commercial: "Commercial",
+
+  // Intelligence pages
   benchmarks: "Benchmarks",
   corridors: "Growth Corridors",
   risk: "Market Risk",
   invest: "Investment Thesis",
   compare: "Compare",
+
+  // Environment pages
   weather: "Weather",
   "air-quality": "Air Quality",
   water: "Water & Rivers",
   wildfire: "Wildfire",
+
+  // Safety pages
   traffic: "Traffic & Roads",
-  earthquakes: "Seismic",
+  seismic: "Seismic",
   emergencies: "Emergencies",
   elections: "Politics",
-  municipalities: "Municipalities",
+
+  // Municipalities
   coverage: "Data Coverage",
-  m: "Municipality",
+
+  // Tools pages
   learn: "Learn",
   docs: "API Docs",
   sources: "Data Sources",
+
+  // Utility pages
+  dashboard: "Dashboard",
   account: "Account",
   billing: "Billing",
   admin: "Admin",
 };
 
-/** Section grouping for breadcrumb parent */
-const SECTION_MAP: Record<string, string> = {
-  energy: "Economy",
-  drilling: "Economy",
-  cycle: "Economy",
-  diversification: "Economy",
-  labour: "Economy",
-  migration: "Economy",
-  agriculture: "Economy",
-  prospects: "Real Estate",
-  "real-estate": "Real Estate",
-  micro: "Real Estate",
-  pipeline: "Real Estate",
-  rental: "Real Estate",
-  commercial: "Real Estate",
-  benchmarks: "Intelligence",
-  corridors: "Intelligence",
-  risk: "Intelligence",
-  invest: "Intelligence",
-  compare: "Intelligence",
-  weather: "Environment",
-  "air-quality": "Environment",
-  water: "Environment",
-  wildfire: "Environment",
-  traffic: "Public Safety",
-  earthquakes: "Public Safety",
-  emergencies: "Public Safety",
-  elections: "Public Safety",
-  coverage: "Municipalities",
+/** Briefing role labels */
+const BRIEFING_LABELS: Record<string, string> = {
+  investor: "Investor",
+  realtor: "Realtor",
+  developer: "Developer",
+  journalist: "Journalist",
+  lender: "Lender",
+  edo: "Economic Development",
+  energy: "Energy Sector",
+  "site-selection": "Site Selection",
 };
 
 export function Breadcrumbs() {
@@ -84,26 +92,32 @@ export function Breadcrumbs() {
 
   const crumbs: { label: string; href?: string }[] = [];
 
-  // Add section parent if applicable
-  const firstSegment = segments[0];
-  const sectionName = SECTION_MAP[firstSegment];
-  if (sectionName) {
-    crumbs.push({ label: sectionName });
-  }
+  // Categories with sub-pages: use first segment as category breadcrumb
+  const category = segments[0];
 
-  // For /m/[slug] routes, add Municipalities parent
-  if (firstSegment === "m") {
-    crumbs.push({ label: "Municipalities", href: "/municipalities" });
-    if (segments[1]) {
-      // Capitalize slug for display
-      const name = segments[1]
-        .split("-")
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" ");
-      crumbs.push({ label: name });
+  if (segments.length >= 2 && LABELS[category]) {
+    // Category crumb (not linked — it's just a grouping, not a page)
+    crumbs.push({ label: LABELS[category] });
+
+    // Municipality deep-dive: /municipalities/[slug]
+    if (category === "municipalities" && segments[1] !== "coverage") {
+      const config = getMunicipality(segments[1]);
+      crumbs.push({
+        label: config?.name || segments[1].split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
+      });
+    }
+    // Briefing sub-pages: /overview/briefing/[role]
+    else if (category === "overview" && segments[1] === "briefing" && segments[2]) {
+      crumbs.push({ label: "Briefings", href: "/overview/briefing" });
+      crumbs.push({ label: BRIEFING_LABELS[segments[2]] || segments[2] });
+    }
+    // Standard category/page
+    else {
+      crumbs.push({ label: LABELS[segments[1]] || segments[1] });
     }
   } else {
-    crumbs.push({ label: LABELS[firstSegment] || firstSegment });
+    // Single-segment pages (dashboard, account, billing, etc.)
+    crumbs.push({ label: LABELS[category] || category });
   }
 
   return (

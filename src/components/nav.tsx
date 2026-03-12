@@ -85,8 +85,7 @@ function buildMunicipalityNav(): NavSection[] {
     icon: Globe,
     items: [
       { href: "/municipalities", label: `All (${live.length} live)`, icon: Globe },
-      { href: "/coverage", label: "Data Coverage", icon: Database },
-      { href: "/dashboard", label: "Edmonton", icon: Building2 },
+      { href: "/municipalities/coverage", label: "Data Coverage", icon: Database },
     ],
   });
 
@@ -102,7 +101,7 @@ function buildMunicipalityNav(): NavSection[] {
       items: municipalities
         .sort((a, b) => (b.population || 0) - (a.population || 0))
         .map((m) => ({
-          href: `/m/${m.slug}`,
+          href: `/municipalities/${m.slug}`,
           label: m.name,
           icon: Building2,
         })),
@@ -118,64 +117,64 @@ const coreSections: NavSection[] = [
     icon: LayoutDashboard,
     items: [
       { href: "/dashboard", label: "Dashboard", icon: Activity },
-      { href: "/signals", label: "Signals", icon: Radar },
-      { href: "/briefing", label: "Briefings", icon: Briefcase },
+      { href: "/overview/signals", label: "Signals", icon: Radar },
+      { href: "/overview/briefing", label: "Briefings", icon: Briefcase },
     ],
   },
   {
     label: "Economy",
     icon: PieChart,
     items: [
-      { href: "/energy", label: "Energy", icon: Flame },
-      { href: "/drilling", label: "Drilling", icon: Pickaxe },
-      { href: "/cycle", label: "Boom-Bust Cycle", icon: RefreshCw },
-      { href: "/diversification", label: "Diversification", icon: PieChart },
-      { href: "/labour", label: "Labour", icon: Users },
-      { href: "/migration", label: "Migration", icon: Plane },
-      { href: "/agriculture", label: "Agriculture", icon: Wheat },
+      { href: "/economy/energy", label: "Energy", icon: Flame },
+      { href: "/economy/drilling", label: "Drilling", icon: Pickaxe },
+      { href: "/economy/cycle", label: "Boom-Bust Cycle", icon: RefreshCw },
+      { href: "/economy/diversification", label: "Diversification", icon: PieChart },
+      { href: "/economy/labour", label: "Labour", icon: Users },
+      { href: "/economy/migration", label: "Migration", icon: Plane },
+      { href: "/economy/agriculture", label: "Agriculture", icon: Wheat },
     ],
   },
   {
     label: "Real Estate",
     icon: Home,
     items: [
-      { href: "/prospects", label: "Prospect Leads", icon: Target },
-      { href: "/real-estate", label: "Market Intel", icon: Home },
-      { href: "/micro", label: "Neighbourhoods", icon: MapPin },
-      { href: "/pipeline", label: "Dev Pipeline", icon: Building },
-      { href: "/rental", label: "Rental Intel", icon: Home },
-      { href: "/commercial", label: "Commercial", icon: Store },
+      { href: "/real-estate/prospects", label: "Prospect Leads", icon: Target },
+      { href: "/real-estate/market", label: "Market Intel", icon: Home },
+      { href: "/real-estate/neighbourhoods", label: "Neighbourhoods", icon: MapPin },
+      { href: "/real-estate/pipeline", label: "Dev Pipeline", icon: Building },
+      { href: "/real-estate/rental", label: "Rental Intel", icon: Home },
+      { href: "/real-estate/commercial", label: "Commercial", icon: Store },
     ],
   },
   {
     label: "Intelligence",
     icon: Scale,
     items: [
-      { href: "/benchmarks", label: "Benchmarks", icon: Scale },
-      { href: "/corridors", label: "Growth Corridors", icon: Rocket },
-      { href: "/risk", label: "Market Risk", icon: ShieldAlert },
-      { href: "/invest", label: "Investment Thesis", icon: TrendingUp },
-      { href: "/compare", label: "Compare", icon: GitCompare },
+      { href: "/intelligence/benchmarks", label: "Benchmarks", icon: Scale },
+      { href: "/intelligence/corridors", label: "Growth Corridors", icon: Rocket },
+      { href: "/intelligence/risk", label: "Market Risk", icon: ShieldAlert },
+      { href: "/intelligence/invest", label: "Investment Thesis", icon: TrendingUp },
+      { href: "/intelligence/compare", label: "Compare", icon: GitCompare },
     ],
   },
   {
     label: "Environment",
     icon: CloudSun,
     items: [
-      { href: "/weather", label: "Weather", icon: CloudSun },
-      { href: "/air-quality", label: "Air Quality", icon: Wind },
-      { href: "/water", label: "Water & Rivers", icon: Waves },
-      { href: "/wildfire", label: "Wildfire", icon: TreePine },
+      { href: "/environment/weather", label: "Weather", icon: CloudSun },
+      { href: "/environment/air-quality", label: "Air Quality", icon: Wind },
+      { href: "/environment/water", label: "Water & Rivers", icon: Waves },
+      { href: "/environment/wildfire", label: "Wildfire", icon: TreePine },
     ],
   },
   {
     label: "Public Safety",
     icon: Siren,
     items: [
-      { href: "/traffic", label: "Traffic & Roads", icon: Car },
-      { href: "/earthquakes", label: "Seismic", icon: Activity },
-      { href: "/emergencies", label: "Emergencies", icon: Siren },
-      { href: "/elections", label: "Politics", icon: Landmark },
+      { href: "/safety/traffic", label: "Traffic & Roads", icon: Car },
+      { href: "/safety/seismic", label: "Seismic", icon: Activity },
+      { href: "/safety/emergencies", label: "Emergencies", icon: Siren },
+      { href: "/safety/elections", label: "Politics", icon: Landmark },
     ],
   },
 ];
@@ -184,9 +183,9 @@ const toolsSection: NavSection = {
   label: "Tools",
   icon: Wrench,
   items: [
-    { href: "/learn", label: "Learn", icon: GraduationCap },
-    { href: "/docs", label: "API Docs", icon: BookOpen },
-    { href: "/sources", label: "Data Sources", icon: Database },
+    { href: "/tools/learn", label: "Learn", icon: GraduationCap },
+    { href: "/tools/docs", label: "API Docs", icon: BookOpen },
+    { href: "/tools/sources", label: "Data Sources", icon: Database },
   ],
 };
 
@@ -372,10 +371,10 @@ export function Nav() {
 
         {/* Briefings quick link */}
         <Link
-          href="/briefing"
+          href="/overview/briefing"
           title="Briefings"
           className={`flex items-center ${expanded ? "gap-2.5 px-4" : "justify-center"} py-2 border-b border-card-border transition-colors ${
-            pathname.startsWith("/briefing")
+            pathname.startsWith("/overview/briefing")
               ? "bg-accent/10 text-accent"
               : "text-muted hover:text-foreground hover:bg-foreground/[0.05]"
           }`}

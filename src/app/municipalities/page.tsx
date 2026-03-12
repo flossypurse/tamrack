@@ -69,7 +69,7 @@ function MunicipalityCard({ config }: { config: MunicipalityConfig }) {
 
   if (isLive) {
     return (
-      <Link href={`/m/${config.slug}`} className="group">
+      <Link href={`/municipalities/${config.slug}`} className="group">
         {inner}
       </Link>
     );
@@ -174,7 +174,7 @@ export default function MunicipalitiesPage() {
 
       {/* Coverage + embed promo */}
       <div className="grid sm:grid-cols-2 gap-4">
-        <Link href="/coverage" className="group">
+        <Link href="/municipalities/coverage" className="group">
           <Card className="h-full hover:border-accent/30 transition-colors text-center py-6">
             <h3 className="text-sm font-medium mb-2 group-hover:text-accent transition-colors">Data Coverage Matrix</h3>
             <p className="text-xs text-muted max-w-md mx-auto">
