@@ -26,8 +26,9 @@ export default function PrivacyPage() {
         <h3 className="text-base font-medium">Account Information</h3>
         <p>
           When you create an account, we collect your email address. If you sign in with Google, we also receive
-          your name and profile image from Google. We do not collect passwords — authentication is handled via
-          magic links or OAuth.
+          your name and profile image from Google. We store a Google OAuth token solely to verify your identity
+          on subsequent sign-ins — we do not use it to access any other Google services. We do not collect
+          passwords — authentication is handled via magic links or OAuth.
         </p>
 
         <h3 className="text-base font-medium">Billing Information</h3>
@@ -40,7 +41,17 @@ export default function PrivacyPage() {
         <h3 className="text-base font-medium">Usage Data</h3>
         <p>
           We log API requests (endpoint, timestamp, response status) for rate limiting and service monitoring.
-          We do not track browsing behavior, use analytics cookies, or share data with advertising platforms.
+          We do not track browsing behavior or share data with advertising platforms.
+        </p>
+
+        <h3 className="text-base font-medium">Analytics</h3>
+        <p>
+          We may use Google Analytics 4 to understand how the Service is used (e.g. sign-up conversions, page
+          views). When enabled, Google Analytics sets its own cookies and collects anonymized usage data such as
+          pages visited, session duration, and browser type. This data is processed by Google under
+          its <a href="https://policies.google.com/privacy" className="text-accent hover:underline" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
+          Google Analytics is not used for advertising or cross-site tracking. You can opt out of Google Analytics
+          by installing the <a href="https://tools.google.com/dlpage/gaoptout" className="text-accent hover:underline" target="_blank" rel="noopener noreferrer">Google Analytics Opt-out Browser Add-on</a>.
         </p>
 
         <h2 className="text-lg font-semibold">2. How We Use Your Information</h2>
@@ -49,6 +60,7 @@ export default function PrivacyPage() {
           <li>To send magic link sign-in emails</li>
           <li>To process subscription billing through Stripe</li>
           <li>To enforce API rate limits</li>
+          <li>To understand usage patterns and improve the Service (via analytics)</li>
           <li>To communicate service updates (rare, opt-out available)</li>
         </ul>
 
@@ -66,13 +78,16 @@ export default function PrivacyPage() {
         <ul className="list-disc pl-6 space-y-1">
           <li><strong>Stripe</strong> — for payment processing</li>
           <li><strong>Mailgun</strong> — for transactional emails (sign-in links)</li>
+          <li><strong>Google Analytics</strong> — for anonymized usage analytics (when enabled)</li>
+          <li><strong>Railway</strong> — infrastructure hosting provider</li>
           <li><strong>Law enforcement</strong> — if required by Canadian law</li>
         </ul>
 
         <h2 className="text-lg font-semibold">5. Cookies</h2>
         <p>
-          We use a single session cookie for authentication. We do not use tracking cookies,
-          analytics cookies, or third-party cookies.
+          We use a single session cookie (<code className="text-xs">authjs.session-token</code>) for authentication.
+          If Google Analytics is enabled, it may set additional cookies for analytics purposes (see Section 1,
+          Analytics above). We do not use advertising cookies or third-party tracking pixels.
         </p>
 
         <h2 className="text-lg font-semibold">6. Your Rights</h2>
@@ -83,7 +98,11 @@ export default function PrivacyPage() {
           <li>Request deletion of your account and data</li>
           <li>Withdraw consent for data processing</li>
         </ul>
-        <p>Contact us to exercise any of these rights.</p>
+        <p>
+          To exercise any of these rights, email us at{" "}
+          <a href="mailto:privacy@albertapulsecheck.ca" className="text-accent hover:underline">privacy@albertapulsecheck.ca</a>.
+          We will respond within 30 days.
+        </p>
 
         <h2 className="text-lg font-semibold">7. Data Retention</h2>
         <p>
@@ -100,7 +119,8 @@ export default function PrivacyPage() {
 
         <h2 className="text-lg font-semibold">Contact</h2>
         <p>
-          Privacy questions? Contact us at the email address associated with your account.
+          Privacy questions? Email{" "}
+          <a href="mailto:privacy@albertapulsecheck.ca" className="text-accent hover:underline">privacy@albertapulsecheck.ca</a>.
         </p>
       </article>
     </main>

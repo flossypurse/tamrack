@@ -29,16 +29,30 @@ export default function TermsPage() {
 
         <h2 className="text-lg font-semibold">2. Description of Service</h2>
         <p>
-          Alberta Pulse Check provides economic data dashboards and APIs aggregating publicly available data from
-          government sources including Bank of Canada, Statistics Canada, and municipal open data portals. The Service
-          processes and presents this data for informational purposes.
+          Alberta Pulse Check provides economic data dashboards, embeddable charts, and APIs aggregating
+          publicly available data from government sources including but not limited to: Bank of Canada,
+          Statistics Canada, Alberta Open Data, the Canada Energy Regulator (CER), Alberta Electric System
+          Operator (AESO), Immigration Refugees and Citizenship Canada (IRCC), Infrastructure Canada,
+          Alberta Energy Regulator (AER), and municipal open data portals across Alberta.
+        </p>
+        <p>
+          The Service processes and presents this data for informational purposes only.
         </p>
 
-        <h2 className="text-lg font-semibold">3. Subscriptions and Billing</h2>
+        <h2 className="text-lg font-semibold">3. Service Tiers</h2>
+
+        <h3 className="text-base font-medium">Free Tier</h3>
         <p>
-          The Service offers a paid subscription at $29 CAD per month. New accounts receive a 14-day free trial.
-          Subscriptions are billed monthly through Stripe. You may cancel at any time through the billing portal;
-          access continues until the end of the current billing period.
+          The free tier provides access to province-wide macro economic dashboards, the municipality explorer,
+          and the coverage map. No account is required for free-tier content.
+        </p>
+
+        <h3 className="text-base font-medium">Pro Subscription ($29 CAD/month)</h3>
+        <p>
+          The Pro tier includes municipality deep-dive dashboards, REST API access, embeddable charts, and
+          briefings. New accounts receive a 14-day free trial with no credit card required. After the trial,
+          subscriptions are billed monthly through Stripe. You may cancel at any time through the billing
+          portal; access continues until the end of the current billing period.
         </p>
 
         <h2 className="text-lg font-semibold">4. API Usage</h2>
@@ -48,7 +62,14 @@ export default function TermsPage() {
           violation of these terms.
         </p>
 
-        <h2 className="text-lg font-semibold">5. Data Accuracy</h2>
+        <h2 className="text-lg font-semibold">5. Embeddable Charts</h2>
+        <p>
+          Pro subscribers may embed charts on external websites using the provided embed URLs. Embedded charts
+          must retain the Alberta Pulse Check attribution link. You may not modify, remove, or obscure the
+          attribution. We reserve the right to disable embed access for accounts that violate this requirement.
+        </p>
+
+        <h2 className="text-lg font-semibold">6. Data Accuracy</h2>
         <p>
           <strong>The Service is for informational purposes only.</strong> While we strive for accuracy, data is
           sourced from third-party government APIs and may contain errors, delays, or gaps. We do not guarantee the
@@ -56,39 +77,49 @@ export default function TermsPage() {
           investment, or business decisions.
         </p>
 
-        <h2 className="text-lg font-semibold">6. Limitation of Liability</h2>
+        <h2 className="text-lg font-semibold">7. Intellectual Property</h2>
+        <p>
+          The Service&apos;s interface, design, and proprietary analysis are owned by Alberta Pulse Check. The
+          underlying data is sourced from public government sources and remains subject to the respective
+          government open data licences. You may use data obtained through the API or embeds for your own
+          purposes, provided you comply with applicable government open data licence terms.
+        </p>
+
+        <h2 className="text-lg font-semibold">8. Limitation of Liability</h2>
         <p>
           To the maximum extent permitted by law, Alberta Pulse Check and its operators shall not be liable for any
           indirect, incidental, special, consequential, or punitive damages resulting from your use of the Service,
           including but not limited to financial losses based on data presented by the Service.
         </p>
 
-        <h2 className="text-lg font-semibold">7. Account Responsibility</h2>
+        <h2 className="text-lg font-semibold">9. Account Responsibility</h2>
         <p>
           You are responsible for maintaining the security of your account credentials and API keys. You are
           responsible for all activity under your account.
         </p>
 
-        <h2 className="text-lg font-semibold">8. Termination</h2>
+        <h2 className="text-lg font-semibold">10. Termination</h2>
         <p>
           We may suspend or terminate your account if you violate these terms, abuse the API, or engage in any
-          activity that harms the Service or other users. You may delete your account at any time by contacting us.
+          activity that harms the Service or other users. You may delete your account at any time by contacting us
+          at <a href="mailto:support@albertapulsecheck.ca" className="text-accent hover:underline">support@albertapulsecheck.ca</a>.
         </p>
 
-        <h2 className="text-lg font-semibold">9. Changes to Terms</h2>
+        <h2 className="text-lg font-semibold">11. Changes to Terms</h2>
         <p>
-          We may update these terms from time to time. Continued use of the Service after changes constitutes
-          acceptance of the new terms.
+          We may update these terms from time to time. We will notify active subscribers of material changes via
+          email. Continued use of the Service after changes constitutes acceptance of the new terms.
         </p>
 
-        <h2 className="text-lg font-semibold">10. Governing Law</h2>
+        <h2 className="text-lg font-semibold">12. Governing Law</h2>
         <p>
           These terms are governed by the laws of the Province of Alberta, Canada.
         </p>
 
         <h2 className="text-lg font-semibold">Contact</h2>
         <p>
-          Questions about these terms? Contact us at the email address associated with your account.
+          Questions about these terms? Email{" "}
+          <a href="mailto:support@albertapulsecheck.ca" className="text-accent hover:underline">support@albertapulsecheck.ca</a>.
         </p>
       </article>
     </main>
