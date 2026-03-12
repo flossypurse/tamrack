@@ -43,6 +43,9 @@ import {
   Siren,
   TreePine,
   Landmark,
+  Pickaxe,
+  TrendingUp,
+  GitCompare,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
@@ -111,6 +114,7 @@ const coreSections: NavSection[] = [
     icon: PieChart,
     items: [
       { href: "/energy", label: "Energy", icon: Flame },
+      { href: "/drilling", label: "Drilling", icon: Pickaxe },
       { href: "/cycle", label: "Boom-Bust Cycle", icon: RefreshCw },
       { href: "/diversification", label: "Diversification", icon: PieChart },
       { href: "/labour", label: "Labour", icon: Users },
@@ -137,6 +141,8 @@ const coreSections: NavSection[] = [
       { href: "/benchmarks", label: "Benchmarks", icon: Scale },
       { href: "/corridors", label: "Growth Corridors", icon: Rocket },
       { href: "/risk", label: "Market Risk", icon: ShieldAlert },
+      { href: "/invest", label: "Investment Thesis", icon: TrendingUp },
+      { href: "/compare", label: "Compare", icon: GitCompare },
     ],
   },
   {

@@ -145,6 +145,12 @@ export const STATSCAN_SERIES = {
   EDMONTON_RENT_1BED: { tableId: 34100133, coordinate: "148.1.2.0.0.0.0.0.0.0" },
   EDMONTON_RENT_2BED: { tableId: 34100133, coordinate: "148.1.3.0.0.0.0.0.0.0" },
   EDMONTON_RENT_3BED: { tableId: 34100133, coordinate: "148.1.4.0.0.0.0.0.0.0" },
+
+  // CMHC Absorption rates — Table 34-10-0153
+  // "Canada Mortgage and Housing Corporation, absorptions and unabsorbed inventory, newly completed dwellings"
+  // Edmonton CMA(4), absorbed(1), totalUnits(1)
+  EDMONTON_ABSORPTION_RATE: { tableId: 34100153, coordinate: "4.1.1.0.0.0.0.0.0.0" },
+  EDMONTON_UNABSORBED: { tableId: 34100153, coordinate: "4.2.1.0.0.0.0.0.0.0" },
 } as const;
 
 // ============================================================
@@ -2634,6 +2640,106 @@ export async function fetchCalgaryTrafficIncidents(): Promise<{ description: str
       type: r.category || "",
       quadrant: r.quadrant || "",
     }));
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
+// AER WELL LICENCES (Alberta Energy Regulator)
+// ============================================================
+
+export interface WellLicence {
+  date: string;
+  licenceType: string;  // "Oil" | "Gas" | "Other"
+  count: number;
+  region?: string;
+}
+
+export async function fetchAERWellLicences(): Promise<WellLicence[]> {
+  try {
+    // AER publishes well licence data through Alberta Open Data / CKAN
+    // ST37 monthly well licence report
+    const csv = await fetchAlbertaCKANResource("well-lic-monthly-summary");
+    if (!csv) {
+      // Fallback: return placeholder data from StatsCan oil/gas indicators
+      // to show trends until AER CSV endpoint is confirmed
+      return [];
+    }
+
+    const lines = csv.split("\n").filter(l => l.trim());
+    if (lines.length < 2) return [];
+
+    const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+    const dateIdx = headers.findIndex(h => h.includes("date") || h.includes("month") || h.includes("year"));
+    const typeIdx = headers.findIndex(h => h.includes("type") || h.includes("substance") || h.includes("fluid"));
+    const countIdx = headers.findIndex(h => h.includes("count") || h.includes("number") || h.includes("licen"));
+
+    const results: WellLicence[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(",").map(c => c.trim());
+      if (cols.length < 2) continue;
+
+      const dateRaw = dateIdx >= 0 ? cols[dateIdx] : cols[0];
+      const typeRaw = typeIdx >= 0 ? cols[typeIdx] : "Other";
+      const countRaw = countIdx >= 0 ? cols[countIdx] : cols[cols.length - 1];
+
+      const count = parseInt(countRaw || "0");
+      if (isNaN(count)) continue;
+
+      // Normalize type
+      let licenceType: "Oil" | "Gas" | "Other" = "Other";
+      if (/oil|crude/i.test(typeRaw)) licenceType = "Oil";
+      else if (/gas|natural/i.test(typeRaw)) licenceType = "Gas";
+
+      results.push({
+        date: dateRaw || "",
+        licenceType,
+        count,
+      });
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
+// ENERGY PRICE PROXY (WCS via BoC commodity data)
+// ============================================================
+
+export interface EnergyPricePoint {
+  date: string;
+  energyIndex: number;
+  allCommodities: number;
+  cadUsd: number;
+}
+
+export async function fetchEnergyPriceTrend(periods: number = 60): Promise<EnergyPricePoint[]> {
+  try {
+    const [energy, allComm, cad] = await Promise.all([
+      fetchBoCTimeSeries(BOC_SERIES.BCPI_ENERGY, periods),
+      fetchBoCTimeSeries(BOC_SERIES.BCPI_ALL, periods),
+      fetchBoCTimeSeries(BOC_SERIES.CAD_USD, periods),
+    ]);
+
+    // Merge by date
+    const dateMap = new Map<string, EnergyPricePoint>();
+    for (const p of energy) {
+      dateMap.set(p.date, { date: p.date, energyIndex: p.value, allCommodities: 0, cadUsd: 0 });
+    }
+    for (const p of allComm) {
+      const existing = dateMap.get(p.date);
+      if (existing) existing.allCommodities = p.value;
+    }
+    for (const p of cad) {
+      const existing = dateMap.get(p.date);
+      if (existing) existing.cadUsd = p.value;
+    }
+
+    return Array.from(dateMap.values())
+      .filter(p => p.energyIndex && p.allCommodities)
+      .sort((a, b) => a.date.localeCompare(b.date));
   } catch {
     return [];
   }

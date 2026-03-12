@@ -24,6 +24,9 @@ const freePages = [
   "/pipeline",
   "/rental",
   "/commercial",
+  // Phase 2 — free funnel
+  "/drilling",
+  "/compare",
 ];
 
 function isPublicRoute(pathname: string) {
