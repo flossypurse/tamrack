@@ -2049,7 +2049,7 @@ export interface ClimatePoint {
 export async function fetchAlbertaWeather(): Promise<CurrentWeather[]> {
   try {
     const res = await fetch(
-      `${ECCC_BASE}/collections/citypageweather-realtime/items?f=json&limit=100&province=AB&sortby=-observation_datetime`,
+      `${ECCC_BASE}/collections/citypageweather-realtime/items?f=json&limit=100&identifier=ab-*`,
       { next: { revalidate: 1800 } }
     );
     if (!res.ok) return [];
@@ -2059,20 +2059,21 @@ export async function fetchAlbertaWeather(): Promise<CurrentWeather[]> {
     const results: CurrentWeather[] = [];
     for (const f of features) {
       const p = f.properties || {};
-      const name = p.location_name_en || p.name || "";
+      const cc = p.currentConditions || {};
+      const name = p.name?.en || p.name || "";
       if (!name || seen.has(name)) continue;
       seen.add(name);
       results.push({
         station: name,
-        temperature: p.air_temp ?? p.temperature ?? null,
-        humidity: p.rel_humidity ?? p.relativeHumidity ?? null,
-        windSpeed: p.wind_speed ?? p.wind?.speed ?? null,
-        windDirection: p.wind_dir ?? p.wind?.direction ?? null,
-        condition: p.condition?.en ?? p.condition ?? p.icon_code ?? null,
-        pressure: p.station_pressure ?? p.pressure ?? null,
-        windChill: p.wind_chill ?? p.windChill ?? null,
-        visibility: p.visibility ?? null,
-        observationTime: p.observation_datetime ?? p.datetime ?? "",
+        temperature: cc.temperature?.value?.en ?? null,
+        humidity: cc.relativeHumidity?.value?.en ?? null,
+        windSpeed: cc.wind?.speed?.value?.en ?? null,
+        windDirection: cc.wind?.direction?.value?.en ?? null,
+        condition: cc.condition?.en ?? null,
+        pressure: cc.pressure?.value?.en ?? null,
+        windChill: cc.windChill?.value?.en ?? null,
+        visibility: cc.visibility?.value?.en ?? null,
+        observationTime: cc.timestamp?.en ?? p.lastUpdated ?? "",
       });
     }
     return results;
@@ -2506,7 +2507,7 @@ export async function fetchAlbertaEmergencyAlerts(): Promise<EmergencyAlert[]> {
   try {
     // Use ECCC weather alerts for Alberta
     const res = await fetch(
-      `${ECCC_BASE}/collections/citypageweather-realtime/items?f=json&limit=100&province=AB`,
+      `${ECCC_BASE}/collections/citypageweather-realtime/items?f=json&limit=100&identifier=ab-*`,
       { next: { revalidate: 1800 } }
     );
     if (!res.ok) return [];
@@ -2515,19 +2516,19 @@ export async function fetchAlbertaEmergencyAlerts(): Promise<EmergencyAlert[]> {
     const seen = new Set<string>();
     for (const f of (data?.features || [])) {
       const p = f.properties || {};
-      const warnings = p.warnings || p.alert || [];
+      const warnings = p.warnings?.events || p.warnings || [];
       if (!Array.isArray(warnings)) continue;
       for (const w of warnings) {
-        const title = w.title || w.event || w.description || "";
+        const title = w.title || w.event?.en || w.description?.en || "";
         if (!title || seen.has(title)) continue;
         seen.add(title);
         alerts.push({
           id: w.id || `alert-${alerts.length}`,
           title,
-          description: w.description || w.message || title,
+          description: w.description?.en || w.message || title,
           severity: w.priority || w.severity || "Unknown",
           urgency: w.urgency || "",
-          areas: [p.location_name_en || p.name || "Alberta"],
+          areas: [p.name?.en || "Alberta"],
           effective: w.effective || w.issueDateTime || "",
           expires: w.expires || w.expiryDateTime || "",
           source: "ECCC",
