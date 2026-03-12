@@ -16,6 +16,7 @@ import {
   Globe,
   Layers,
 } from "lucide-react";
+import { AlbertaOutline, MapleLeaf, MountainRidge, WildRose } from "@/components/alberta-decorations";
 
 const features = [
   { icon: BarChart3, title: "Macro Dashboard", desc: "BoC rates, GDP, CPI, unemployment, retail sales — all live, all Alberta" },
@@ -63,10 +64,18 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-accent/5 via-transparent to-transparent" />
+
+        {/* Alberta province outline — faint watermark */}
+        <AlbertaOutline className="absolute -right-10 top-4 w-[280px] h-[420px] text-accent opacity-[0.04] pointer-events-none select-none" />
+
+        {/* Mountain ridge at bottom of hero */}
+        <MountainRidge className="absolute bottom-0 left-0 w-full h-[60px] text-accent opacity-[0.04] pointer-events-none select-none" />
+
         <div className="relative max-w-5xl mx-auto px-4 py-20 sm:py-28 text-center space-y-6">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Activity size={32} className="text-accent" />
             <span className="text-xl font-bold">Alberta Pulse Check</span>
+            <MapleLeaf size={16} className="text-accent-red opacity-30" />
           </div>
           <h1 className="text-3xl sm:text-5xl font-bold leading-tight">
             Economic intelligence
@@ -183,6 +192,7 @@ export default function LandingPage() {
             <Activity size={14} className="text-accent" />
             <span>Alberta Pulse Check</span>
             <span className="text-card-border">|</span>
+            <WildRose size={12} className="text-accent opacity-40" />
             <span>Built in Parkland County, Alberta</span>
           </div>
           <div className="flex items-center gap-4">
