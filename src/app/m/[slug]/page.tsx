@@ -40,6 +40,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       description,
       url: `https://albertapulsecheck.ca/m/${slug}`,
       type: "website",
+      images: [
+        {
+          url: `/api/og?title=${encodeURIComponent(config.name)}&subtitle=${encodeURIComponent("Economic Data & Development Activity")}&type=municipality`,
+          width: 1200,
+          height: 630,
+          alt: `${config.name} economic data — Alberta Pulse Check`,
+        },
+      ],
     },
   };
 }

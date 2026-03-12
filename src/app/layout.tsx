@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { AppShell } from "@/components/app-shell";
 import { OrganizationJsonLd, WebsiteJsonLd, SoftwareApplicationJsonLd } from "@/components/json-ld";
+import { Analytics } from "@/components/analytics";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,12 +43,21 @@ export const metadata: Metadata = {
     title: "Alberta Pulse Check — Economic Intelligence for Alberta",
     description:
       "Real-time economic, real estate, and municipal data for Alberta. Live data from 8+ government sources across 22 municipalities.",
+    images: [
+      {
+        url: "/api/og?title=Alberta+Pulse+Check+-+Economic+Intelligence+for+Alberta",
+        width: 1200,
+        height: 630,
+        alt: "Alberta Pulse Check — Economic Intelligence Dashboard",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Alberta Pulse Check — Economic Intelligence for Alberta",
     description:
       "Real-time economic, real estate, and municipal data for Alberta. Live data from 8+ government sources across 22 municipalities.",
+    images: ["/api/og?title=Alberta+Pulse+Check+-+Economic+Intelligence+for+Alberta"],
   },
   robots: {
     index: true,
@@ -83,6 +93,7 @@ export default function RootLayout({
         <Providers>
           <AppShell>{children}</AppShell>
         </Providers>
+        <Analytics />
       </body>
     </html>
   );

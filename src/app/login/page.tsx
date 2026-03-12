@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { Activity, Mail, Loader2 } from "lucide-react";
+import { trackEvent } from "@/components/analytics";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -21,6 +22,7 @@ function LoginForm() {
     setLoading(true);
     setError("");
     try {
+      trackEvent("sign_up_intent", "conversion", "login_page");
       const result = await signIn("nodemailer", {
         email,
         callbackUrl,

@@ -46,6 +46,15 @@ export const metadata: Metadata = {
   description:
     "Live economic data from 8+ government sources across 22 Alberta municipalities. Building permits, assessments, energy prices, labour market, migration, and more — updated daily.",
   alternates: { canonical: "https://albertapulsecheck.ca" },
+  openGraph: {
+    images: [
+      {
+        url: "/api/og?title=Alberta+Pulse+Check&subtitle=Real-Time+Economic+Intelligence+for+Alberta",
+        width: 1200,
+        height: 630,
+      },
+    ],
+  },
 };
 
 export default function LandingPage() {

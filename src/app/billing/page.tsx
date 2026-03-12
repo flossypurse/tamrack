@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { CreditCard, Key, Loader2, Copy, Check, Trash2, Plus, ExternalLink } from "lucide-react";
+import { trackEvent } from "@/components/analytics";
 
 interface ApiKeyRow {
   id: string;
@@ -40,6 +41,7 @@ export default function BillingPage() {
   }
 
   async function handleCheckout() {
+    trackEvent("begin_trial", "conversion", "billing_page");
     setLoading("checkout");
     const res = await fetch("/api/billing", {
       method: "POST",

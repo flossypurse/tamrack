@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Lock, ArrowRight } from "lucide-react";
+import { trackEvent } from "@/components/analytics";
 
 // Shows an upgrade banner for non-subscribed users viewing gated content
 // Used on municipality deep-dive pages to convert free users
@@ -28,6 +29,7 @@ export function PaywallBanner() {
       <div className="flex items-center justify-center gap-4">
         <Link
           href="/billing"
+          onClick={() => trackEvent("upgrade_click", "conversion", "paywall_banner")}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent/90 transition-colors"
         >
           Start Free Trial — $29/mo

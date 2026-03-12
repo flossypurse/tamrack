@@ -15,7 +15,7 @@ const publicRoutes = [
   // Reference pages
   "/learn", "/sources",
 ];
-const publicPrefixes = ["/api/auth", "/api/webhooks", "/api/health", "/embed/"];
+const publicPrefixes = ["/api/auth", "/api/webhooks", "/api/health", "/api/og", "/embed/"];
 
 // Free pages — visible without subscription (part of the funnel)
 // Users still need to be logged in, but don't need an active subscription
@@ -39,9 +39,12 @@ const freePages = [
   // Phase 2 — free funnel
   "/drilling",
   "/compare",
-  // Briefings — role-based intelligence reports
+  // Briefings hub only — individual briefings (/briefing/*) require subscription
   "/briefing",
 ];
+
+// Pages where only exact match is free (sub-routes require subscription)
+const freePagesExactOnly = new Set(["/briefing"]);
 
 function isPublicRoute(pathname: string) {
   if (publicRoutes.includes(pathname)) return true;
@@ -134,7 +137,7 @@ export async function middleware(req: NextRequest) {
       return NextResponse.next();
     }
     // Allow free funnel pages without subscription
-    if (freePages.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+    if (freePages.some((p) => pathname === p || (!freePagesExactOnly.has(p) && pathname.startsWith(p + "/")))) {
       return NextResponse.next();
     }
     return NextResponse.redirect(new URL("/billing?expired=1", req.url));

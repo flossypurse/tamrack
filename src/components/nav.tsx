@@ -49,6 +49,8 @@ import {
   Search,
   Wrench,
   Briefcase,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
@@ -59,6 +61,7 @@ import {
 } from "@/lib/municipality-registry";
 import { CommandPalette, InlineSearch } from "./command-palette";
 import type { CommandItem } from "./command-palette";
+import { useSidebar } from "./sidebar-context";
 
 // ============================================================
 // Nav structure — add new pages here
@@ -259,6 +262,7 @@ export function Nav() {
   const router = useRouter();
   const { data: session } = useSession();
   const { resolvedTheme, setTheme } = useTheme();
+  const { expanded, toggle: toggleSidebar } = useSidebar();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -346,21 +350,44 @@ export function Nav() {
       {/* ── DESKTOP: Rail + Flyout Panel ── */}
       {/* ================================================================ */}
 
-      {/* Icon rail */}
+      {/* Icon rail (expandable on desktop) */}
       <aside
         data-nav-rail
-        className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-14 bg-card border-r border-card-border z-40"
+        className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 bg-card border-r border-card-border z-40 transition-[width] duration-200 ${
+          expanded ? "lg:w-52" : "lg:w-14"
+        }`}
       >
-        {/* Logo */}
+        {/* Logo — links to landing page */}
         <Link
-          href="/dashboard"
-          className="flex items-center justify-center py-4 border-b border-card-border"
+          href="/"
+          className={`flex items-center ${expanded ? "gap-2.5 px-4" : "justify-center"} py-4 border-b border-card-border`}
         >
-          <Activity size={22} className="text-accent" />
+          <Activity size={22} className="text-accent shrink-0" />
+          {expanded && (
+            <span className="text-sm font-semibold tracking-tight text-foreground whitespace-nowrap overflow-hidden">
+              Alberta Pulse
+            </span>
+          )}
+        </Link>
+
+        {/* Briefings quick link */}
+        <Link
+          href="/briefing"
+          title="Briefings"
+          className={`flex items-center ${expanded ? "gap-2.5 px-4" : "justify-center"} py-2 border-b border-card-border transition-colors ${
+            pathname.startsWith("/briefing")
+              ? "bg-accent/10 text-accent"
+              : "text-muted hover:text-foreground hover:bg-foreground/[0.05]"
+          }`}
+        >
+          <Briefcase size={18} className="shrink-0" />
+          {expanded && (
+            <span className="text-sm whitespace-nowrap overflow-hidden">Briefings</span>
+          )}
         </Link>
 
         {/* Category icons */}
-        <div className="flex-1 flex flex-col items-center py-2 gap-0.5 overflow-y-auto">
+        <div className={`flex-1 flex flex-col ${expanded ? "items-stretch px-2" : "items-center"} py-2 gap-0.5 overflow-y-auto`}>
           {categories.map((cat) => {
             const Icon = cat.icon;
             const active = isCategoryActive(cat);
@@ -372,8 +399,8 @@ export function Nav() {
                 onClick={() =>
                   setActiveCategory(isOpen ? null : cat.key)
                 }
-                title={cat.label}
-                className={`relative w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
+                title={expanded ? undefined : cat.label}
+                className={`relative flex items-center ${expanded ? "gap-2.5 px-3 w-full" : "justify-center w-10"} h-10 rounded-lg transition-colors ${
                   isOpen
                     ? "bg-accent/15 text-accent"
                     : active
@@ -381,7 +408,10 @@ export function Nav() {
                     : "text-muted hover:text-foreground hover:bg-foreground/[0.05]"
                 }`}
               >
-                <Icon size={18} />
+                <Icon size={18} className="shrink-0" />
+                {expanded && (
+                  <span className="text-sm whitespace-nowrap overflow-hidden">{cat.label}</span>
+                )}
                 {/* Active indicator dot */}
                 {active && !isOpen && (
                   <span className="absolute left-0.5 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-accent" />
@@ -391,12 +421,21 @@ export function Nav() {
           })}
         </div>
 
-        {/* Bottom: search trigger, theme, user */}
-        <div className="flex flex-col items-center gap-1 py-3 border-t border-card-border">
+        {/* Bottom: expand toggle, search, theme, user */}
+        <div className={`flex flex-col ${expanded ? "items-stretch px-2" : "items-center"} gap-1 py-3 border-t border-card-border`}>
+          {/* Expand / collapse toggle */}
+          <button
+            onClick={toggleSidebar}
+            title={expanded ? "Collapse sidebar" : "Expand sidebar"}
+            className={`flex items-center ${expanded ? "gap-2.5 px-3 w-full" : "justify-center w-10"} h-10 rounded-lg text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors`}
+          >
+            {expanded ? <PanelLeftClose size={18} className="shrink-0" /> : <PanelLeftOpen size={18} />}
+            {expanded && <span className="text-sm whitespace-nowrap">Collapse</span>}
+          </button>
+
           {/* Search */}
           <button
             onClick={() => {
-              // Simulate Cmd+K
               window.dispatchEvent(
                 new KeyboardEvent("keydown", {
                   key: "k",
@@ -405,10 +444,11 @@ export function Nav() {
                 })
               );
             }}
-            title="Search (⌘K)"
-            className="w-10 h-10 flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
+            title={expanded ? undefined : "Search (⌘K)"}
+            className={`flex items-center ${expanded ? "gap-2.5 px-3 w-full" : "justify-center w-10"} h-10 rounded-lg text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors`}
           >
-            <Search size={18} />
+            <Search size={18} className="shrink-0" />
+            {expanded && <span className="text-sm whitespace-nowrap">Search <kbd className="ml-auto text-[10px] text-muted/60">⌘K</kbd></span>}
           </button>
 
           {/* Theme toggle */}
@@ -417,41 +457,44 @@ export function Nav() {
               onClick={() =>
                 setTheme(resolvedTheme === "dark" ? "light" : "dark")
               }
-              title="Toggle theme"
-              className="w-10 h-10 flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
+              title={expanded ? undefined : "Toggle theme"}
+              className={`flex items-center ${expanded ? "gap-2.5 px-3 w-full" : "justify-center w-10"} h-10 rounded-lg text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors`}
             >
               {resolvedTheme === "dark" ? (
-                <Sun size={18} />
+                <Sun size={18} className="shrink-0" />
               ) : (
-                <Moon size={18} />
+                <Moon size={18} className="shrink-0" />
               )}
+              {expanded && <span className="text-sm whitespace-nowrap">{resolvedTheme === "dark" ? "Light mode" : "Dark mode"}</span>}
             </button>
           )}
 
           {/* User avatar */}
           <Link
             href="/account"
-            title="Account"
-            className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
+            title={expanded ? undefined : "Account"}
+            className={`flex items-center ${expanded ? "gap-2.5 px-3 w-full" : "justify-center w-10"} h-10 rounded-lg transition-colors ${
               pathname === "/account"
                 ? "bg-accent/10 text-accent"
                 : "text-muted hover:text-foreground hover:bg-foreground/[0.05]"
             }`}
           >
-            <User size={18} />
+            <User size={18} className="shrink-0" />
+            {expanded && <span className="text-sm whitespace-nowrap">Account</span>}
           </Link>
 
           {isAdmin && (
             <Link
               href="/admin"
-              title="Admin"
-              className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
+              title={expanded ? undefined : "Admin"}
+              className={`flex items-center ${expanded ? "gap-2.5 px-3 w-full" : "justify-center w-10"} h-10 rounded-lg transition-colors ${
                 pathname === "/admin"
                   ? "bg-accent/10 text-accent"
                   : "text-muted hover:text-foreground hover:bg-foreground/[0.05]"
               }`}
             >
-              <Shield size={18} />
+              <Shield size={18} className="shrink-0" />
+              {expanded && <span className="text-sm whitespace-nowrap">Admin</span>}
             </Link>
           )}
         </div>
@@ -461,7 +504,9 @@ export function Nav() {
       {activeCategory && (
         <div
           data-nav-panel
-          className="hidden lg:block fixed top-0 bottom-0 left-14 w-60 bg-card border-r border-card-border z-30 overflow-y-auto shadow-lg"
+          className={`hidden lg:block fixed top-0 bottom-0 w-60 bg-card border-r border-card-border z-30 overflow-y-auto shadow-lg transition-[left] duration-200 ${
+            expanded ? "left-52" : "left-14"
+          }`}
         >
           {(() => {
             const cat = categories.find((c) => c.key === activeCategory);
@@ -574,7 +619,7 @@ export function Nav() {
       {/* Top bar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-b border-card-border">
         <div className="flex items-center justify-between px-4 py-3">
-          <Link href="/dashboard" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <Activity size={18} className="text-accent" />
             <span className="text-sm font-semibold">Alberta Pulse Check</span>
           </Link>
@@ -622,7 +667,7 @@ export function Nav() {
         {/* Logo row */}
         <div className="px-4 py-4 border-b border-card-border flex items-center justify-between shrink-0">
           <Link
-            href="/dashboard"
+            href="/"
             className="flex items-center gap-2.5"
             onClick={() => setMobileOpen(false)}
           >
