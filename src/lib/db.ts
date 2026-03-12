@@ -91,6 +91,12 @@ function migrate(db: Database.Database) {
       UNIQUE(identifier, token)
     );
 
+    CREATE TABLE IF NOT EXISTS sessions (
+      session_token TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS subscriptions (
       id TEXT PRIMARY KEY,
       user_id TEXT UNIQUE NOT NULL REFERENCES users(id),

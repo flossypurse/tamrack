@@ -103,6 +103,44 @@ export function SQLiteAdapter(): Adapter {
       return undefined;
     },
 
+    createSession(session) {
+      console.log(`[auth-adapter] createSession: userId=${session.userId}`);
+      db.prepare(
+        `INSERT INTO sessions (session_token, user_id, expires) VALUES (?, ?, ?)`
+      ).run(session.sessionToken, session.userId, session.expires.toISOString());
+      return session;
+    },
+
+    getSessionAndUser(sessionToken) {
+      const row = db.prepare(
+        `SELECT s.session_token, s.user_id, s.expires, u.* FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.session_token = ?`
+      ).get(sessionToken) as Record<string, string> | undefined;
+      if (!row) return null;
+      return {
+        session: {
+          sessionToken: row.session_token,
+          userId: row.user_id,
+          expires: new Date(row.expires),
+        },
+        user: toAdapterUser(row),
+      };
+    },
+
+    updateSession(session) {
+      if (session.expires) {
+        db.prepare(`UPDATE sessions SET expires = ? WHERE session_token = ?`).run(
+          session.expires.toISOString(),
+          session.sessionToken
+        );
+      }
+      return null;
+    },
+
+    deleteSession(sessionToken) {
+      db.prepare(`DELETE FROM sessions WHERE session_token = ?`).run(sessionToken);
+      return null;
+    },
+
     createVerificationToken(token) {
       console.log(`[auth-adapter] createVerificationToken: identifier=${token.identifier}, expires=${token.expires.toISOString()}`);
       db.prepare(
