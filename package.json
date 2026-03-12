@@ -7,7 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "snapshot": "npx tsx scripts/snapshot.ts"
+    "snapshot": "npx tsx scripts/snapshot.ts",
+    "collect": "npx tsx scripts/collect.ts",
+    "collect:regional": "npx tsx scripts/collect.ts --source regional",
+    "collect:energy": "npx tsx scripts/collect.ts --source energy",
+    "collect:municipalities": "npx tsx scripts/collect.ts --source municipalities",
+    "collect:wells": "npx tsx scripts/collect.ts --source wells",
+    "collect:immigration": "npx tsx scripts/collect.ts --source immigration",
+    "collect:projects": "npx tsx scripts/collect.ts --source projects",
+    "collect:macro": "npx tsx scripts/collect.ts --source macro"
   },
   "dependencies": {
     "better-sqlite3": "^12.6.2",
