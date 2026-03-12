@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card, MetricCard } from "@/components/card";
 import {
+  MUNICIPALITY_REGISTRY,
   getLiveMunicipalities,
   getMunicipalitiesByRegion,
   REGION_LABELS,
@@ -16,57 +17,73 @@ export const metadata = {
 
 function MunicipalityCard({ config }: { config: MunicipalityConfig }) {
   const capLabels = config.capabilities.map((c) => c.replace(/_/g, " "));
+  const isLive = config.status === "live";
 
-  return (
-    <Link href={`/m/${config.slug}`} className="group">
-      <Card className="h-full hover:border-accent/30 transition-colors">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <div
-              className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: config.color }}
-            />
-            <h3 className="text-sm font-medium group-hover:text-accent transition-colors">
-              {config.name}
-            </h3>
-          </div>
+  const inner = (
+    <Card className={`h-full transition-colors ${isLive ? "hover:border-accent/30" : "opacity-60"}`}>
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-2">
+          <div
+            className="w-2 h-2 rounded-full"
+            style={{ backgroundColor: isLive ? config.color : "#71717a" }}
+          />
+          <h3 className={`text-sm font-medium ${isLive ? "group-hover:text-accent" : "text-muted"} transition-colors`}>
+            {config.name}
+          </h3>
+          {!isLive && (
+            <span className="text-[9px] px-1 py-0.5 rounded bg-zinc-500/20 text-zinc-400">
+              PLANNED
+            </span>
+          )}
+        </div>
+        {isLive && (
           <ArrowRight
             size={14}
             className="text-muted group-hover:text-accent transition-colors"
           />
-        </div>
-
-        {config.population && (
-          <p className="text-xs text-muted mt-1">
-            Pop. ~{config.population.toLocaleString()}
-          </p>
         )}
+      </div>
 
-        <div className="flex flex-wrap gap-1 mt-3">
-          {capLabels.map((cap) => (
-            <span
-              key={cap}
-              className="text-[9px] bg-white/[0.04] text-muted px-1.5 py-0.5 rounded"
-            >
-              {cap}
-            </span>
-          ))}
-        </div>
-
-        <p className="text-[10px] text-muted/60 mt-2 font-mono">
-          {config.dataSource}
+      {config.population && (
+        <p className="text-xs text-muted mt-1">
+          Pop. ~{config.population.toLocaleString()}
         </p>
-      </Card>
-    </Link>
+      )}
+
+      <div className="flex flex-wrap gap-1 mt-3">
+        {capLabels.map((cap) => (
+          <span
+            key={cap}
+            className="text-[9px] bg-white/[0.04] text-muted px-1.5 py-0.5 rounded"
+          >
+            {cap}
+          </span>
+        ))}
+      </div>
+
+      <p className="text-[10px] text-muted/60 mt-2 font-mono">
+        {config.dataSource}
+      </p>
+    </Card>
   );
+
+  if (isLive) {
+    return (
+      <Link href={`/m/${config.slug}`} className="group">
+        {inner}
+      </Link>
+    );
+  }
+  return <div>{inner}</div>;
 }
 
 export default function MunicipalitiesPage() {
-  const all = getLiveMunicipalities();
+  const all = MUNICIPALITY_REGISTRY;
+  const live = getLiveMunicipalities();
   const byRegion = getMunicipalitiesByRegion();
 
   const totalPop = all.reduce((s, m) => s + (m.population || 0), 0);
-  const totalCaps = new Set(all.flatMap((m) => m.capabilities));
+  const totalCaps = new Set(live.flatMap((m) => m.capabilities));
 
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
@@ -76,7 +93,7 @@ export default function MunicipalitiesPage() {
           All Alberta Municipalities
         </h1>
         <p className="text-sm text-muted mt-1">
-          {all.length} municipalities with live data from public APIs.
+          {all.length} municipalities tracked, {live.length} with live verified data.
           Free property assessments, permits, businesses, and development data across the province.
         </p>
       </header>
@@ -155,15 +172,25 @@ export default function MunicipalitiesPage() {
         );
       })}
 
-      {/* Embeddable charts promo */}
-      <Card className="text-center py-8">
-        <h3 className="text-sm font-medium mb-2">Embeddable Charts</h3>
-        <p className="text-xs text-muted max-w-md mx-auto">
-          Every chart on Alberta Pulse Check can be embedded on your website.
-          Click the &quot;Embed&quot; button on any chart to get an iframe code.
-          Perfect for municipal websites, news outlets, and real estate blogs.
-        </p>
-      </Card>
+      {/* Coverage + embed promo */}
+      <div className="grid sm:grid-cols-2 gap-4">
+        <Link href="/coverage" className="group">
+          <Card className="h-full hover:border-accent/30 transition-colors text-center py-6">
+            <h3 className="text-sm font-medium mb-2 group-hover:text-accent transition-colors">Data Coverage Matrix</h3>
+            <p className="text-xs text-muted max-w-md mx-auto">
+              See exactly which data types are available for every municipality.
+              Detailed breakdown by API source and capability.
+            </p>
+          </Card>
+        </Link>
+        <Card className="text-center py-6">
+          <h3 className="text-sm font-medium mb-2">Embeddable Charts</h3>
+          <p className="text-xs text-muted max-w-md mx-auto">
+            Every chart can be embedded on your website.
+            Click &quot;Embed&quot; on any chart for iframe code.
+          </p>
+        </Card>
+      </div>
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
         Alberta Pulse Check — Province-wide municipal data from public APIs

@@ -292,20 +292,16 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     population: 35000,
     status: "live",
     endpoints: {
-      parcels: { url: "https://services1.arcgis.com/vSJSJBCERhofQMUY/arcgis/rest/services/Property_Assessment_Current_Year/FeatureServer/0", type: "FeatureServer" },
+      assessments: { url: "https://maps.leduc.ca/arcgis/rest/services/Assessment_parcel/MapServer/0", type: "MapServer" },
     },
     fields: {
-      assessmentValue: "TOTAL_ASSESSMENT",
+      assessmentValue: "ASSESSMENT",
       address: "ADDRESS",
-      zoning: "ZONING",
-      neighbourhood: "NEIGHBOURHOOD",
       propertyClass: "PROPERTY_TYPE",
+      yearBuilt: "YEAR_BUILT",
     },
-    capabilities: ["assessments", "zoning"],
-    filters: {
-      assessmentWhere: "TOTAL_ASSESSMENT > 0",
-    },
-    dataSource: "City of Leduc ArcGIS",
+    capabilities: ["assessments"],
+    dataSource: "City of Leduc ArcGIS MapServer",
     description: "Property assessments with zoning and neighbourhood breakdowns for Leduc and Nisku industrial area.",
     color: "#ef4444",
   },
@@ -315,7 +311,7 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Beaumont",
     region: "edmonton-metro",
     population: 22000,
-    status: "live",
+    status: "planned",
     endpoints: {
       parcels: { url: "https://services1.arcgis.com/vSJSJBCERhofQMUY/arcgis/rest/services/Beaumont_Property_Assessments/FeatureServer/0", type: "FeatureServer" },
     },
@@ -339,7 +335,7 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Fort Saskatchewan",
     region: "edmonton-metro",
     population: 28000,
-    status: "live",
+    status: "planned",
     endpoints: {
       parcels: { url: "https://services1.arcgis.com/vSJSJBCERhofQMUY/arcgis/rest/services/FortSask_Property_Assessments/FeatureServer/0", type: "FeatureServer" },
     },
@@ -363,7 +359,7 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Morinville",
     region: "edmonton-metro",
     population: 10000,
-    status: "live",
+    status: "planned",
     endpoints: {
       parcels: { url: "https://services1.arcgis.com/vSJSJBCERhofQMUY/arcgis/rest/services/Morinville_Property_Assessments/FeatureServer/0", type: "FeatureServer" },
     },
@@ -386,7 +382,7 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Devon",
     region: "edmonton-metro",
     population: 7000,
-    status: "live",
+    status: "planned",
     endpoints: {
       parcels: { url: "https://services1.arcgis.com/vSJSJBCERhofQMUY/arcgis/rest/services/Devon_Property_Assessments/FeatureServer/0", type: "FeatureServer" },
     },
@@ -404,6 +400,46 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     color: "#84cc16",
   },
 
+  {
+    slug: "sturgeon-county",
+    name: "Sturgeon County",
+    region: "edmonton-metro",
+    population: 21000,
+    status: "live",
+    endpoints: {
+      parcels: { url: "https://services.arcgis.com/ix1ny7KGzblW5l6Y/arcgis/rest/services/Sturgeon_PropertyInfo/FeatureServer/1", type: "FeatureServer" },
+    },
+    fields: {
+      address: "FullAddress",
+      neighbourhood: "Neighbourhood",
+    },
+    capabilities: ["zoning"],
+    dataSource: "Sturgeon County ArcGIS",
+    description: "24,500 parcels with addresses, neighbourhoods, and property codes. North of Edmonton along Highway 2.",
+    color: "#166534",
+    notes: ["No dollar-value assessments available via public API"],
+  },
+
+  {
+    slug: "leduc-county",
+    name: "Leduc County",
+    region: "edmonton-metro",
+    population: 14000,
+    status: "live",
+    endpoints: {
+      parcels: { url: "https://services1.arcgis.com/sBJkLg2JQW8aX6Ct/ArcGIS/rest/services/PARCEL_HTTPS/FeatureServer/0", type: "FeatureServer" },
+    },
+    fields: {
+      address: "ADDRESS",
+      zoning: "zoning",
+    },
+    capabilities: ["zoning"],
+    dataSource: "Leduc County ArcGIS",
+    description: "11,740 parcels with zoning, area structure plans, and school districts. South of Edmonton, includes Nisku area.",
+    color: "#be185d",
+    notes: ["No dollar-value assessments available via public API"],
+  },
+
   // ── CALGARY METRO ──────────────────────────────────────────
 
   {
@@ -413,8 +449,10 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     population: 1340000,
     status: "live",
     endpoints: {
-      parcels: { url: "https://data.calgary.ca/resource/6zp6-pxei.json", type: "FeatureServer" },
+      parcels: { url: "https://data.calgary.ca/resource/4bsw-nn7w.json", type: "FeatureServer" },
       permits: { url: "https://data.calgary.ca/resource/c2es-76ed.json", type: "FeatureServer" },
+      businesses: { url: "https://data.calgary.ca/resource/vdjc-pybd.json", type: "FeatureServer" },
+      devPermits: { url: "https://data.calgary.ca/resource/6933-unw5.json", type: "FeatureServer" },
     },
     fields: {
       assessmentValue: "assessed_value",
@@ -428,13 +466,16 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
       permitDescription: "description",
       permitAddress: "originaladdress",
       permitValue: "estprojectcost",
+      businessName: "tradename",
+      businessCategory: "licencetypes",
+      businessAddress: "address",
     },
-    capabilities: ["assessments", "permits", "zoning"],
+    capabilities: ["assessments", "permits", "businesses", "zoning", "dev_permits"],
     filters: {
       assessmentWhere: "assessed_value > 0",
     },
     dataSource: "City of Calgary Open Data (Socrata)",
-    description: "Alberta's largest city — 600K+ property assessments and building permits via open data portal.",
+    description: "Alberta's largest city — 600K+ property assessments, building permits, business licences, and development permits via open data portal.",
     color: "#dc2626",
     notes: ["Uses Socrata API (same as Edmonton)", "Assessment and permit data"],
   },
@@ -444,7 +485,7 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Airdrie",
     region: "calgary-metro",
     population: 80000,
-    status: "live",
+    status: "planned",
     endpoints: {
       parcels: { url: "https://services.arcgis.com/xUhfOfxKjn65QCmh/arcgis/rest/services/Assessment_Current/FeatureServer/0", type: "FeatureServer" },
     },
@@ -468,7 +509,7 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Cochrane",
     region: "calgary-metro",
     population: 36000,
-    status: "live",
+    status: "planned",
     endpoints: {
       parcels: { url: "https://services.arcgis.com/xUhfOfxKjn65QCmh/arcgis/rest/services/Cochrane_Assessments/FeatureServer/0", type: "FeatureServer" },
     },
@@ -492,7 +533,7 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Okotoks",
     region: "calgary-metro",
     population: 33000,
-    status: "live",
+    status: "planned",
     endpoints: {
       parcels: { url: "https://services.arcgis.com/xUhfOfxKjn65QCmh/arcgis/rest/services/Okotoks_Assessments/FeatureServer/0", type: "FeatureServer" },
     },
@@ -515,7 +556,7 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Chestermere",
     region: "calgary-metro",
     population: 24000,
-    status: "live",
+    status: "planned",
     endpoints: {
       parcels: { url: "https://services.arcgis.com/xUhfOfxKjn65QCmh/arcgis/rest/services/Chestermere_Assessments/FeatureServer/0", type: "FeatureServer" },
     },
@@ -533,6 +574,53 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     color: "#2dd4bf",
   },
 
+  {
+    slug: "strathmore",
+    name: "Strathmore",
+    region: "calgary-metro",
+    population: 18000,
+    status: "live",
+    endpoints: {
+      assessments: { url: "https://gis.strathmore.ca/arcgis/rest/services/Property_Parcels/FeatureServer/0", type: "FeatureServer" },
+      zoning: { url: "https://gis.strathmore.ca/arcgis/rest/services/Land_Use/FeatureServer/0", type: "FeatureServer" },
+    },
+    fields: {
+      assessmentValue: "AssessValue",
+      address: "Short_Legal",
+      zoning: "LandUse",
+      neighbourhood: "Census Zone",
+      yearBuilt: "Year_Built",
+      salePrice: "Consideration_amount",
+    },
+    capabilities: ["assessments", "zoning"],
+    filters: {
+      assessmentWhere: "AssessValue > 0",
+    },
+    dataSource: "Town of Strathmore ArcGIS",
+    description: "6,900+ parcels with assessments, tax rates, sale prices, and land use data. One of Alberta's richest public datasets.",
+    color: "#7c3aed",
+  },
+
+  {
+    slug: "canmore",
+    name: "Canmore",
+    region: "calgary-metro",
+    population: 15000,
+    status: "live",
+    endpoints: {
+      zoning: { url: "https://services.arcgis.com/USaXRc3mZF0nhsUu/arcgis/rest/services/Canmore_Land_Use_Districts/FeatureServer/0", type: "FeatureServer" },
+    },
+    fields: {
+      zoning: "LUC_CODE",
+      zoningDescription: "DESCRIPTIO",
+    },
+    capabilities: ["zoning"],
+    dataSource: "Town of Canmore Open Data",
+    description: "305 land use districts in the Bow Valley. Zoning and land use data for one of Alberta's premier mountain communities.",
+    color: "#0d9488",
+    notes: ["No assessment values or parcel boundaries available via public API"],
+  },
+
   // ── CENTRAL ALBERTA ────────────────────────────────────────
 
   {
@@ -540,7 +628,7 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Red Deer",
     region: "central",
     population: 105000,
-    status: "live",
+    status: "planned",
     endpoints: {
       parcels: { url: "https://services.arcgis.com/jTADFmGdo0XlHBdx/arcgis/rest/services/Property_Assessment/FeatureServer/0", type: "FeatureServer" },
     },
@@ -560,6 +648,51 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     color: "#b91c1c",
   },
 
+  {
+    slug: "camrose",
+    name: "Camrose",
+    region: "central",
+    population: 19000,
+    status: "live",
+    endpoints: {
+      assessments: { url: "https://services1.arcgis.com/2MfbdEdZ9gZBFEPt/arcgis/rest/services/PropertyInfo2026/FeatureServer/0", type: "FeatureServer" },
+    },
+    fields: {
+      assessmentValue: "Total_Assessed_Value",
+      address: "Address",
+      zoning: "Zone_Code",
+      yearBuilt: "Year_Built",
+    },
+    capabilities: ["assessments", "zoning"],
+    filters: {
+      assessmentWhere: "Total_Assessed_Value > 0",
+    },
+    dataSource: "City of Camrose ArcGIS",
+    description: "8,600+ parcels with 2026 assessments, zoning, and year built. Historical assessment data available back to 2016.",
+    color: "#0369a1",
+  },
+
+  {
+    slug: "lloydminster",
+    name: "Lloydminster",
+    region: "central",
+    population: 32000,
+    status: "live",
+    endpoints: {
+      parcels: { url: "https://geo.lloydminster.ca/server/rest/services/Parcel_Basemap/MapServer/1", type: "MapServer" },
+    },
+    fields: {
+      address: "Address",
+      subdivision: "Subdivision",
+      yearBuilt: "YearBuilt",
+    },
+    capabilities: ["zoning"],
+    dataSource: "City of Lloydminster ArcGIS",
+    description: "13,000 parcels on the Alberta/Saskatchewan border. Year built, subdivisions, and lot data.",
+    color: "#ca8a04",
+    notes: ["No dollar-value assessments available via public API"],
+  },
+
   // ── SOUTHERN ALBERTA ───────────────────────────────────────
 
   {
@@ -567,7 +700,7 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Lethbridge",
     region: "south",
     population: 104000,
-    status: "live",
+    status: "planned",
     endpoints: {
       parcels: { url: "https://opendata.lethbridge.ca/resource/assessment.json", type: "FeatureServer" },
     },
@@ -584,6 +717,7 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     dataSource: "City of Lethbridge Open Data",
     description: "Southern Alberta's largest city. Property assessments with neighbourhood breakdowns.",
     color: "#059669",
+    notes: ["Socrata endpoint not verified — may use ArcGIS Hub instead"],
   },
 
   {
@@ -591,7 +725,7 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Medicine Hat",
     region: "south",
     population: 65000,
-    status: "live",
+    status: "planned",
     endpoints: {
       parcels: { url: "https://services.arcgis.com/s2Ma2kMGCLsXMKot/arcgis/rest/services/Property_Assessment/FeatureServer/0", type: "FeatureServer" },
     },
@@ -616,7 +750,7 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Grande Prairie",
     region: "north",
     population: 69000,
-    status: "live",
+    status: "planned",
     endpoints: {
       parcels: { url: "https://services.arcgis.com/bJpkR4sFBZZsmJMW/arcgis/rest/services/Property_Assessment/FeatureServer/0", type: "FeatureServer" },
     },
@@ -639,7 +773,7 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Wood Buffalo (Fort McMurray)",
     region: "northeast",
     population: 75000,
-    status: "live",
+    status: "planned",
     endpoints: {
       parcels: { url: "https://services.arcgis.com/SmKQbwDrtQGamLAC/arcgis/rest/services/Property_Assessment/FeatureServer/0", type: "FeatureServer" },
     },

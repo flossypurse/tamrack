@@ -85,32 +85,54 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       : []),
   ],
   callbacks: {
+    async signIn({ user, account }) {
+      console.log(`[auth] signIn callback: user=${user?.email}, provider=${account?.provider}`);
+      return true;
+    },
+
+    async redirect({ url, baseUrl }) {
+      console.log(`[auth] redirect callback: url=${url}, baseUrl=${baseUrl}`);
+      // Allow relative URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      // Allow same-origin URLs
+      if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
+    },
+
     async jwt({ token, user, trigger }) {
-      // On sign-in or explicit update, load fresh data
-      if (user || trigger === "update") {
-        const userId = (user?.id ?? token.sub) as string;
-        const db = getDb();
+      console.log(`[auth] jwt callback: trigger=${trigger}, hasUser=${!!user}, sub=${token.sub}`);
+      try {
+        // On sign-in or explicit update, load fresh data
+        if (user || trigger === "update") {
+          const userId = (user?.id ?? token.sub) as string;
+          console.log(`[auth] jwt: loading user data for ${userId}`);
+          const db = getDb();
 
-        const dbUser = db.prepare(`SELECT role FROM users WHERE id = ?`).get(userId) as { role: string } | undefined;
-        const sub = db.prepare(
-          `SELECT status, trial_end, current_period_end, cancel_at_period_end FROM subscriptions WHERE user_id = ?`
-        ).get(userId) as {
-          status: string;
-          trial_end: string | null;
-          current_period_end: string | null;
-          cancel_at_period_end: number;
-        } | undefined;
+          const dbUser = db.prepare(`SELECT role FROM users WHERE id = ?`).get(userId) as { role: string } | undefined;
+          const sub = db.prepare(
+            `SELECT status, trial_end, current_period_end, cancel_at_period_end FROM subscriptions WHERE user_id = ?`
+          ).get(userId) as {
+            status: string;
+            trial_end: string | null;
+            current_period_end: string | null;
+            cancel_at_period_end: number;
+          } | undefined;
 
-        token.role = dbUser?.role ?? "user";
-        token.subscriptionStatus = sub?.status ?? "none";
-        token.trialEnd = sub?.trial_end ?? null;
-        token.currentPeriodEnd = sub?.current_period_end ?? null;
-        token.cancelAtPeriodEnd = sub?.cancel_at_period_end === 1;
+          console.log(`[auth] jwt: role=${dbUser?.role}, subStatus=${sub?.status}, trialEnd=${sub?.trial_end}`);
+          token.role = dbUser?.role ?? "user";
+          token.subscriptionStatus = sub?.status ?? "none";
+          token.trialEnd = sub?.trial_end ?? null;
+          token.currentPeriodEnd = sub?.current_period_end ?? null;
+          token.cancelAtPeriodEnd = sub?.cancel_at_period_end === 1;
+        }
+      } catch (err) {
+        console.error(`[auth] jwt callback ERROR:`, err);
       }
       return token;
     },
 
     async session({ session, token }) {
+      console.log(`[auth] session callback: sub=${token.sub}`);
       session.user.id = token.sub as string;
       session.user.role = token.role as string;
       session.user.subscriptionStatus = token.subscriptionStatus as string;

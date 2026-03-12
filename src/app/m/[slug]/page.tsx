@@ -18,7 +18,8 @@ import {
   type TopProperty,
   type ConstructionProject,
 } from "@/lib/municipality-data";
-import { Building2, Home, Store, HardHat, MapPin, FileText } from "lucide-react";
+import { fetchAllRegionalData, type RegionalDashboardRecord } from "@/lib/data-sources";
+import { Building2, Home, Store, HardHat, MapPin, FileText, BarChart3, TrendingUp } from "lucide-react";
 
 // Generate static paths for all live municipalities
 export function generateStaticParams() {
@@ -445,6 +446,230 @@ async function TopPropertiesTable({ slug }: { slug: string }) {
 }
 
 // ============================================================
+// Regional Dashboard Data (province-wide indicators)
+// ============================================================
+
+function getLatestByCategory(records: RegionalDashboardRecord[]): { category: string; value: number; year: string }[] {
+  const latest = new Map<string, { value: number; year: string }>();
+  for (const r of records) {
+    const cat = String(r.Category || "Total");
+    const year = String(r.Period || "");
+    const val = Number(r.OriginalValue) || 0;
+    const existing = latest.get(cat);
+    if (!existing || year > existing.year) {
+      latest.set(cat, { value: val, year });
+    }
+  }
+  return Array.from(latest.entries())
+    .map(([category, { value, year }]) => ({ category, value, year }))
+    .filter((r) => r.value > 0)
+    .sort((a, b) => b.value - a.value);
+}
+
+function getTimeSeries(records: RegionalDashboardRecord[], category?: string): { year: string; value: number }[] {
+  const filtered = category
+    ? records.filter((r) => String(r.Category || "Total") === category)
+    : records;
+  const byYear = new Map<string, number>();
+  for (const r of filtered) {
+    const year = String(r.Period || "");
+    const val = Number(r.OriginalValue) || 0;
+    if (year && val > 0) byYear.set(year, val);
+  }
+  return Array.from(byYear.entries())
+    .map(([year, value]) => ({ year, value }))
+    .sort((a, b) => a.year.localeCompare(b.year));
+}
+
+async function RegionalDataSection({ slug }: { slug: string }) {
+  const config = getMunicipality(slug)!;
+  // Map municipality names for regional dashboard lookup
+  const lookupName = config.name
+    .replace(" (Fort McMurray)", "")
+    .replace("Sturgeon County", "Sturgeon")
+    .replace("Leduc County", "Leduc County");
+
+  const regional = await fetchAllRegionalData(lookupName);
+
+  // Check if we got any data at all
+  const totalRecords = Object.values(regional).reduce((s, arr) => s + arr.length, 0);
+  if (totalRecords === 0) return null;
+
+  const latestAssessments = getLatestByCategory(regional.assessments);
+  const latestPermits = getLatestByCategory(regional.buildingPermits);
+  const latestRent = getLatestByCategory(regional.averageRent);
+  const latestVacancy = getLatestByCategory(regional.vacancyRates);
+  const latestHousing = getLatestByCategory(regional.housingStarts);
+  const latestIncome = getLatestByCategory(regional.medianIncome);
+  const latestTax = getLatestByCategory(regional.taxRates);
+
+  // Get total assessment value
+  const totalAssessment = latestAssessments.find((a) => a.category === "Total");
+  const residentialAssessment = latestAssessments.find((a) => a.category === "Residential");
+
+  // Get total building permits (residential)
+  const residentialPermits = latestPermits.find((p) => p.category === "Residential");
+  const totalPermits = latestPermits.find((p) => p.category === "Total");
+
+  // Rent & vacancy
+  const rent2br = latestRent.find((r) => r.category === "2 Bedroom");
+  const vacancy = latestVacancy.find((v) => v.category === "Total" || v.category === "Overall");
+
+  // Housing starts
+  const totalStarts = latestHousing.find((h) => h.category === "Total");
+
+  // Income
+  const income = latestIncome[0];
+
+  // Tax
+  const taxRate = latestTax[0];
+
+  return (
+    <section>
+      <div className="flex items-center gap-2 mb-3">
+        <BarChart3 size={16} className="text-cyan-400" />
+        <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
+          Provincial Indicators
+        </h2>
+        <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400">
+          AB REGIONAL DASHBOARD
+        </span>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {totalAssessment && (
+          <MetricCard
+            title="Equalized Assessment"
+            value={`$${(totalAssessment.value / 1_000_000).toFixed(0)}M`}
+            change={totalAssessment.year}
+            source="AB Regional Dashboard"
+          />
+        )}
+        {residentialAssessment && !totalAssessment && (
+          <MetricCard
+            title="Residential Assessment"
+            value={`$${(residentialAssessment.value / 1_000_000).toFixed(0)}M`}
+            change={residentialAssessment.year}
+            source="AB Regional Dashboard"
+          />
+        )}
+        {(totalPermits || residentialPermits) && (
+          <MetricCard
+            title="Building Permits"
+            value={(totalPermits?.value || residentialPermits?.value || 0).toLocaleString()}
+            change={`${totalPermits ? "Total" : "Residential"} (${totalPermits?.year || residentialPermits?.year})`}
+            source="AB Regional Dashboard"
+          />
+        )}
+        {rent2br && (
+          <MetricCard
+            title="Avg Rent (2BR)"
+            value={`$${rent2br.value.toLocaleString()}`}
+            change={rent2br.year}
+            source="AB Regional Dashboard"
+          />
+        )}
+        {vacancy && (
+          <MetricCard
+            title="Vacancy Rate"
+            value={`${vacancy.value.toFixed(1)}%`}
+            change={vacancy.year}
+            source="AB Regional Dashboard"
+          />
+        )}
+        {totalStarts && (
+          <MetricCard
+            title="Housing Starts"
+            value={totalStarts.value.toLocaleString()}
+            change={totalStarts.year}
+            source="AB Regional Dashboard"
+          />
+        )}
+        {income && (
+          <MetricCard
+            title="Median Income"
+            value={`$${income.value.toLocaleString()}`}
+            change={income.year}
+            source="AB Regional Dashboard"
+          />
+        )}
+        {taxRate && (
+          <MetricCard
+            title="Mill Rate"
+            value={taxRate.value.toFixed(4)}
+            change={taxRate.year}
+            source="AB Regional Dashboard"
+          />
+        )}
+      </div>
+
+      {/* Assessment breakdown by type */}
+      {latestAssessments.length > 1 && (
+        <div className="mt-4">
+          <Card>
+            <CardHeader
+              title="Equalized Assessment by Type"
+              subtitle={`Property assessment breakdown (${latestAssessments[0]?.year})`}
+              badge="PROVINCIAL"
+            />
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-card-border text-muted text-left">
+                    <th className="pb-2 pr-3 font-medium">Property Type</th>
+                    <th className="pb-2 pr-3 font-medium text-right">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {latestAssessments.filter((a) => a.category !== "Total").map((a, i) => (
+                    <tr key={i} className="border-b border-card-border/50 hover:bg-card-border/20">
+                      <td className="py-2 pr-3">{a.category}</td>
+                      <td className="py-2 pr-3 text-right text-accent-green">
+                        ${(a.value / 1_000_000).toFixed(1)}M
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Building permits breakdown */}
+      {latestPermits.length > 1 && (
+        <div className="mt-4">
+          <Card>
+            <CardHeader
+              title="Building Permits by Type"
+              subtitle={`Permit activity breakdown (${latestPermits[0]?.year})`}
+              badge="PROVINCIAL"
+            />
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-card-border text-muted text-left">
+                    <th className="pb-2 pr-3 font-medium">Type</th>
+                    <th className="pb-2 pr-3 font-medium text-right">Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {latestPermits.filter((p) => p.category !== "Total").map((p, i) => (
+                    <tr key={i} className="border-b border-card-border/50 hover:bg-card-border/20">
+                      <td className="py-2 pr-3">{p.category}</td>
+                      <td className="py-2 pr-3 text-right">{p.value.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ============================================================
 // Loading fallbacks
 // ============================================================
 
@@ -551,6 +776,11 @@ export default async function MunicipalityPage({ params }: { params: Promise<{ s
       {/* Construction */}
       <Suspense fallback={<LoadingCard />}>
         <ConstructionSection slug={slug} />
+      </Suspense>
+
+      {/* Regional Dashboard Data */}
+      <Suspense fallback={<LoadingCard />}>
+        <RegionalDataSection slug={slug} />
       </Suspense>
 
       {/* Data Sources */}

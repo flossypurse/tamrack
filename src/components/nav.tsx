@@ -30,6 +30,19 @@ import {
   Globe,
   Sun,
   Moon,
+  BookOpen,
+  Building,
+  Store,
+  Scale,
+  ShieldAlert,
+  Rocket,
+  CloudSun,
+  Wind,
+  Waves,
+  Car,
+  Siren,
+  TreePine,
+  Landmark,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
@@ -46,9 +59,10 @@ import {
 type NavItem = { href: string; label: string; icon: React.ElementType };
 type NavSection = { label: string; icon: React.ElementType; items: NavItem[] };
 
-// Build municipality nav items grouped by region
+// Build municipality nav items grouped by region (only live municipalities)
 function buildMunicipalityNav(): NavSection[] {
   const byRegion = getMunicipalitiesByRegion();
+  const live = getLiveMunicipalities();
   const sections: NavSection[] = [];
 
   // "Explore All" link
@@ -56,15 +70,16 @@ function buildMunicipalityNav(): NavSection[] {
     label: "Municipalities",
     icon: Globe,
     items: [
-      { href: "/municipalities", label: `All (${getLiveMunicipalities().length})`, icon: Globe },
+      { href: "/municipalities", label: `All (${live.length} live)`, icon: Globe },
+      { href: "/coverage", label: "Data Coverage", icon: Database },
       // Edmonton (special — uses SODA, not registry)
       { href: "/dashboard", label: "Edmonton", icon: Building2 },
     ],
   });
 
   for (const region of REGION_ORDER) {
-    const municipalities = byRegion[region];
-    if (!municipalities || municipalities.length === 0) continue;
+    const municipalities = (byRegion[region] || []).filter((m) => m.status === "live");
+    if (municipalities.length === 0) continue;
 
     sections.push({
       label: REGION_LABELS[region],
@@ -110,6 +125,38 @@ const coreSections: NavSection[] = [
       { href: "/prospects", label: "Prospect Leads", icon: Target },
       { href: "/real-estate", label: "Market Intel", icon: Home },
       { href: "/micro", label: "Neighbourhoods", icon: MapPin },
+      { href: "/pipeline", label: "Dev Pipeline", icon: Building },
+      { href: "/rental", label: "Rental Intel", icon: Home },
+      { href: "/commercial", label: "Commercial", icon: Store },
+    ],
+  },
+  {
+    label: "Intelligence",
+    icon: Scale,
+    items: [
+      { href: "/benchmarks", label: "Benchmarks", icon: Scale },
+      { href: "/corridors", label: "Growth Corridors", icon: Rocket },
+      { href: "/risk", label: "Market Risk", icon: ShieldAlert },
+    ],
+  },
+  {
+    label: "Environment",
+    icon: CloudSun,
+    items: [
+      { href: "/weather", label: "Weather", icon: CloudSun },
+      { href: "/air-quality", label: "Air Quality", icon: Wind },
+      { href: "/water", label: "Water & Rivers", icon: Waves },
+      { href: "/wildfire", label: "Wildfire", icon: TreePine },
+    ],
+  },
+  {
+    label: "Public Safety",
+    icon: Siren,
+    items: [
+      { href: "/traffic", label: "Traffic & Roads", icon: Car },
+      { href: "/earthquakes", label: "Seismic", icon: Activity },
+      { href: "/emergencies", label: "Emergencies", icon: Siren },
+      { href: "/elections", label: "Politics", icon: Landmark },
     ],
   },
 ];
@@ -120,6 +167,7 @@ const toolsSections: NavSection[] = [
     icon: GraduationCap,
     items: [
       { href: "/learn", label: "Learn", icon: GraduationCap },
+      { href: "/docs", label: "API Docs", icon: BookOpen },
       { href: "/sources", label: "Data Sources", icon: Database },
     ],
   },

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 // Routes that don't require auth
-const publicRoutes = ["/", "/login", "/terms", "/privacy", "/pricing", "/municipalities"];
+const publicRoutes = ["/", "/login", "/terms", "/privacy", "/pricing", "/municipalities", "/coverage"];
 const publicPrefixes = ["/api/auth", "/api/webhooks", "/embed/"];
 
 // Free pages — visible without subscription (part of the funnel)
@@ -17,8 +17,13 @@ const freePages = [
   "/agriculture",
   "/signals",
   "/learn",
+  "/docs",
   "/sources",
   "/municipalities",
+  // Phase 1 audience expansion — free funnel to show value
+  "/pipeline",
+  "/rental",
+  "/commercial",
 ];
 
 function isPublicRoute(pathname: string) {

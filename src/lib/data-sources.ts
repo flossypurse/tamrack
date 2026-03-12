@@ -367,6 +367,96 @@ export async function fetchEdmontonBusinessLicences(): Promise<TimeSeriesPoint[]
 }
 
 // ============================================================
+// COMMERCIAL DATA (derived from Edmonton SODA)
+// ============================================================
+
+export interface CommercialAssessment {
+  neighbourhood: string;
+  count: number;
+  avgValue: number;
+  totalValue: number;
+}
+
+export async function fetchEdmontonCommercialAssessments(
+  limit: number = 20
+): Promise<CommercialAssessment[]> {
+  try {
+    const data = await fetchEdmontonData(EDMONTON_DATASETS.PROPERTY_ASSESSMENTS, {
+      $query: `SELECT neighbourhood, count(*) as cnt, avg(assessed_value::number) as avg_val, sum(assessed_value::number) as total_val WHERE tax_class='Non Residential' AND neighbourhood IS NOT NULL GROUP BY neighbourhood ORDER BY total_val DESC LIMIT ${limit}`,
+    });
+    if (!Array.isArray(data)) return [];
+    return data.map((row: { neighbourhood: string; cnt: string; avg_val: string; total_val: string }) => ({
+      neighbourhood: row.neighbourhood || "Unknown",
+      count: parseInt(row.cnt || "0"),
+      avgValue: Math.round(parseFloat(row.avg_val || "0")),
+      totalValue: Math.round(parseFloat(row.total_val || "0")),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export interface BusinessCategory {
+  category: string;
+  count: number;
+}
+
+export async function fetchEdmontonBusinessCategories(
+  limit: number = 20
+): Promise<BusinessCategory[]> {
+  try {
+    const data = await fetchEdmontonData(EDMONTON_DATASETS.BUSINESS_LICENCES, {
+      $query: `SELECT category, count(*) as cnt WHERE status='ISSUED' AND category IS NOT NULL GROUP BY category ORDER BY cnt DESC LIMIT ${limit}`,
+    });
+    if (!Array.isArray(data)) return [];
+    return data.map((row: { category: string; cnt: string }) => ({
+      category: row.category || "Unknown",
+      count: parseInt(row.cnt || "0"),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export interface BusinessByNeighbourhood {
+  neighbourhood: string;
+  count: number;
+}
+
+export async function fetchEdmontonBusinessesByNeighbourhood(
+  limit: number = 20
+): Promise<BusinessByNeighbourhood[]> {
+  try {
+    const data = await fetchEdmontonData(EDMONTON_DATASETS.BUSINESS_LICENCES, {
+      $query: `SELECT neighbourhood, count(*) as cnt WHERE status='ISSUED' AND neighbourhood IS NOT NULL GROUP BY neighbourhood ORDER BY cnt DESC LIMIT ${limit}`,
+    });
+    if (!Array.isArray(data)) return [];
+    return data.map((row: { neighbourhood: string; cnt: string }) => ({
+      neighbourhood: row.neighbourhood || "Unknown",
+      count: parseInt(row.cnt || "0"),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchEdmontonCommercialPermits(): Promise<TimeSeriesPoint[]> {
+  try {
+    const data = await fetchEdmontonData(EDMONTON_DATASETS.BUILDING_PERMITS, {
+      $query:
+        "SELECT date_trunc_ym(issue_date) as month, count(*) as cnt, sum(construction_value) as total_val WHERE issue_date > '2023-01-01' AND job_category='Commercial' GROUP BY date_trunc_ym(issue_date) ORDER BY month",
+    });
+    if (!Array.isArray(data)) return [];
+    return data.map((row: { month: string; cnt: string; total_val: string }) => ({
+      date: row.month?.split("T")[0] || "",
+      value: parseInt(row.cnt || "0"),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
 // CONVENIENCE: Fetch and normalize StatsCan for dashboard
 // ============================================================
 
@@ -1752,4 +1842,799 @@ export async function fetchMajorProjectsBySector(
   return Array.from(map.entries())
     .map(([sector, { count, totalCost }]) => ({ sector, count, totalCost }))
     .sort((a, b) => b.totalCost - a.totalCost);
+}
+
+// ============================================================
+// Alberta Regional Dashboard API
+// Province-wide data for all municipalities
+// https://regionaldashboard.alberta.ca
+// ============================================================
+
+export interface RegionalDashboardRecord {
+  CSDUID: string;       // StatsCan census subdivision ID
+  CSDName: string;      // Municipality name
+  Period: string;        // Year or year range
+  OriginalValue: number | string;
+  Category?: string;    // Sub-category (e.g., property type, dwelling type)
+}
+
+const REGIONAL_DASHBOARD_BASE = "https://regionaldashboard.alberta.ca/export/opendata";
+
+// In-memory cache for regional dashboard data — each indicator is fetched once
+// and shared across all municipality pages during build/request
+const regionalCache = new Map<string, Promise<RegionalDashboardRecord[]>>();
+
+async function fetchRegionalDashboard(
+  indicator: string,
+  municipalityName?: string
+): Promise<RegionalDashboardRecord[]> {
+  try {
+    // Use cached promise if available (deduplicates concurrent requests)
+    let dataPromise = regionalCache.get(indicator);
+    if (!dataPromise) {
+      dataPromise = (async () => {
+        const url = `${REGIONAL_DASHBOARD_BASE}/${encodeURIComponent(indicator)}/jsons`;
+        const res = await fetch(url, { next: { revalidate: 86400 } });
+        if (!res.ok) return [];
+        return res.json() as Promise<RegionalDashboardRecord[]>;
+      })();
+      regionalCache.set(indicator, dataPromise);
+    }
+    const data = await dataPromise;
+    if (municipalityName) {
+      const lower = municipalityName.toLowerCase();
+      return data.filter((r) => r.CSDName?.toLowerCase().includes(lower));
+    }
+    return data;
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchRegionalAssessments(municipalityName?: string) {
+  return fetchRegionalDashboard("Total Equalized Assessment", municipalityName);
+}
+
+export async function fetchRegionalBuildingPermits(municipalityName?: string) {
+  return fetchRegionalDashboard("Building Permits", municipalityName);
+}
+
+export async function fetchRegionalHousingStarts(municipalityName?: string) {
+  return fetchRegionalDashboard("Housing Starts", municipalityName);
+}
+
+// Note: "Businesses" dataset is 91MB — too large for build-time fetching.
+// Use "Incorporations" as a lighter proxy for business activity.
+export async function fetchRegionalBusinesses(municipalityName?: string) {
+  return fetchRegionalDashboard("Incorporations", municipalityName);
+}
+
+export async function fetchRegionalVacancyRates(municipalityName?: string) {
+  return fetchRegionalDashboard("Vacancy Rates", municipalityName);
+}
+
+export async function fetchRegionalAverageRent(municipalityName?: string) {
+  return fetchRegionalDashboard("Average Rent", municipalityName);
+}
+
+export async function fetchRegionalMedianIncome(municipalityName?: string) {
+  return fetchRegionalDashboard("Median Income", municipalityName);
+}
+
+export async function fetchRegionalMunicipalTaxRates(municipalityName?: string) {
+  return fetchRegionalDashboard("Municipal Tax Rates", municipalityName);
+}
+
+export async function fetchRegionalWellCount(municipalityName?: string) {
+  return fetchRegionalDashboard("Well Count", municipalityName);
+}
+
+export async function fetchRegionalOilProduction(municipalityName?: string) {
+  return fetchRegionalDashboard("Oil Production", municipalityName);
+}
+
+export async function fetchRegionalNaturalGasProduction(municipalityName?: string) {
+  return fetchRegionalDashboard("Natural Gas Production", municipalityName);
+}
+
+export async function fetchRegionalPopulation(municipalityName?: string) {
+  return fetchRegionalDashboard("Dwelling Units", municipalityName);
+}
+
+export async function fetchRegionalBankruptcies(municipalityName?: string) {
+  return fetchRegionalDashboard("Bankruptcies", municipalityName);
+}
+
+export async function fetchRegionalLandTitles(municipalityName?: string) {
+  return fetchRegionalDashboard("Land Titles", municipalityName);
+}
+
+export async function fetchRegionalIncorporations(municipalityName?: string) {
+  return fetchRegionalDashboard("Incorporations", municipalityName);
+}
+
+export async function fetchRegionalEIBeneficiaries(municipalityName?: string) {
+  return fetchRegionalDashboard("Employment Insurance Beneficiaries", municipalityName);
+}
+
+// Fetch all available indicators for a single municipality
+export async function fetchAllRegionalData(municipalityName: string) {
+  const [
+    assessments,
+    buildingPermits,
+    housingStarts,
+    businesses,
+    vacancyRates,
+    averageRent,
+    medianIncome,
+    taxRates,
+    wellCount,
+    landTitles,
+    bankruptcies,
+    incorporations,
+  ] = await Promise.all([
+    fetchRegionalAssessments(municipalityName),
+    fetchRegionalBuildingPermits(municipalityName),
+    fetchRegionalHousingStarts(municipalityName),
+    fetchRegionalBusinesses(municipalityName),
+    fetchRegionalVacancyRates(municipalityName),
+    fetchRegionalAverageRent(municipalityName),
+    fetchRegionalMedianIncome(municipalityName),
+    fetchRegionalMunicipalTaxRates(municipalityName),
+    fetchRegionalWellCount(municipalityName),
+    fetchRegionalLandTitles(municipalityName),
+    fetchRegionalBankruptcies(municipalityName),
+    fetchRegionalIncorporations(municipalityName),
+  ]);
+
+  return {
+    assessments,
+    buildingPermits,
+    housingStarts,
+    businesses,
+    vacancyRates,
+    averageRent,
+    medianIncome,
+    taxRates,
+    wellCount,
+    landTitles,
+    bankruptcies,
+    incorporations,
+  };
+}
+
+// ============================================================
+// ECCC WEATHER (api.weather.gc.ca — OGC API, no auth)
+// ============================================================
+
+const ECCC_BASE = "https://api.weather.gc.ca";
+
+export interface WeatherStation {
+  id: string;
+  name: string;
+  province: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface CurrentWeather {
+  station: string;
+  temperature: number | null;
+  humidity: number | null;
+  windSpeed: number | null;
+  windDirection: string | null;
+  condition: string | null;
+  pressure: number | null;
+  windChill: number | null;
+  visibility: number | null;
+  observationTime: string;
+}
+
+export interface ClimatePoint {
+  date: string;
+  meanTemp: number | null;
+  maxTemp: number | null;
+  minTemp: number | null;
+  precipitation: number | null;
+  snowfall: number | null;
+}
+
+// Fetch current weather for Alberta cities
+export async function fetchAlbertaWeather(): Promise<CurrentWeather[]> {
+  try {
+    const res = await fetch(
+      `${ECCC_BASE}/collections/citypageweather-realtime/items?f=json&limit=100&province=AB&sortby=-observation_datetime`,
+      { next: { revalidate: 1800 } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const features = data?.features || [];
+    const seen = new Set<string>();
+    const results: CurrentWeather[] = [];
+    for (const f of features) {
+      const p = f.properties || {};
+      const name = p.location_name_en || p.name || "";
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      results.push({
+        station: name,
+        temperature: p.air_temp ?? p.temperature ?? null,
+        humidity: p.rel_humidity ?? p.relativeHumidity ?? null,
+        windSpeed: p.wind_speed ?? p.wind?.speed ?? null,
+        windDirection: p.wind_dir ?? p.wind?.direction ?? null,
+        condition: p.condition?.en ?? p.condition ?? p.icon_code ?? null,
+        pressure: p.station_pressure ?? p.pressure ?? null,
+        windChill: p.wind_chill ?? p.windChill ?? null,
+        visibility: p.visibility ?? null,
+        observationTime: p.observation_datetime ?? p.datetime ?? "",
+      });
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+// Fetch historical climate data for a station
+export async function fetchClimateDaily(
+  stationId: string,
+  startDate: string,
+  endDate: string
+): Promise<ClimatePoint[]> {
+  try {
+    const res = await fetch(
+      `${ECCC_BASE}/collections/climate-daily/items?f=json&limit=366&CLIMATE_IDENTIFIER=${stationId}&LOCAL_DATE>=${startDate}&LOCAL_DATE<=${endDate}&sortby=LOCAL_DATE`,
+      { next: { revalidate: 86400 } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data?.features || []).map((f: { properties: Record<string, unknown> }) => {
+      const p = f.properties;
+      return {
+        date: String(p.LOCAL_DATE || "").slice(0, 10),
+        meanTemp: p.MEAN_TEMPERATURE != null ? Number(p.MEAN_TEMPERATURE) : null,
+        maxTemp: p.MAX_TEMPERATURE != null ? Number(p.MAX_TEMPERATURE) : null,
+        minTemp: p.MIN_TEMPERATURE != null ? Number(p.MIN_TEMPERATURE) : null,
+        precipitation: p.TOTAL_PRECIPITATION != null ? Number(p.TOTAL_PRECIPITATION) : null,
+        snowfall: p.TOTAL_SNOWFALL != null ? Number(p.TOTAL_SNOWFALL) : null,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+// Fetch climate monthly summaries for Alberta
+export async function fetchClimateMonthly(
+  stationId: string,
+  limit: number = 60
+): Promise<TimeSeriesPoint[]> {
+  try {
+    const res = await fetch(
+      `${ECCC_BASE}/collections/climate-monthly/items?f=json&limit=${limit}&CLIMATE_IDENTIFIER=${stationId}&sortby=-LOCAL_DATE`,
+      { next: { revalidate: 86400 } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data?.features || [])
+      .map((f: { properties: Record<string, unknown> }) => ({
+        date: String(f.properties.LOCAL_DATE || "").slice(0, 10),
+        value: Number(f.properties.MEAN_TEMPERATURE ?? 0),
+      }))
+      .reverse();
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
+// ECCC AIR QUALITY (AQHI — api.weather.gc.ca)
+// ============================================================
+
+export interface AQHIReading {
+  location: string;
+  locationId: string;
+  aqhi: number;
+  observationTime: string;
+  latitude: number;
+  longitude: number;
+}
+
+export async function fetchAlbertaAQHI(): Promise<AQHIReading[]> {
+  try {
+    const res = await fetch(
+      `${ECCC_BASE}/collections/aqhi-observations-realtime/items?f=json&limit=100&sortby=-observation_datetime`,
+      { next: { revalidate: 1800 } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const features = data?.features || [];
+    const seen = new Set<string>();
+    const results: AQHIReading[] = [];
+    for (const f of features) {
+      const p = f.properties || {};
+      const locId = p.location_id || "";
+      // Filter Alberta locations (location_id often has province info, or check coordinates)
+      const name = p.location_name_en || "";
+      if (!name || seen.has(locId)) continue;
+      // Alberta bounding box: lat 49-60, lon -120 to -110
+      const coords = f.geometry?.coordinates || [];
+      const lon = coords[0] || 0;
+      const lat = coords[1] || 0;
+      if (lat < 49 || lat > 60 || lon < -120 || lon > -110) continue;
+      seen.add(locId);
+      results.push({
+        location: name,
+        locationId: locId,
+        aqhi: Number(p.aqhi ?? 0),
+        observationTime: p.observation_datetime || "",
+        latitude: lat,
+        longitude: lon,
+      });
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
+// ECCC HYDROMETRIC (Water levels — api.weather.gc.ca)
+// ============================================================
+
+export interface HydrometricReading {
+  stationId: string;
+  stationName: string;
+  waterLevel: number | null;
+  discharge: number | null;
+  date: string;
+  latitude: number;
+  longitude: number;
+  province: string;
+}
+
+export async function fetchAlbertaWaterLevels(): Promise<HydrometricReading[]> {
+  try {
+    const res = await fetch(
+      `${ECCC_BASE}/collections/hydrometric-realtime/items?f=json&limit=200&PROV_TERR_STATE_LOC=AB&sortby=-DATETIME`,
+      { next: { revalidate: 3600 } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const features = data?.features || [];
+    const seen = new Set<string>();
+    const results: HydrometricReading[] = [];
+    for (const f of features) {
+      const p = f.properties || {};
+      const stnId = p.STATION_NUMBER || "";
+      if (!stnId || seen.has(stnId)) continue;
+      seen.add(stnId);
+      const coords = f.geometry?.coordinates || [];
+      results.push({
+        stationId: stnId,
+        stationName: p.STATION_NAME || stnId,
+        waterLevel: p.LEVEL != null ? Number(p.LEVEL) : null,
+        discharge: p.DISCHARGE != null ? Number(p.DISCHARGE) : null,
+        date: p.DATETIME || "",
+        latitude: coords[1] || 0,
+        longitude: coords[0] || 0,
+        province: "AB",
+      });
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchHydrometricStations(): Promise<WeatherStation[]> {
+  try {
+    const res = await fetch(
+      `${ECCC_BASE}/collections/hydrometric-stations/items?f=json&limit=500&PROV_TERR_STATE_LOC=AB`,
+      { next: { revalidate: 86400 } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data?.features || []).map((f: { properties: Record<string, unknown>; geometry?: { coordinates?: number[] } }) => ({
+      id: String(f.properties.STATION_NUMBER || ""),
+      name: String(f.properties.STATION_NAME || ""),
+      province: "AB",
+      latitude: f.geometry?.coordinates?.[1] || 0,
+      longitude: f.geometry?.coordinates?.[0] || 0,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
+// 511 ALBERTA (Traffic — 511.alberta.ca)
+// ============================================================
+
+const ALBERTA_511_BASE = "https://511.alberta.ca/api/v2/get";
+
+export interface RoadCondition {
+  id: string;
+  roadName: string;
+  area: string;
+  location: string;
+  primaryCondition: string;
+  visibility: string;
+  lastUpdated: string;
+}
+
+export interface TrafficEvent {
+  id: string;
+  type: string;
+  severity: string;
+  description: string;
+  roadName: string;
+  direction: string;
+  startTime: string;
+  lastUpdated: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface TrafficCamera {
+  id: string;
+  name: string;
+  location: string;
+  imageUrl: string;
+  latitude: number;
+  longitude: number;
+}
+
+export async function fetchRoadConditions(): Promise<RoadCondition[]> {
+  try {
+    const res = await fetch(`${ALBERTA_511_BASE}/winterroads?format=json`, {
+      next: { revalidate: 600 },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (Array.isArray(data) ? data : []).map((r: Record<string, unknown>) => ({
+      id: String(r.Id || r.id || ""),
+      roadName: String(r.RoadwayName || r.LocationDescription || ""),
+      area: String(r.AreaName || ""),
+      location: String(r.LocationDescription || ""),
+      primaryCondition: String(r.PrimaryCondition || "Unknown"),
+      visibility: String(r.Visibility || ""),
+      lastUpdated: String(r.LastUpdated || ""),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchTrafficEvents(): Promise<TrafficEvent[]> {
+  try {
+    const res = await fetch(`${ALBERTA_511_BASE}/events?format=json`, {
+      next: { revalidate: 600 },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (Array.isArray(data) ? data : []).map((e: Record<string, unknown>) => ({
+      id: String(e.Id || e.id || ""),
+      type: String(e.EventType || e.Type || ""),
+      severity: String(e.Severity || ""),
+      description: String(e.Description || ""),
+      roadName: String(e.RoadwayName || ""),
+      direction: String(e.Direction || ""),
+      startTime: String(e.StartDate || e.StartTime || ""),
+      lastUpdated: String(e.LastUpdated || ""),
+      latitude: Number(e.Latitude || 0),
+      longitude: Number(e.Longitude || 0),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchTrafficCameras(): Promise<TrafficCamera[]> {
+  try {
+    const res = await fetch(`${ALBERTA_511_BASE}/cameras?format=json`, {
+      next: { revalidate: 600 },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (Array.isArray(data) ? data : []).map((c: Record<string, unknown>) => ({
+      id: String(c.Id || c.id || ""),
+      name: String(c.Name || c.Description || ""),
+      location: String(c.RoadwayName || c.Location || ""),
+      imageUrl: String(c.Url || c.ImageUrl || ""),
+      latitude: Number(c.Latitude || 0),
+      longitude: Number(c.Longitude || 0),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchTrafficAlerts(): Promise<{ id: string; message: string; startTime: string; endTime: string; highImportance: boolean; regions: string[] }[]> {
+  try {
+    const res = await fetch(`${ALBERTA_511_BASE}/alerts?format=json`, {
+      next: { revalidate: 600 },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (Array.isArray(data) ? data : []).map((a: Record<string, unknown>) => ({
+      id: String(a.Id || a.id || ""),
+      message: String(a.Message || a.Description || ""),
+      startTime: String(a.StartTime || ""),
+      endTime: String(a.EndTime || ""),
+      highImportance: Boolean(a.HighImportance),
+      regions: Array.isArray(a.Regions) ? a.Regions.map(String) : [],
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
+// ALBERTA WILDFIRE (ArcGIS — geospatial.alberta.ca)
+// ============================================================
+
+const WILDFIRE_BASE = "https://geospatial.alberta.ca/titan/rest/services/wildfire";
+
+export interface ActiveFire {
+  name: string;
+  latitude: number;
+  longitude: number;
+  size: number;
+  stageOfControl: string;
+  startDate: string;
+  lastUpdated: string;
+  fireType: string;
+}
+
+export async function fetchActiveWildfires(): Promise<ActiveFire[]> {
+  try {
+    const res = await fetch(
+      `${WILDFIRE_BASE}/firemap/FeatureServer/0/query?where=1=1&outFields=*&f=json&resultRecordCount=500`,
+      { next: { revalidate: 3600 } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data?.features || []).map((f: { attributes: Record<string, unknown>; geometry?: { x?: number; y?: number } }) => {
+      const a = f.attributes || {};
+      return {
+        name: String(a.FireName || a.FIRENAME || a.FIRE_NUMBER || "Unknown"),
+        latitude: Number(a.Latitude || a.LATITUDE || f.geometry?.y || 0),
+        longitude: Number(a.Longitude || a.LONGITUDE || f.geometry?.x || 0),
+        size: Number(a.CurrentSize || a.SIZE_HA || a.CURRENT_SIZE || 0),
+        stageOfControl: String(a.StageOfControl || a.STAGE_OF_CONTROL || "Unknown"),
+        startDate: a.StartDate || a.START_DATE ? new Date(Number(a.StartDate || a.START_DATE)).toISOString() : "",
+        lastUpdated: a.LastUpdated || a.UPDATE_DATE ? new Date(Number(a.LastUpdated || a.UPDATE_DATE)).toISOString() : "",
+        fireType: String(a.FireType || a.FIRE_TYPE || ""),
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchNonActiveWildfires(): Promise<ActiveFire[]> {
+  try {
+    const res = await fetch(
+      `${WILDFIRE_BASE}/firemap/FeatureServer/1/query?where=1=1&outFields=*&f=json&resultRecordCount=1000`,
+      { next: { revalidate: 3600 } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data?.features || []).map((f: { attributes: Record<string, unknown>; geometry?: { x?: number; y?: number } }) => {
+      const a = f.attributes || {};
+      return {
+        name: String(a.FireName || a.FIRENAME || a.FIRE_NUMBER || "Unknown"),
+        latitude: Number(a.Latitude || a.LATITUDE || f.geometry?.y || 0),
+        longitude: Number(a.Longitude || a.LONGITUDE || f.geometry?.x || 0),
+        size: Number(a.CurrentSize || a.SIZE_HA || a.CURRENT_SIZE || 0),
+        stageOfControl: String(a.StageOfControl || a.STAGE_OF_CONTROL || "Extinguished"),
+        startDate: a.StartDate || a.START_DATE ? new Date(Number(a.StartDate || a.START_DATE)).toISOString() : "",
+        lastUpdated: a.LastUpdated || a.UPDATE_DATE ? new Date(Number(a.LastUpdated || a.UPDATE_DATE)).toISOString() : "",
+        fireType: String(a.FireType || a.FIRE_TYPE || ""),
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
+// EARTHQUAKES (NRCan + USGS)
+// ============================================================
+
+export interface Earthquake {
+  id: string;
+  magnitude: number;
+  location: string;
+  latitude: number;
+  longitude: number;
+  depth: number;
+  time: string;
+  source: string;
+}
+
+export async function fetchAlbertaEarthquakes(days: number = 365): Promise<Earthquake[]> {
+  try {
+    // Use USGS API with Alberta bounding box
+    const endDate = new Date().toISOString().slice(0, 10);
+    const startDate = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+    const res = await fetch(
+      `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=${startDate}&endtime=${endDate}&minlatitude=49&maxlatitude=60&minlongitude=-120&maxlongitude=-110&orderby=time`,
+      { next: { revalidate: 3600 } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data?.features || []).map((f: { id: string; properties: Record<string, unknown>; geometry?: { coordinates?: number[] } }) => ({
+      id: f.id || "",
+      magnitude: Number(f.properties.mag ?? 0),
+      location: String(f.properties.place || ""),
+      latitude: f.geometry?.coordinates?.[1] || 0,
+      longitude: f.geometry?.coordinates?.[0] || 0,
+      depth: f.geometry?.coordinates?.[2] || 0,
+      time: f.properties.time ? new Date(Number(f.properties.time)).toISOString() : "",
+      source: "USGS",
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
+// EMERGENCY ALERTS (Alberta Emergency Alert — Atom feed)
+// ============================================================
+
+export interface EmergencyAlert {
+  id: string;
+  title: string;
+  description: string;
+  severity: string;
+  urgency: string;
+  areas: string[];
+  effective: string;
+  expires: string;
+  source: string;
+}
+
+export async function fetchAlbertaEmergencyAlerts(): Promise<EmergencyAlert[]> {
+  try {
+    // Use ECCC weather alerts for Alberta
+    const res = await fetch(
+      `${ECCC_BASE}/collections/citypageweather-realtime/items?f=json&limit=100&province=AB`,
+      { next: { revalidate: 1800 } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const alerts: EmergencyAlert[] = [];
+    const seen = new Set<string>();
+    for (const f of (data?.features || [])) {
+      const p = f.properties || {};
+      const warnings = p.warnings || p.alert || [];
+      if (!Array.isArray(warnings)) continue;
+      for (const w of warnings) {
+        const title = w.title || w.event || w.description || "";
+        if (!title || seen.has(title)) continue;
+        seen.add(title);
+        alerts.push({
+          id: w.id || `alert-${alerts.length}`,
+          title,
+          description: w.description || w.message || title,
+          severity: w.priority || w.severity || "Unknown",
+          urgency: w.urgency || "",
+          areas: [p.location_name_en || p.name || "Alberta"],
+          effective: w.effective || w.issueDateTime || "",
+          expires: w.expires || w.expiryDateTime || "",
+          source: "ECCC",
+        });
+      }
+    }
+    return alerts;
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
+// REPRESENT API (Elections — represent.opennorth.ca)
+// ============================================================
+
+const REPRESENT_BASE = "https://represent.opennorth.ca";
+
+export interface ElectedOfficial {
+  name: string;
+  party: string;
+  district: string;
+  email: string;
+  url: string;
+  photoUrl: string;
+  office: string;
+}
+
+export async function fetchAlbertaMLAs(): Promise<ElectedOfficial[]> {
+  try {
+    const res = await fetch(
+      `${REPRESENT_BASE}/representatives/alberta-legislature/?format=json&limit=100`,
+      { next: { revalidate: 86400 } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const objects = data?.objects || [];
+    return objects.map((o: Record<string, unknown>) => ({
+      name: String(o.name || ""),
+      party: String(o.party_name || ""),
+      district: String(o.district_name || ""),
+      email: String(o.email || ""),
+      url: String(o.url || o.personal_url || ""),
+      photoUrl: String(o.photo_url || ""),
+      office: String(o.elected_office || "MLA"),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export interface ElectoralDistrict {
+  name: string;
+  id: string;
+  boundaryUrl: string;
+}
+
+export async function fetchAlbertaElectoralDistricts(): Promise<ElectoralDistrict[]> {
+  try {
+    const res = await fetch(
+      `${REPRESENT_BASE}/boundaries/alberta-electoral-districts-2017/?format=json&limit=100`,
+      { next: { revalidate: 86400 } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const objects = data?.objects || [];
+    return objects.map((o: Record<string, unknown>) => ({
+      name: String(o.name || ""),
+      id: String(o.external_id || o.slug || ""),
+      boundaryUrl: String(o.url || ""),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// Edmonton traffic disruptions (Socrata)
+export async function fetchEdmontonTrafficDisruptions(): Promise<{ description: string; location: string; startDate: string; endDate: string; type: string }[]> {
+  try {
+    const data = await fetchEdmontonData("k4tx-5k8p", {
+      $limit: "100",
+      $order: "start_date DESC",
+    });
+    if (!Array.isArray(data)) return [];
+    return data.map((r: Record<string, string>) => ({
+      description: r.description || r.activity || "",
+      location: r.location || r.address || "",
+      startDate: r.start_date || "",
+      endDate: r.end_date || "",
+      type: r.type || r.category || "",
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// Calgary traffic incidents (Socrata)
+export async function fetchCalgaryTrafficIncidents(): Promise<{ description: string; location: string; startTime: string; type: string; quadrant: string }[]> {
+  try {
+    const res = await fetch(
+      "https://data.calgary.ca/resource/35ra-9556.json?$limit=100&$order=start_dt DESC",
+      { next: { revalidate: 600 } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.map((r: Record<string, string>) => ({
+      description: r.description || "",
+      location: r.incident_info || r.address || "",
+      startTime: r.start_dt || "",
+      type: r.category || "",
+      quadrant: r.quadrant || "",
+    }));
+  } catch {
+    return [];
+  }
 }
