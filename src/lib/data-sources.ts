@@ -133,6 +133,18 @@ export const STATSCAN_SERIES = {
   EDMONTON_HOUSING_STARTS: { tableId: 34100154, coordinate: "4.1.1.0.0.0.0.0.0.0" },
   EDMONTON_HOUSING_COMPLETIONS: { tableId: 34100154, coordinate: "4.3.1.0.0.0.0.0.0.0" },
   EDMONTON_UNDER_CONSTRUCTION: { tableId: 34100154, coordinate: "4.2.1.0.0.0.0.0.0.0" },
+
+  // CMHC Rental vacancy rate — Table 34-10-0127
+  // Apartment structures of six units+, privately initiated. Annual (October survey).
+  // Edmonton CMA = member 4
+  EDMONTON_VACANCY_RATE: { tableId: 34100127, coordinate: "4.0.0.0.0.0.0.0.0.0" },
+
+  // CMHC Average rents — Table 34-10-0133
+  // Edmonton CMA = member 148, structure type: apartment 3+ = 1, unit type: bachelor=1/1bed=2/2bed=3/3bed=4
+  EDMONTON_RENT_BACHELOR: { tableId: 34100133, coordinate: "148.1.1.0.0.0.0.0.0.0" },
+  EDMONTON_RENT_1BED: { tableId: 34100133, coordinate: "148.1.2.0.0.0.0.0.0.0" },
+  EDMONTON_RENT_2BED: { tableId: 34100133, coordinate: "148.1.3.0.0.0.0.0.0.0" },
+  EDMONTON_RENT_3BED: { tableId: 34100133, coordinate: "148.1.4.0.0.0.0.0.0.0" },
 } as const;
 
 // ============================================================
@@ -209,6 +221,7 @@ export const EDMONTON_DATASETS = {
   PROPERTY_ASSESSMENTS: "q7d6-ambg",
   BUSINESS_LICENCES: "qhi4-bdpu",
   DEVELOPMENT_PERMITS: "q4gd-6q9r",
+  ROAD_CONSTRUCTION: "7wiq-4rgy",
 } as const;
 
 // ============================================================
@@ -1527,4 +1540,216 @@ export async function fetchSpruceGroveVacantParcels(): Promise<
   } catch {
     return [];
   }
+}
+
+// ============================================================
+// EDMONTON ROAD CONSTRUCTION (SODA API)
+// ============================================================
+
+export interface RoadConstructionProject {
+  fileNumber: string;
+  startDate: string;
+  finishDate: string;
+  workReason: string;
+  street: string;
+  intersections: string;
+  lat: number | null;
+  lng: number | null;
+}
+
+export async function fetchEdmontonRoadConstruction(
+  limit: number = 50
+): Promise<RoadConstructionProject[]> {
+  try {
+    const data = await fetchEdmontonData(EDMONTON_DATASETS.ROAD_CONSTRUCTION, {
+      $where: "work_reason IN('ROAD CONSTRUCTION NEW','ROAD CONSTRUCTION REHAB','LRT CONSTRUCTION','BRIDGE REHABILITATION','DRAINAGE INSTALL','TRAFFIC SIGNAL INSTALL')",
+      $order: "start_date DESC",
+      $limit: String(limit),
+    });
+    return (data || []).map((d: Record<string, unknown>) => ({
+      fileNumber: String(d.file_number || ""),
+      startDate: String(d.start_date || "").slice(0, 10),
+      finishDate: String(d.finish_date || "").slice(0, 10),
+      workReason: String(d.work_reason || ""),
+      street: String(d.street_full_name || ""),
+      intersections: String(d.road_segment_intersections || ""),
+      lat: d.latitude ? Number(d.latitude) : null,
+      lng: d.longitude ? Number(d.longitude) : null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchRoadConstructionByType(): Promise<
+  { type: string; count: number }[]
+> {
+  try {
+    const data = await fetchEdmontonData(EDMONTON_DATASETS.ROAD_CONSTRUCTION, {
+      $select: "work_reason, count(*) as cnt",
+      $group: "work_reason",
+      $order: "cnt DESC",
+      $limit: "20",
+    });
+    return (data || []).map((d: Record<string, unknown>) => ({
+      type: String(d.work_reason || "Unknown").replace(/_/g, " "),
+      count: Number(d.cnt || 0),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
+// ALBERTA MUNICIPAL MILL RATES (Alberta Open Data XLSX)
+// ============================================================
+
+export interface MillRateEntry {
+  municipality: string;
+  status: string;
+  residential: number;
+  nonResidential: number;
+  farmland: number;
+  year: number;
+}
+
+const METRO_MUNICIPALITIES = [
+  "EDMONTON",
+  "ST. ALBERT",
+  "SPRUCE GROVE",
+  "STONY PLAIN",
+  "STRATHCONA COUNTY",
+  "PARKLAND COUNTY",
+  "LEDUC",
+  "BEAUMONT",
+  "FORT SASKATCHEWAN",
+  "DEVON",
+  "MORINVILLE",
+  "STURGEON COUNTY",
+];
+
+export async function fetchAlbertaMillRates(): Promise<MillRateEntry[]> {
+  try {
+    const url =
+      "https://open.alberta.ca/dataset/cde4c4fd-a0b2-4816-af43-13de7a3fd3e3/resource/3a5ae050-ca7e-43b1-b3b9-8cea7330637b/download/2024_financial_year.xlsx";
+    const res = await fetch(url, { next: { revalidate: 86400 } });
+    const buffer = await res.arrayBuffer();
+    const XLSX = await import("xlsx");
+    const workbook = XLSX.read(buffer, { type: "array" });
+
+    // Find the mill rate sheet
+    const sheetName = workbook.SheetNames.find((n: string) =>
+      n.toLowerCase().includes("mill rate")
+    );
+    if (!sheetName) return [];
+
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet, {
+      header: 1,
+      raw: true,
+    }) as unknown[][];
+
+    const results: MillRateEntry[] = [];
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.length < 9) continue;
+      const municipality = String(row[3] || "").trim().toUpperCase();
+      if (!METRO_MUNICIPALITIES.includes(municipality)) continue;
+
+      results.push({
+        municipality: String(row[3] || "").trim(),
+        status: String(row[1] || "").trim(),
+        residential: parseFloat(String(row[5] || 0)) || 0,
+        nonResidential: parseFloat(String(row[7] || 0)) || 0,
+        farmland: parseFloat(String(row[6] || 0)) || 0,
+        year: parseInt(String(row[0] || 2024)) || 2024,
+      });
+    }
+    return results.sort((a, b) => a.residential - b.residential);
+  } catch {
+    return [];
+  }
+}
+
+// ============================================================
+// ALBERTA MAJOR PROJECTS API
+// ============================================================
+
+export interface MajorProject {
+  id: number;
+  name: string;
+  municipality: string;
+  sector: string;
+  stage: string;
+  cost: number;
+  developer: string;
+  type: string;
+  scheduleStart: string;
+  scheduleEnd: string;
+}
+
+export async function fetchMajorProjects(
+  municipalities?: string[]
+): Promise<MajorProject[]> {
+  try {
+    const res = await fetch(
+      "https://majorprojects.alberta.ca/api/MajorProjects",
+      { next: { revalidate: 86400 } }
+    );
+    const geojson = await res.json();
+    const features = geojson?.features || geojson || [];
+    const projects: MajorProject[] = [];
+
+    for (const feature of features) {
+      const p = feature.properties || feature;
+      const munis: string[] = Array.isArray(p.municipalities)
+        ? p.municipalities
+        : typeof p.municipalities === "string"
+          ? [p.municipalities]
+          : [];
+
+      const matchesMuni =
+        !municipalities ||
+        municipalities.some((m) =>
+          munis.some(
+            (pm: string) =>
+              pm.toLowerCase().includes(m.toLowerCase())
+          )
+        );
+      if (!matchesMuni) continue;
+
+      projects.push({
+        id: p.id || 0,
+        name: String(p.name || ""),
+        municipality: munis.join(", "),
+        sector: String(p.sector || ""),
+        stage: String(p.stage || ""),
+        cost: parseFloat(String(p.cost || 0)) || 0,
+        developer: String(p.developer || ""),
+        type: String(p.type || ""),
+        scheduleStart: String(p.schedule || ""),
+        scheduleEnd: String(p.scheduleEnd || ""),
+      });
+    }
+
+    return projects.sort((a, b) => b.cost - a.cost);
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchMajorProjectsBySector(
+  municipalities?: string[]
+): Promise<{ sector: string; count: number; totalCost: number }[]> {
+  const projects = await fetchMajorProjects(municipalities);
+  const map = new Map<string, { count: number; totalCost: number }>();
+  for (const p of projects) {
+    const existing = map.get(p.sector) || { count: 0, totalCost: 0 };
+    existing.count++;
+    existing.totalCost += p.cost;
+    map.set(p.sector, existing);
+  }
+  return Array.from(map.entries())
+    .map(([sector, { count, totalCost }]) => ({ sector, count, totalCost }))
+    .sort((a, b) => b.totalCost - a.totalCost);
 }

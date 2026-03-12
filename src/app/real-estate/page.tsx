@@ -19,11 +19,19 @@ import {
   fetchStrathconaAssessmentsByArea,
   fetchStAlbertDevPermits,
   fetchStAlbertAssessmentsByNeighbourhood,
+  fetchEdmontonRoadConstruction,
+  fetchRoadConstructionByType,
+  fetchAlbertaMillRates,
+  fetchMajorProjects,
+  fetchMajorProjectsBySector,
   BOC_SERIES,
   STATSCAN_SERIES,
   type ResidentialDevPermit,
   type StrathconaPermit,
   type StAlbertDevPermit,
+  type RoadConstructionProject,
+  type MillRateEntry,
+  type MajorProject,
 } from "@/lib/data-sources";
 import {
   Home,
@@ -33,6 +41,9 @@ import {
   FileText,
   Building2,
   Globe,
+  DollarSign,
+  Construction,
+  Landmark,
 } from "lucide-react";
 
 // ============================================================
@@ -195,6 +206,435 @@ async function MetroSingleFamilyChart() {
       />
       <TimeSeriesBarChart data={data} color="#f59e0b" />
     </Card>
+  );
+}
+
+// -- Rental Market (CMHC via StatsCan) --
+
+async function RentalVacancyMetrics() {
+  const [vacancyData, bachelor, oneBed, twoBed, threeBed] = await Promise.all([
+    fetchStatCanTimeSeries(
+      STATSCAN_SERIES.EDMONTON_VACANCY_RATE.tableId,
+      STATSCAN_SERIES.EDMONTON_VACANCY_RATE.coordinate,
+      10
+    ).catch(() => []),
+    fetchStatCanTimeSeries(
+      STATSCAN_SERIES.EDMONTON_RENT_BACHELOR.tableId,
+      STATSCAN_SERIES.EDMONTON_RENT_BACHELOR.coordinate,
+      10
+    ).catch(() => []),
+    fetchStatCanTimeSeries(
+      STATSCAN_SERIES.EDMONTON_RENT_1BED.tableId,
+      STATSCAN_SERIES.EDMONTON_RENT_1BED.coordinate,
+      10
+    ).catch(() => []),
+    fetchStatCanTimeSeries(
+      STATSCAN_SERIES.EDMONTON_RENT_2BED.tableId,
+      STATSCAN_SERIES.EDMONTON_RENT_2BED.coordinate,
+      10
+    ).catch(() => []),
+    fetchStatCanTimeSeries(
+      STATSCAN_SERIES.EDMONTON_RENT_3BED.tableId,
+      STATSCAN_SERIES.EDMONTON_RENT_3BED.coordinate,
+      10
+    ).catch(() => []),
+  ]);
+
+  const latestVacancy = vacancyData.at(-1);
+  const prevVacancy = vacancyData.at(-2);
+  const latestBachelor = bachelor.at(-1);
+  const latest1Bed = oneBed.at(-1);
+  const latest2Bed = twoBed.at(-1);
+  const latest3Bed = threeBed.at(-1);
+
+  const vacancyTrend =
+    latestVacancy && prevVacancy
+      ? latestVacancy.value > prevVacancy.value
+        ? "rising"
+        : "falling"
+      : null;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <MetricCard
+          title="Vacancy Rate"
+          value={latestVacancy ? `${latestVacancy.value.toFixed(1)}%` : "—"}
+          change={
+            vacancyTrend
+              ? `${vacancyTrend} (was ${prevVacancy?.value.toFixed(1)}%)`
+              : undefined
+          }
+          source={`CMHC Oct ${latestVacancy?.date?.slice(0, 4) || ""} Survey`}
+        />
+        <MetricCard
+          title="Bachelor Rent"
+          value={latestBachelor ? `$${Math.round(latestBachelor.value).toLocaleString()}` : "—"}
+          source="CMHC avg rent, apt 3+ units"
+        />
+        <MetricCard
+          title="1-Bedroom Rent"
+          value={latest1Bed ? `$${Math.round(latest1Bed.value).toLocaleString()}` : "—"}
+          source="CMHC avg rent, apt 3+ units"
+        />
+        <MetricCard
+          title="2-Bedroom Rent"
+          value={latest2Bed ? `$${Math.round(latest2Bed.value).toLocaleString()}` : "—"}
+          source="CMHC avg rent, apt 3+ units"
+        />
+        <MetricCard
+          title="3-Bedroom Rent"
+          value={latest3Bed ? `$${Math.round(latest3Bed.value).toLocaleString()}` : "—"}
+          source="CMHC avg rent, apt 3+ units"
+        />
+      </div>
+      <Card>
+        <CardHeader
+          title="Edmonton CMA — Rental Vacancy Rate (October Survey)"
+          subtitle="Apartment structures of 6+ units, privately initiated"
+          badge="LIVE"
+        />
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-card-border text-muted text-left">
+                <th className="pb-2 pr-3 font-medium">Year</th>
+                <th className="pb-2 pr-3 font-medium text-right">Vacancy %</th>
+                <th className="pb-2 pr-3 font-medium text-right">Bachelor</th>
+                <th className="pb-2 pr-3 font-medium text-right">1-Bed</th>
+                <th className="pb-2 pr-3 font-medium text-right">2-Bed</th>
+                <th className="pb-2 font-medium text-right">3-Bed</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vacancyData
+                .slice(-8)
+                .reverse()
+                .map((v, i) => {
+                  const year = v.date?.slice(0, 4);
+                  const bRent = bachelor.find((r) => r.date?.slice(0, 4) === year);
+                  const r1 = oneBed.find((r) => r.date?.slice(0, 4) === year);
+                  const r2 = twoBed.find((r) => r.date?.slice(0, 4) === year);
+                  const r3 = threeBed.find((r) => r.date?.slice(0, 4) === year);
+                  return (
+                    <tr
+                      key={i}
+                      className="border-b border-card-border/50 hover:bg-card-border/20"
+                    >
+                      <td className="py-2 pr-3 font-medium">{year}</td>
+                      <td className="py-2 pr-3 text-right">
+                        <span
+                          className={
+                            v.value < 3
+                              ? "text-red-400"
+                              : v.value < 5
+                                ? "text-accent-amber"
+                                : "text-accent-green"
+                          }
+                        >
+                          {v.value.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td className="py-2 pr-3 text-right text-muted">
+                        {bRent ? `$${Math.round(bRent.value).toLocaleString()}` : "—"}
+                      </td>
+                      <td className="py-2 pr-3 text-right text-muted">
+                        {r1 ? `$${Math.round(r1.value).toLocaleString()}` : "—"}
+                      </td>
+                      <td className="py-2 pr-3 text-right text-muted">
+                        {r2 ? `$${Math.round(r2.value).toLocaleString()}` : "—"}
+                      </td>
+                      <td className="py-2 text-right text-muted">
+                        {r3 ? `$${Math.round(r3.value).toLocaleString()}` : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-[10px] text-muted/60 mt-3">
+          Low vacancy (&lt;3%) = landlord&apos;s market, strong rental demand. High vacancy (&gt;5%) = tenant&apos;s market, potential rent declines. Source: CMHC Rental Market Survey via StatsCan 34-10-0127 &amp; 34-10-0133.
+        </p>
+      </Card>
+    </div>
+  );
+}
+
+// -- Mill Rates comparison --
+
+async function MillRatesTable() {
+  const rates = await fetchAlbertaMillRates();
+  if (!rates.length) return null;
+
+  return (
+    <Card>
+      <CardHeader
+        title="Edmonton Metro — Municipal Mill Rates"
+        subtitle="Property tax rates per $1,000 of assessed value (2024)"
+        badge="LIVE"
+      />
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-card-border text-muted text-left">
+              <th className="pb-2 pr-3 font-medium">Municipality</th>
+              <th className="pb-2 pr-3 font-medium">Type</th>
+              <th className="pb-2 pr-3 font-medium text-right">Residential</th>
+              <th className="pb-2 pr-3 font-medium text-right">Non-Residential</th>
+              <th className="pb-2 font-medium text-right">Farmland</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rates.map((r: MillRateEntry, i: number) => (
+              <tr
+                key={i}
+                className="border-b border-card-border/50 hover:bg-card-border/20"
+              >
+                <td className="py-2 pr-3 font-medium">{r.municipality}</td>
+                <td className="py-2 pr-3 text-muted text-[10px]">{r.status}</td>
+                <td className="py-2 pr-3 text-right">
+                  <span
+                    className={
+                      r.residential < 5
+                        ? "text-accent-green"
+                        : r.residential < 7
+                          ? "text-accent-amber"
+                          : "text-red-400"
+                    }
+                  >
+                    {r.residential.toFixed(4)}
+                  </span>
+                </td>
+                <td className="py-2 pr-3 text-right text-muted">
+                  {r.nonResidential.toFixed(4)}
+                </td>
+                <td className="py-2 text-right text-muted">
+                  {r.farmland > 0 ? r.farmland.toFixed(4) : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-[10px] text-muted/60 mt-3">
+        Lower mill rate = lower property tax for same assessed value. A $500K home at 4.68 mills = $2,340/yr tax; at 7.66 mills = $3,830/yr. Source: Alberta Municipal Affairs, 2024 Financial Year.
+      </p>
+    </Card>
+  );
+}
+
+// -- Road Construction --
+
+async function RoadConstructionTable() {
+  const projects = await fetchEdmontonRoadConstruction(25);
+  if (!projects.length) return null;
+
+  return (
+    <Card>
+      <CardHeader
+        title="Edmonton — Active Road & Infrastructure Construction"
+        subtitle="Major on-street construction permits — new roads, LRT, bridges, drainage"
+        badge="LIVE"
+      />
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-card-border text-muted text-left">
+              <th className="pb-2 pr-3 font-medium">Type</th>
+              <th className="pb-2 pr-3 font-medium">Street</th>
+              <th className="pb-2 pr-3 font-medium">Limits</th>
+              <th className="pb-2 pr-3 font-medium">Start</th>
+              <th className="pb-2 font-medium">End</th>
+            </tr>
+          </thead>
+          <tbody>
+            {projects.map((p: RoadConstructionProject, i: number) => (
+              <tr
+                key={i}
+                className="border-b border-card-border/50 hover:bg-card-border/20"
+              >
+                <td className="py-2 pr-3 whitespace-nowrap">
+                  <span
+                    className={`text-[9px] px-1.5 py-0.5 rounded ${
+                      p.workReason.includes("LRT")
+                        ? "bg-purple-500/20 text-purple-400"
+                        : p.workReason.includes("BRIDGE")
+                          ? "bg-blue-500/20 text-blue-400"
+                          : p.workReason.includes("NEW")
+                            ? "bg-accent-green/20 text-accent-green"
+                            : "bg-accent-amber/20 text-accent-amber"
+                    }`}
+                  >
+                    {p.workReason.replace("ROAD CONSTRUCTION ", "").replace("TRAFFIC SIGNAL ", "SIG ")}
+                  </span>
+                </td>
+                <td className="py-2 pr-3 whitespace-nowrap font-mono text-[10px]">
+                  {p.street}
+                </td>
+                <td className="py-2 pr-3 text-muted max-w-xs truncate text-[10px]">
+                  {p.intersections}
+                </td>
+                <td className="py-2 pr-3 text-muted whitespace-nowrap">
+                  {p.startDate}
+                </td>
+                <td className="py-2 text-muted whitespace-nowrap">{p.finishDate}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-[10px] text-muted/60 mt-3">
+        Infrastructure construction precedes property value increases. New roads and LRT lines drive demand in adjacent neighbourhoods. Source: City of Edmonton On-Street Construction Permits.
+      </p>
+    </Card>
+  );
+}
+
+async function RoadConstructionSummary() {
+  const byType = await fetchRoadConstructionByType();
+  if (!byType.length) return null;
+
+  return (
+    <Card>
+      <CardHeader
+        title="Edmonton — Construction Permits by Type"
+        subtitle="All active on-street construction and maintenance permits"
+        badge="LIVE"
+      />
+      <NeighbourhoodBarChart
+        data={byType}
+        dataKey="count"
+        labelKey="type"
+        color="#f59e0b"
+        tooltipLabel="Permits"
+        height={Math.max(250, byType.length * 28)}
+      />
+    </Card>
+  );
+}
+
+// -- Major Projects --
+
+async function MajorProjectsTable() {
+  const edmontonMetro = [
+    "Edmonton",
+    "St. Albert",
+    "Spruce Grove",
+    "Stony Plain",
+    "Strathcona",
+    "Sherwood Park",
+    "Parkland",
+    "Leduc",
+    "Beaumont",
+    "Fort Saskatchewan",
+  ];
+  const projects = await fetchMajorProjects(edmontonMetro);
+  const topProjects = projects.slice(0, 20);
+  const bySector = await fetchMajorProjectsBySector(edmontonMetro);
+
+  const totalValue = projects.reduce((s, p) => s + p.cost, 0);
+  const underConstruction = projects.filter(
+    (p) => p.stage === "Under Construction" || p.stage === "Construction"
+  ).length;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard
+          title="Metro Projects"
+          value={projects.length.toString()}
+          source="Alberta Major Projects ($5M+)"
+        />
+        <MetricCard
+          title="Total Investment"
+          value={`$${(totalValue / 1000).toFixed(1)}B`}
+          source="Combined project value"
+        />
+        <MetricCard
+          title="Under Construction"
+          value={underConstruction.toString()}
+          source="Active build phase"
+        />
+        <MetricCard
+          title="Sectors"
+          value={bySector.length.toString()}
+          source="Distinct industry sectors"
+        />
+      </div>
+      <div className="grid lg:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader
+            title="Investment by Sector"
+            subtitle="Edmonton metro area — total project value ($M)"
+            badge="LIVE"
+          />
+          <NeighbourhoodBarChart
+            data={bySector.map((s) => ({
+              neighbourhood: `${s.sector} (${s.count})`,
+              value: s.totalCost,
+            }))}
+            dataKey="value"
+            color="#8b5cf6"
+            valuePrefix="$"
+            valueSuffix="M"
+            tooltipLabel="Total $M"
+            height={Math.max(250, bySector.length * 32)}
+          />
+        </Card>
+        <Card>
+          <CardHeader
+            title="Top 20 Projects by Value"
+            subtitle="Edmonton metro — largest active & planned projects"
+            badge="LIVE"
+          />
+          <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 bg-card">
+                <tr className="border-b border-card-border text-muted text-left">
+                  <th className="pb-2 pr-3 font-medium">Project</th>
+                  <th className="pb-2 pr-3 font-medium text-right">$M</th>
+                  <th className="pb-2 pr-3 font-medium">Stage</th>
+                  <th className="pb-2 font-medium">Sector</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topProjects.map((p: MajorProject, i: number) => (
+                  <tr
+                    key={i}
+                    className="border-b border-card-border/50 hover:bg-card-border/20"
+                  >
+                    <td className="py-2 pr-3 max-w-[200px] truncate" title={p.name}>
+                      {p.name}
+                    </td>
+                    <td className="py-2 pr-3 text-right font-mono text-accent-green">
+                      ${p.cost.toLocaleString()}
+                    </td>
+                    <td className="py-2 pr-3 whitespace-nowrap">
+                      <span
+                        className={`text-[9px] px-1.5 py-0.5 rounded ${
+                          p.stage === "Under Construction" || p.stage === "Construction"
+                            ? "bg-accent-green/20 text-accent-green"
+                            : p.stage === "Proposed"
+                              ? "bg-accent-amber/20 text-accent-amber"
+                              : "bg-blue-500/20 text-blue-400"
+                        }`}
+                      >
+                        {p.stage}
+                      </span>
+                    </td>
+                    <td className="py-2 text-muted text-[10px]">{p.sector}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[10px] text-muted/60 mt-3">
+            Source: Alberta Major Projects Inventory. Projects valued at $5M+. Values in millions CAD.
+          </p>
+        </Card>
+      </div>
+    </div>
   );
 }
 
@@ -786,6 +1226,77 @@ export default function RealEstatePage() {
         </div>
       </section>
 
+      {/* Section: Rental Market */}
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <Home size={16} className="text-emerald-400" />
+          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
+            Rental Market (CMHC Survey)
+          </h2>
+        </div>
+        <p className="text-xs text-muted mb-3">
+          Annual October survey — vacancy rates and average rents for the Edmonton CMA.
+          Low vacancy (&lt;3%) means strong rental demand; rising vacancy signals softening.
+        </p>
+        <Suspense fallback={<LoadingTable />}>
+          <RentalVacancyMetrics />
+        </Suspense>
+      </section>
+
+      {/* Section: Mill Rates */}
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <DollarSign size={16} className="text-green-400" />
+          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
+            Property Tax Rates — Mill Rate Comparison
+          </h2>
+        </div>
+        <p className="text-xs text-muted mb-3">
+          Compare property tax rates across Edmonton metro municipalities. Lower mill rate = lower tax for same assessed value.
+        </p>
+        <Suspense fallback={<LoadingTable />}>
+          <MillRatesTable />
+        </Suspense>
+      </section>
+
+      {/* Section: Road Construction */}
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <Construction size={16} className="text-amber-400" />
+          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
+            Edmonton — Road &amp; Infrastructure Construction
+          </h2>
+        </div>
+        <p className="text-xs text-muted mb-3">
+          Active on-street construction permits. Infrastructure spend precedes property value increases — new roads and LRT lines drive demand in adjacent areas.
+        </p>
+        <div className="grid lg:grid-cols-2 gap-4">
+          <Suspense fallback={<LoadingCard />}>
+            <RoadConstructionSummary />
+          </Suspense>
+          <Suspense fallback={<LoadingTable />}>
+            <RoadConstructionTable />
+          </Suspense>
+        </div>
+      </section>
+
+      {/* Section: Major Projects */}
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <Landmark size={16} className="text-violet-400" />
+          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
+            Edmonton Metro — Major Projects ($5M+)
+          </h2>
+        </div>
+        <p className="text-xs text-muted mb-3">
+          Alberta&apos;s inventory of major capital projects. New hospitals, schools, LRT lines, and industrial facilities
+          drive local housing demand — a new project announcement signals future area growth.
+        </p>
+        <Suspense fallback={<LoadingTable />}>
+          <MajorProjectsTable />
+        </Suspense>
+      </section>
+
       {/* Section: Edmonton Hot Zones */}
       <section>
         <div className="flex items-center gap-2 mb-3">
@@ -902,7 +1413,7 @@ export default function RealEstatePage() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-[10px] text-muted">
           <div>
             <span className="text-foreground font-medium">Edmonton</span> —
-            Full permits, assessments, dev permits via SODA API
+            Permits, assessments, dev permits, road construction via SODA API
           </div>
           <div>
             <span className="text-foreground font-medium">
@@ -916,21 +1427,25 @@ export default function RealEstatePage() {
           </div>
           <div>
             <span className="text-foreground font-medium">
-              Edmonton CMA (StatsCan)
+              CMHC Rental
             </span>{" "}
-            — All municipalities, monthly aggregate
+            — Vacancy rates + avg rents (annual Oct survey) via StatsCan
           </div>
           <div>
             <span className="text-foreground font-medium">CMHC Housing</span> —
             Starts, completions, under construction via StatsCan
           </div>
           <div>
-            <span className="text-muted/60">Parkland County</span> — No permit
-            data available (GIS layers only)
+            <span className="text-foreground font-medium">Mill Rates</span> —
+            12 Edmonton metro municipalities via Alberta Municipal Affairs
           </div>
           <div>
-            <span className="text-muted/60">Spruce Grove / Stony Plain</span>{" "}
-            — No open data portals
+            <span className="text-foreground font-medium">Major Projects</span> —
+            $5M+ projects via Alberta Major Projects API
+          </div>
+          <div>
+            <span className="text-foreground font-medium">Road Construction</span> —
+            Active permits via Edmonton SODA
           </div>
         </div>
       </Card>
