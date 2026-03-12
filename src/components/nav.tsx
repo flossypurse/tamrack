@@ -125,6 +125,7 @@ const coreSections: NavSection[] = [
     label: "Economy",
     icon: PieChart,
     items: [
+      { href: "/economy", label: "Overview", icon: PieChart },
       { href: "/economy/energy", label: "Energy", icon: Flame },
       { href: "/economy/drilling", label: "Drilling", icon: Pickaxe },
       { href: "/economy/cycle", label: "Boom-Bust Cycle", icon: RefreshCw },
@@ -138,6 +139,7 @@ const coreSections: NavSection[] = [
     label: "Real Estate",
     icon: Home,
     items: [
+      { href: "/real-estate", label: "Overview", icon: Home },
       { href: "/real-estate/prospects", label: "Prospect Leads", icon: Target },
       { href: "/real-estate/market", label: "Market Intel", icon: Home },
       { href: "/real-estate/neighbourhoods", label: "Neighbourhoods", icon: MapPin },
@@ -150,6 +152,7 @@ const coreSections: NavSection[] = [
     label: "Intelligence",
     icon: Scale,
     items: [
+      { href: "/intelligence", label: "Overview", icon: Scale },
       { href: "/intelligence/benchmarks", label: "Benchmarks", icon: Scale },
       { href: "/intelligence/corridors", label: "Growth Corridors", icon: Rocket },
       { href: "/intelligence/risk", label: "Market Risk", icon: ShieldAlert },
@@ -161,6 +164,7 @@ const coreSections: NavSection[] = [
     label: "Environment",
     icon: CloudSun,
     items: [
+      { href: "/environment", label: "Overview", icon: CloudSun },
       { href: "/environment/weather", label: "Weather", icon: CloudSun },
       { href: "/environment/air-quality", label: "Air Quality", icon: Wind },
       { href: "/environment/water", label: "Water & Rivers", icon: Waves },
@@ -171,6 +175,7 @@ const coreSections: NavSection[] = [
     label: "Public Safety",
     icon: Siren,
     items: [
+      { href: "/safety", label: "Overview", icon: Siren },
       { href: "/safety/traffic", label: "Traffic & Roads", icon: Car },
       { href: "/safety/seismic", label: "Seismic", icon: Activity },
       { href: "/safety/emergencies", label: "Emergencies", icon: Siren },
@@ -183,6 +188,7 @@ const toolsSection: NavSection = {
   label: "Tools",
   icon: Wrench,
   items: [
+    { href: "/tools", label: "Overview", icon: Wrench },
     { href: "/tools/learn", label: "Learn", icon: GraduationCap },
     { href: "/tools/docs", label: "API Docs", icon: BookOpen },
     { href: "/tools/sources", label: "Data Sources", icon: Database },
@@ -290,6 +296,8 @@ export function Nav() {
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
     if (href === "/municipalities") return pathname === "/municipalities";
+    // Category overview pages need exact match
+    if (href === "/economy" || href === "/real-estate" || href === "/intelligence" || href === "/environment" || href === "/safety" || href === "/tools") return pathname === href;
     return pathname.startsWith(href);
   };
 

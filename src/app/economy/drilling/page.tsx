@@ -11,6 +11,8 @@ import {
   MultiSeriesLineChart,
   type MultiSeriesPoint,
 } from "@/components/chart";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import { Flame, TrendingUp, BarChart3, Factory, DollarSign } from "lucide-react";
 import {
   fetchBoCTimeSeries,
@@ -246,18 +248,12 @@ function LoadingCard() {
 export default function DrillingPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <Flame size={20} className="text-orange-400" />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Drilling &amp; Energy Activity
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Well licences, production, and oilfield activity across Alberta. When
-          drilling ramps up, service companies, housing, and retail follow.
-        </p>
-      </header>
+      <PageHeader
+        title="Drilling & Energy Activity"
+        description="Well licences, production, and oilfield activity across Alberta. When drilling ramps up, service companies, housing, and retail follow."
+        category="economy"
+        icon={<Flame size={20} />}
+      />
 
       {/* Key Metrics */}
       <section>
@@ -281,12 +277,7 @@ export default function DrillingPage() {
 
       {/* Energy Price Trends */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp size={16} className="text-orange-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Energy Price Trends
-          </h2>
-        </div>
+        <SectionHeader title="Energy Price Trends" icon={<TrendingUp size={16} />} category="economy" />
         <Suspense fallback={<LoadingCard />}>
           <EnergyPriceTrendsChart />
         </Suspense>
@@ -294,12 +285,7 @@ export default function DrillingPage() {
 
       {/* Oil & Gas GDP Trend */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <BarChart3 size={16} className="text-amber-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Oil &amp; Gas GDP Trend
-          </h2>
-        </div>
+        <SectionHeader title="Oil & Gas GDP Trend" icon={<BarChart3 size={16} />} category="economy" />
         <Suspense fallback={<LoadingCard />}>
           <OilGasGdpChart />
         </Suspense>
@@ -307,12 +293,7 @@ export default function DrillingPage() {
 
       {/* Energy vs CAD Correlation */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <DollarSign size={16} className="text-emerald-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Energy vs CAD Correlation
-          </h2>
-        </div>
+        <SectionHeader title="Energy vs CAD Correlation" icon={<DollarSign size={16} />} category="economy" />
         <Suspense fallback={<LoadingCard />}>
           <EnergyVsCadChart />
         </Suspense>
@@ -320,12 +301,7 @@ export default function DrillingPage() {
 
       {/* Construction Activity */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Factory size={16} className="text-cyan-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Construction Activity
-          </h2>
-        </div>
+        <SectionHeader title="Construction Activity" icon={<Factory size={16} />} category="economy" />
         <Suspense fallback={<LoadingCard />}>
           <ConstructionGdpChart />
         </Suspense>

@@ -8,6 +8,7 @@ import {
   MapPin,
   Clock,
 } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 import {
   fetchActiveWildfires,
   fetchNonActiveWildfires,
@@ -249,16 +250,12 @@ export default function WildfirePage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Flame className="w-6 h-6 text-orange-500" />
-          Wildfire Watch
-        </h1>
-        <p className="text-sm text-muted mt-1">
-          Tracking active wildfires across Alberta in near real-time. Data
-          refreshes hourly from Alberta Wildfire&apos;s ArcGIS service.
-        </p>
-      </div>
+      <PageHeader
+        title="Wildfire Watch"
+        description="Tracking active wildfires across Alberta in near real-time. Data refreshes hourly from Alberta Wildfire's ArcGIS service."
+        category="environment"
+        icon={<Flame size={20} />}
+      />
 
       {/* Active fires — includes metrics + table */}
       <Suspense

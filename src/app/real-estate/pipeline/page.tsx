@@ -15,10 +15,11 @@ import {
 import {
   Building,
   HardHat,
-  TrendingUp,
   Layers,
   BarChart3,
 } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   fetchStatCanTimeSeries,
   STATSCAN_SERIES,
@@ -297,23 +298,18 @@ function LoadingCard() {
 export default function PipelinePage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <Building size={20} className="text-blue-400" />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Development Pipeline
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Housing starts, completions, and the construction backlog for Edmonton CMA.
-          This is the supply side of the equation — are we building enough, too much, or too little?
-        </p>
-        <div className="flex flex-wrap gap-2 mt-3">
+      <PageHeader
+        title="Development Pipeline"
+        description="Housing starts, completions, and the construction backlog for Edmonton CMA. This is the supply side of the equation — are we building enough, too much, or too little?"
+        category="realestate"
+        icon={<Building size={20} />}
+      >
+        <div className="flex flex-wrap gap-2">
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-mono">DEVELOPERS</span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-mono">LENDERS</span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 font-mono">INVESTORS</span>
         </div>
-      </header>
+      </PageHeader>
 
       {/* Key Metrics */}
       <section>
@@ -337,12 +333,7 @@ export default function PipelinePage() {
 
       {/* Pipeline Overlay */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Layers size={16} className="text-purple-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            The Full Pipeline
-          </h2>
-        </div>
+        <SectionHeader title="The Full Pipeline" icon={<Layers size={16} />} category="realestate" />
         <Suspense fallback={<LoadingCard />}>
           <PipelineOverlayChart />
         </Suspense>
@@ -350,12 +341,7 @@ export default function PipelinePage() {
 
       {/* Individual charts */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <HardHat size={16} className="text-blue-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Pipeline Stages
-          </h2>
-        </div>
+        <SectionHeader title="Pipeline Stages" icon={<HardHat size={16} />} category="realestate" />
         <div className="grid md:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <StartsChart />
@@ -374,12 +360,7 @@ export default function PipelinePage() {
 
       {/* Starts vs Permits */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <BarChart3 size={16} className="text-amber-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Leading Indicators
-          </h2>
-        </div>
+        <SectionHeader title="Leading Indicators" icon={<BarChart3 size={16} />} category="realestate" />
         <Suspense fallback={<LoadingCard />}>
           <StartsVsPermitsChart />
         </Suspense>

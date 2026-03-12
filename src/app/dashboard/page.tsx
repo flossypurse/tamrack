@@ -15,6 +15,7 @@ import {
   BOC_SERIES,
   STATSCAN_SERIES,
 } from "@/lib/data-sources";
+import { SectionHeader } from "@/components/section-header";
 import { TrendingUp, Briefcase, BarChart3, Activity } from "lucide-react";
 
 // ============================================================
@@ -319,12 +320,7 @@ export default function Dashboard() {
 
       {/* Section: Monetary & Financial */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp size={16} className="text-accent" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Monetary &amp; Financial
-          </h2>
-        </div>
+        <SectionHeader title="Monetary & Financial" icon={<TrendingUp size={16} />} category="economy" />
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <InterestRateChart />
@@ -340,12 +336,7 @@ export default function Dashboard() {
 
       {/* Section: Provincial Economy (StatsCan) */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <BarChart3 size={16} className="text-accent-green" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Provincial Economy (Alberta)
-          </h2>
-        </div>
+        <SectionHeader title="Provincial Economy (Alberta)" icon={<BarChart3 size={16} />} category="economy" />
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <UnemploymentChart />
@@ -361,12 +352,7 @@ export default function Dashboard() {
 
       {/* Section: Provincial Economy — Deep Dive */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Activity size={16} className="text-accent" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Provincial Economy &mdash; Deep Dive
-          </h2>
-        </div>
+        <SectionHeader title="Provincial Economy — Deep Dive" icon={<Activity size={16} />} category="economy" />
         <div className="grid md:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <GdpChart />
@@ -379,12 +365,7 @@ export default function Dashboard() {
 
       {/* Section: Data Catalog */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Briefcase size={16} className="text-accent-green" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Data Sources Connected
-          </h2>
-        </div>
+        <SectionHeader title="Data Sources Connected" icon={<Briefcase size={16} />} category="economy" />
         <Card>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
             <DataSourceItem

@@ -13,6 +13,8 @@ import {
   MultiSeriesLineChart,
   type MultiSeriesPoint,
 } from "@/components/chart";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   Wheat,
   TrendingUp,
@@ -322,18 +324,12 @@ function AgricultureContext() {
 export default function AgriculturePage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <Wheat size={20} className="text-amber-400" />
-          <h1 className="text-xl font-semibold tracking-tight">
-            The Other Pillar
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Agriculture is Alberta&apos;s second economic engine — $15B+ in farm cash receipts,
-          running on different cycles than energy. When both are strong, Alberta booms hard.
-        </p>
-      </header>
+      <PageHeader
+        title="The Other Pillar"
+        description="Agriculture is Alberta's second economic engine — $15B+ in farm cash receipts, running on different cycles than energy. When both are strong, Alberta booms hard."
+        category="economy"
+        icon={<Wheat size={20} />}
+      />
 
       {/* Metrics */}
       <section>
@@ -357,12 +353,7 @@ export default function AgriculturePage() {
 
       {/* Hero: Commodity Index */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp size={16} className="text-amber-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Agricultural Commodity Prices
-          </h2>
-        </div>
+        <SectionHeader title="Agricultural Commodity Prices" icon={<TrendingUp size={16} />} category="economy" />
         <Suspense fallback={<LoadingCard />}>
           <AgCommodityChart />
         </Suspense>
@@ -370,12 +361,7 @@ export default function AgriculturePage() {
 
       {/* GDP & Revenue */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <DollarSign size={16} className="text-emerald-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Output &amp; Revenue
-          </h2>
-        </div>
+        <SectionHeader title="Output & Revenue" icon={<DollarSign size={16} />} category="economy" />
         <div className="grid lg:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <AgGdpChart />
@@ -388,12 +374,7 @@ export default function AgriculturePage() {
 
       {/* Breakdown */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <BarChart3 size={16} className="text-red-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Crop vs Livestock
-          </h2>
-        </div>
+        <SectionHeader title="Crop vs Livestock" icon={<BarChart3 size={16} />} category="economy" />
         <Suspense fallback={<LoadingCard />}>
           <CropVsLivestockChart />
         </Suspense>
@@ -401,12 +382,7 @@ export default function AgriculturePage() {
 
       {/* Ag vs Energy */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Sprout size={16} className="text-orange-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Agriculture vs Energy
-          </h2>
-        </div>
+        <SectionHeader title="Agriculture vs Energy" icon={<Sprout size={16} />} category="economy" />
         <Suspense fallback={<LoadingCard />}>
           <AgVsEnergyChart />
         </Suspense>

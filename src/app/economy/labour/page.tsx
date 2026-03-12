@@ -13,10 +13,11 @@ import {
   MultiSeriesLineChart,
   type MultiSeriesPoint,
 } from "@/components/chart";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   HardHat,
   TrendingUp,
-  DollarSign,
   Users,
   BarChart3,
 } from "lucide-react";
@@ -323,19 +324,12 @@ function LabourContext() {
 export default function LabourPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <HardHat size={20} className="text-blue-400" />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Who&apos;s Working, Where?
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Alberta&apos;s labour market is uniquely concentrated — high wages in energy pull
-          talent from every sector. When energy booms, trades vanish. When it busts,
-          there&apos;s a surplus.
-        </p>
-      </header>
+      <PageHeader
+        title="Who's Working, Where?"
+        description="Alberta's labour market is uniquely concentrated — high wages in energy pull talent from every sector. When energy booms, trades vanish. When it busts, there's a surplus."
+        category="economy"
+        icon={<HardHat size={20} />}
+      />
 
       {/* Metrics */}
       <section>
@@ -359,12 +353,7 @@ export default function LabourPage() {
 
       {/* Hero: Unemployment */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp size={16} className="text-red-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            The Headline Number
-          </h2>
-        </div>
+        <SectionHeader title="The Headline Number" icon={<TrendingUp size={16} />} category="economy" />
         <Suspense fallback={<LoadingCard />}>
           <UnemploymentChart />
         </Suspense>
@@ -372,12 +361,7 @@ export default function LabourPage() {
 
       {/* Employment vs Unemployment overlay */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Users size={16} className="text-blue-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Jobs vs Jobless
-          </h2>
-        </div>
+        <SectionHeader title="Jobs vs Jobless" icon={<Users size={16} />} category="economy" />
         <Suspense fallback={<LoadingCard />}>
           <EmploymentVsUnemploymentChart />
         </Suspense>
@@ -385,12 +369,7 @@ export default function LabourPage() {
 
       {/* Detailed charts */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <BarChart3 size={16} className="text-emerald-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Labour Force Details
-          </h2>
-        </div>
+        <SectionHeader title="Labour Force Details" icon={<BarChart3 size={16} />} category="economy" />
         <div className="grid md:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <EmploymentChart />

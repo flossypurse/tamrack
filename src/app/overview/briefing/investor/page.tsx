@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { PageHeader } from "@/components/page-header";
 import {
   TrendingUp,
   TrendingDown,
-  Minus,
   DollarSign,
   Activity,
   Users,
@@ -573,26 +573,19 @@ export default function InvestorBriefingPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto space-y-5">
       {/* Header */}
-      <header>
-        <div className="flex items-center gap-2 text-[10px] text-muted mb-2">
-          <Link href="/overview/briefing" className="hover:text-accent">Briefings</Link>
-          <ChevronRight size={10} />
-          <span>Investor</span>
-        </div>
-        <div className="flex items-center gap-3 mb-1">
-          <div className="p-2 rounded-lg bg-amber-500/10">
-            <TrendingUp size={20} className="text-amber-400" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold">Investor Briefing</h1>
-            <p className="text-xs text-muted">{today}</p>
-          </div>
-        </div>
-        <p className="text-sm text-muted mt-2">
-          Rate trajectory, rental yields, assessment growth, and risk signals —
-          everything you need to evaluate Alberta real estate opportunities.
-        </p>
-      </header>
+      <div className="flex items-center gap-2 text-[10px] text-muted mb-2">
+        <Link href="/overview/briefing" className="hover:text-accent">Briefings</Link>
+        <ChevronRight size={10} />
+        <span>Investor</span>
+      </div>
+      <PageHeader
+        title="Investor Briefing"
+        description="Rate trajectory, rental yields, assessment growth, and risk signals — everything you need to evaluate Alberta real estate opportunities."
+        category="overview"
+        icon={<TrendingUp size={20} />}
+      >
+        <p className="text-xs text-muted">{today}</p>
+      </PageHeader>
 
       {/* Quick Stats */}
       <Suspense fallback={<LoadingGrid />}>

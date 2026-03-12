@@ -13,6 +13,8 @@ import {
   MultiSeriesLineChart,
   type MultiSeriesPoint,
 } from "@/components/chart";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   Flame,
   TrendingUp,
@@ -293,19 +295,12 @@ function LoadingCard() {
 export default function EnergyPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <Flame size={20} className="text-orange-400" />
-          <h1 className="text-xl font-semibold tracking-tight">
-            The Engine Room
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Energy drives Alberta. When oil moves, everything else follows —
-          jobs, migration, housing, government revenue. This page tracks the
-          upstream signals.
-        </p>
-      </header>
+      <PageHeader
+        title="The Engine Room"
+        description="Energy drives Alberta. When oil moves, everything else follows — jobs, migration, housing, government revenue. This page tracks the upstream signals."
+        category="economy"
+        icon={<Flame size={20} />}
+      />
 
       {/* Key Metrics */}
       <section>
@@ -329,12 +324,7 @@ export default function EnergyPage() {
 
       {/* Hero chart: Energy Price Index */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp size={16} className="text-orange-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            The Master Signal
-          </h2>
-        </div>
+        <SectionHeader title="The Master Signal" icon={<TrendingUp size={16} />} category="economy" />
         <Suspense fallback={<LoadingCard />}>
           <EnergyPriceChart />
         </Suspense>
@@ -342,12 +332,7 @@ export default function EnergyPage() {
 
       {/* Correlation */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <DollarSign size={16} className="text-emerald-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            The Petro-Dollar Connection
-          </h2>
-        </div>
+        <SectionHeader title="The Petro-Dollar Connection" icon={<DollarSign size={16} />} category="economy" />
         <Suspense fallback={<LoadingCard />}>
           <EnergyVsCadChart />
         </Suspense>
@@ -355,12 +340,7 @@ export default function EnergyPage() {
 
       {/* Commodity breakdown */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <BarChart3 size={16} className="text-blue-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Commodity Breakdown
-          </h2>
-        </div>
+        <SectionHeader title="Commodity Breakdown" icon={<BarChart3 size={16} />} category="economy" />
         <div className="grid md:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <AllCommoditiesChart />
@@ -373,12 +353,7 @@ export default function EnergyPage() {
 
       {/* GDP by sector */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Factory size={16} className="text-amber-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Industry GDP
-          </h2>
-        </div>
+        <SectionHeader title="Industry GDP" icon={<Factory size={16} />} category="economy" />
         <div className="grid md:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <OilGasGdpChart />
@@ -391,12 +366,7 @@ export default function EnergyPage() {
 
       {/* Exchange rate */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Droplets size={16} className="text-teal-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Currency
-          </h2>
-        </div>
+        <SectionHeader title="Currency" icon={<Droplets size={16} />} category="economy" />
         <Suspense fallback={<LoadingCard />}>
           <CadUsdChart />
         </Suspense>

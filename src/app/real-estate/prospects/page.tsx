@@ -13,6 +13,7 @@ import {
   Eye,
   FileText,
 } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 import { PrintButton } from "./print-button";
 import {
   findEquityGoldSellers,
@@ -317,33 +318,27 @@ export default function ProspectsPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto space-y-6 print:p-2 print:space-y-4">
       {/* Header */}
-      <header>
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-2">
-            <Target size={20} className="text-accent" />
-            <h1 className="text-xl font-semibold tracking-tight">
-              Prospect Leads
-            </h1>
+      <PageHeader
+        title="Prospect Leads"
+        description="Province-wide data-driven leads across Alberta. Every lead includes a specific address or location, why it matters, and what to do about it. Updated live from Edmonton, Calgary, and 20+ municipal data sources."
+        category="realestate"
+        icon={<Target size={20} />}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/15">
+              <Flame size={10} /> HOT = act this week
+            </span>
+            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/15">
+              <TrendingUp size={10} /> WARM = add to campaign
+            </span>
+            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/15">
+              <Eye size={10} /> WATCH = monitor
+            </span>
           </div>
           <PrintButton />
         </div>
-        <p className="text-sm text-muted">
-          Province-wide data-driven leads across Alberta. Every lead includes a
-          specific address or location, why it matters, and what to do about it.
-          Updated live from Edmonton, Calgary, and 20+ municipal data sources.
-        </p>
-        <div className="flex flex-wrap gap-2 mt-3">
-          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/15">
-            <Flame size={10} /> HOT = act this week
-          </span>
-          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/15">
-            <TrendingUp size={10} /> WARM = add to campaign
-          </span>
-          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/15">
-            <Eye size={10} /> WATCH = monitor
-          </span>
-        </div>
-      </header>
+      </PageHeader>
 
       {/* Section 1: Equity Gold */}
       <section>

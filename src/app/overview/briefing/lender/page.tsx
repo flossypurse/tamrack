@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { PageHeader } from "@/components/page-header";
 import {
   TrendingUp,
   TrendingDown,
-  Minus,
   CreditCard,
   DollarSign,
   Activity,
@@ -542,26 +542,19 @@ export default function LenderBriefingPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto space-y-5">
       {/* Header */}
-      <header>
-        <div className="flex items-center gap-2 text-[10px] text-muted mb-2">
-          <Link href="/overview/briefing" className="hover:text-accent">Briefings</Link>
-          <ChevronRight size={10} />
-          <span>Lender</span>
-        </div>
-        <div className="flex items-center gap-3 mb-1">
-          <div className="p-2 rounded-lg bg-red-500/10">
-            <CreditCard size={20} className="text-red-400" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold">Lender Briefing</h1>
-            <p className="text-xs text-muted">{today}</p>
-          </div>
-        </div>
-        <p className="text-sm text-muted mt-2">
-          Rate environment, origination outlook, default risk signals, and
-          municipality-level portfolio risk — everything for underwriting decisions.
-        </p>
-      </header>
+      <div className="flex items-center gap-2 text-[10px] text-muted mb-2">
+        <Link href="/overview/briefing" className="hover:text-accent">Briefings</Link>
+        <ChevronRight size={10} />
+        <span>Lender</span>
+      </div>
+      <PageHeader
+        title="Lender Briefing"
+        description="Rate environment, origination outlook, default risk signals, and municipality-level portfolio risk — everything for underwriting decisions."
+        category="overview"
+        icon={<CreditCard size={20} />}
+      >
+        <p className="text-xs text-muted">{today}</p>
+      </PageHeader>
 
       {/* Quick Stats */}
       <Suspense fallback={<LoadingGrid />}>

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader } from "@/components/card";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   Rocket,
   TrendingUp,
-  Building2,
-  Zap,
 } from "lucide-react";
 import {
   getLiveMunicipalities,
@@ -244,24 +244,19 @@ export const metadata: Metadata = {
 export default function CorridorsPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <Rocket size={20} className="text-emerald-400" />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Growth Corridors
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Every registered municipality ranked by a composite growth score.
-          Where is development energy concentrating? Where&apos;s the next boomtown?
-        </p>
-        <div className="flex flex-wrap gap-2 mt-3">
+      <PageHeader
+        title="Growth Corridors"
+        description="Every registered municipality ranked by a composite growth score. Where is development energy concentrating? Where's the next boomtown?"
+        category="intelligence"
+        icon={<Rocket size={20} />}
+      >
+        <div className="flex flex-wrap gap-2">
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-mono">INVESTORS</span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-mono">DEVELOPERS</span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 font-mono">EDOs</span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-mono">FRANCHISES</span>
         </div>
-      </header>
+      </PageHeader>
 
       {/* Summary */}
       <section>
@@ -280,12 +275,7 @@ export default function CorridorsPage() {
 
       {/* Rankings */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp size={16} className="text-emerald-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Full Rankings
-          </h2>
-        </div>
+        <SectionHeader title="Full Rankings" icon={<TrendingUp size={16} />} category="intelligence" />
         <Suspense
           fallback={
             <div className="space-y-3">

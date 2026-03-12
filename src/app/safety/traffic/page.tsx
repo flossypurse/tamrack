@@ -10,6 +10,8 @@ import {
   type RoadCondition,
   type TrafficEvent,
 } from "@/lib/data-sources";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   Car,
   AlertTriangle,
@@ -192,13 +194,7 @@ async function TrafficEventsSection() {
 
   return (
     <div>
-      <h2 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
-        <Construction className="w-4 h-4 text-yellow-400" />
-        Traffic Events
-        <span className="text-[10px] font-mono bg-accent/10 text-accent px-2 py-0.5 rounded-full">
-          {eventsArr.length} active
-        </span>
-      </h2>
+      <SectionHeader title="Traffic Events" icon={<Construction size={16} />} category="safety" />
       <div className="grid gap-3 sm:grid-cols-2">
         {recent.map((event, i) => (
           <Card key={`event-${i}`}>
@@ -243,10 +239,7 @@ async function TrafficAlertsSection() {
 
   return (
     <div>
-      <h2 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
-        <AlertTriangle className="w-4 h-4 text-red-400" />
-        Traffic Alerts
-      </h2>
+      <SectionHeader title="Traffic Alerts" icon={<AlertTriangle size={16} />} category="safety" />
       <div className="grid gap-3">
         {alertsArr.map((alert, i) => {
           const isHigh = alert.highImportance;
@@ -433,15 +426,12 @@ export default function TrafficPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-          <Car className="w-5 h-5 text-accent" />
-          Traffic & Roads
-        </h1>
-        <p className="text-sm text-muted mt-1">
-          Real-time highway conditions and traffic events across Alberta
-        </p>
-      </div>
+      <PageHeader
+        title="Traffic & Roads"
+        description="Real-time highway conditions and traffic events across Alberta"
+        category="safety"
+        icon={<Car size={20} />}
+      />
 
       {/* Key Metrics */}
       <Suspense fallback={<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{Array.from({ length: 4 }).map((_, i) => <LoadingCard key={i} />)}</div>}>

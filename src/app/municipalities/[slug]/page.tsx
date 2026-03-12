@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import { NeighbourhoodBarChart } from "@/components/chart";
 import { ChartCard } from "@/components/chart-card";
 import {
@@ -19,7 +21,7 @@ import {
   type ConstructionProject,
 } from "@/lib/municipality-data";
 import { fetchAllRegionalData, type RegionalDashboardRecord } from "@/lib/data-sources";
-import { Building2, Home, Store, HardHat, MapPin, FileText, BarChart3, TrendingUp } from "lucide-react";
+import { Building2, Home, Store, HardHat, MapPin, FileText, BarChart3 } from "lucide-react";
 
 // Generate static paths for all live municipalities
 export function generateStaticParams() {
@@ -227,12 +229,7 @@ async function BusinessSection({ slug }: { slug: string }) {
 
   return (
     <section>
-      <div className="flex items-center gap-2 mb-3">
-        <Store size={16} className="text-purple-400" />
-        <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-          Business Activity
-        </h2>
-      </div>
+      <SectionHeader title="Business Activity" icon={<Store size={16} />} category="municipalities" />
       <ChartCard chartId={`${slug}-businesses`} title={`${config.name} — Businesses by Category`}>
         <Card>
           <CardHeader
@@ -267,12 +264,7 @@ async function VacantSection({ slug }: { slug: string }) {
 
   return (
     <section>
-      <div className="flex items-center gap-2 mb-3">
-        <MapPin size={16} className="text-amber-400" />
-        <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-          Vacant Land
-        </h2>
-      </div>
+      <SectionHeader title="Vacant Land" icon={<MapPin size={16} />} category="municipalities" />
       <ChartCard chartId={`${slug}-vacant`} title={`${config.name} — Vacant Lots`}>
         <Card>
           <CardHeader
@@ -302,12 +294,7 @@ async function ConstructionSection({ slug }: { slug: string }) {
 
   return (
     <section>
-      <div className="flex items-center gap-2 mb-3">
-        <HardHat size={16} className="text-amber-400" />
-        <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-          Infrastructure Projects
-        </h2>
-      </div>
+      <SectionHeader title="Infrastructure Projects" icon={<HardHat size={16} />} category="municipalities" />
       <Card>
         <CardHeader
           title="Active Construction"
@@ -359,12 +346,7 @@ async function PermitSection({ slug }: { slug: string }) {
 
   return (
     <section>
-      <div className="flex items-center gap-2 mb-3">
-        <FileText size={16} className="text-blue-400" />
-        <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-          Development Permits
-        </h2>
-      </div>
+      <SectionHeader title="Development Permits" icon={<FileText size={16} />} category="municipalities" />
       <ChartCard chartId={`${slug}-permits`} title={`${config.name} — Permits`}>
         <Card>
           <CardHeader
@@ -396,12 +378,7 @@ async function TopPropertiesTable({ slug }: { slug: string }) {
 
   return (
     <section>
-      <div className="flex items-center gap-2 mb-3">
-        <Home size={16} className="text-green-400" />
-        <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-          Highest Value Properties
-        </h2>
-      </div>
+      <SectionHeader title="Highest Value Properties" icon={<Home size={16} />} category="municipalities" />
       <Card>
         <CardHeader
           title="Top Assessed Properties"
@@ -536,15 +513,7 @@ async function RegionalDataSection({ slug }: { slug: string }) {
 
   return (
     <section>
-      <div className="flex items-center gap-2 mb-3">
-        <BarChart3 size={16} className="text-cyan-400" />
-        <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-          Provincial Indicators
-        </h2>
-        <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400">
-          AB REGIONAL DASHBOARD
-        </span>
-      </div>
+      <SectionHeader title="Provincial Indicators" icon={<BarChart3 size={16} />} category="municipalities" />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {totalAssessment && (
           <MetricCard
@@ -720,18 +689,18 @@ export default async function MunicipalityPage({ params }: { params: Promise<{ s
 
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-          <Building2 size={22} style={{ color: config.color }} />
-          {config.name}
-        </h1>
-        <p className="text-sm text-muted mt-1">{config.description}</p>
+      <PageHeader
+        title={config.name}
+        description={config.description}
+        category="municipalities"
+        icon={<Building2 size={22} style={{ color: config.color }} />}
+      >
         {config.population && (
-          <p className="text-xs text-muted/60 mt-0.5">
+          <p className="text-xs text-muted/60">
             Population ~{config.population.toLocaleString()}
           </p>
         )}
-      </header>
+      </PageHeader>
 
       {/* Key Metrics */}
       <Suspense fallback={<LoadingMetrics />}>
@@ -741,12 +710,7 @@ export default async function MunicipalityPage({ params }: { params: Promise<{ s
       {/* Assessment Charts */}
       {config.capabilities.includes("assessments") && (
         <section>
-          <div className="flex items-center gap-2 mb-3">
-            <Home size={16} className="text-green-400" />
-            <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-              Property Assessments
-            </h2>
-          </div>
+          <SectionHeader title="Property Assessments" icon={<Home size={16} />} category="municipalities" />
           <div className="grid lg:grid-cols-2 gap-4">
             <Suspense fallback={<LoadingCard />}>
               <AssessmentCountChart slug={slug} />

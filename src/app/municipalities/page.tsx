@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Card, MetricCard } from "@/components/card";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   MUNICIPALITY_REGISTRY,
   getLiveMunicipalities,
@@ -87,16 +89,12 @@ export default function MunicipalitiesPage() {
 
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-          <Globe size={22} className="text-accent" />
-          All Alberta Municipalities
-        </h1>
-        <p className="text-sm text-muted mt-1">
-          {all.length} municipalities tracked, {live.length} with live verified data.
-          Free property assessments, permits, businesses, and development data across the province.
-        </p>
-      </header>
+      <PageHeader
+        title="All Alberta Municipalities"
+        description={`${all.length} municipalities tracked, ${live.length} with live verified data. Free property assessments, permits, businesses, and development data across the province.`}
+        category="municipalities"
+        icon={<Globe size={22} />}
+      />
 
       {/* Summary metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -152,15 +150,11 @@ export default function MunicipalitiesPage() {
 
         return (
           <section key={region}>
-            <div className="flex items-center gap-2 mb-3">
-              <MapPin size={16} className="text-muted" />
-              <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-                {REGION_LABELS[region]}
-              </h2>
-              <span className="text-[10px] text-muted/60">
-                ({municipalities.length} {municipalities.length === 1 ? "municipality" : "municipalities"})
-              </span>
-            </div>
+            <SectionHeader
+              title={`${REGION_LABELS[region]} (${municipalities.length} ${municipalities.length === 1 ? "municipality" : "municipalities"})`}
+              icon={<MapPin size={16} />}
+              category="municipalities"
+            />
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {municipalities
                 .sort((a, b) => (b.population || 0) - (a.population || 0))

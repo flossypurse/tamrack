@@ -18,6 +18,16 @@
   --tooltip-border: #e2e4e9;
   --tooltip-text: #1a1a2e;
   --axis: #9ca3af;
+
+  /* ── Category accent colors ── */
+  --cat-overview: #c06a2b;
+  --cat-economy: #16803c;
+  --cat-realestate: #2563eb;
+  --cat-intelligence: #7c3aed;
+  --cat-environment: #0d9488;
+  --cat-safety: #b45309;
+  --cat-municipalities: #c06a2b;
+  --cat-tools: #64748b;
 }
 
 /* ── Dark mode ── */
@@ -38,6 +48,16 @@
   --tooltip-border: #303848;
   --tooltip-text: #f0f1f3;
   --axis: #6b7280;
+
+  /* ── Category accent colors (dark) ── */
+  --cat-overview: #d4863a;
+  --cat-economy: #22c55e;
+  --cat-realestate: #60a5fa;
+  --cat-intelligence: #a78bfa;
+  --cat-environment: #2dd4bf;
+  --cat-safety: #f59e0b;
+  --cat-municipalities: #d4863a;
+  --cat-tools: #94a3b8;
 }
 
 @theme inline {
@@ -53,6 +73,14 @@
   --color-accent-red: var(--accent-red);
   --color-muted: var(--muted);
   --color-grid: var(--grid);
+  --color-cat-overview: var(--cat-overview);
+  --color-cat-economy: var(--cat-economy);
+  --color-cat-realestate: var(--cat-realestate);
+  --color-cat-intelligence: var(--cat-intelligence);
+  --color-cat-environment: var(--cat-environment);
+  --color-cat-safety: var(--cat-safety);
+  --color-cat-municipalities: var(--cat-municipalities);
+  --color-cat-tools: var(--cat-tools);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

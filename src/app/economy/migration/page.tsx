@@ -13,6 +13,8 @@ import {
   MultiSeriesLineChart,
   type MultiSeriesPoint,
 } from "@/components/chart";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   Plane,
   TrendingUp,
@@ -365,18 +367,12 @@ function MigrationContext() {
 export default function MigrationPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <Plane size={20} className="text-blue-400" />
-          <h1 className="text-xl font-semibold tracking-tight">
-            The People Flow
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Who is coming to Alberta, who is leaving, and why? Migration drives
-          housing demand, school enrollment, retail, and services.
-        </p>
-      </header>
+      <PageHeader
+        title="The People Flow"
+        description="Who is coming to Alberta, who is leaving, and why? Migration drives housing demand, school enrollment, retail, and services."
+        category="economy"
+        icon={<Plane size={20} />}
+      />
 
       {/* Metrics */}
       <section>
@@ -400,12 +396,7 @@ export default function MigrationPage() {
 
       {/* Hero: Population */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Users size={16} className="text-blue-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            The Growth Story
-          </h2>
-        </div>
+        <SectionHeader title="The Growth Story" icon={<Users size={16} />} category="economy" />
         <Suspense fallback={<LoadingCard />}>
           <PopulationChart />
         </Suspense>
@@ -413,12 +404,7 @@ export default function MigrationPage() {
 
       {/* Migration flows */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <ArrowRightLeft size={16} className="text-orange-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Migration Flows
-          </h2>
-        </div>
+        <SectionHeader title="Migration Flows" icon={<ArrowRightLeft size={16} />} category="economy" />
         <div className="grid lg:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <ImmigrationChart />
@@ -431,12 +417,7 @@ export default function MigrationPage() {
 
       {/* Components breakdown */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp size={16} className="text-emerald-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Growth Components
-          </h2>
-        </div>
+        <SectionHeader title="Growth Components" icon={<TrendingUp size={16} />} category="economy" />
         <Suspense fallback={<LoadingCard />}>
           <MigrationComponentsChart />
         </Suspense>
@@ -444,12 +425,7 @@ export default function MigrationPage() {
 
       {/* Correlation */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <MapPin size={16} className="text-amber-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Migration &amp; Energy Correlation
-          </h2>
-        </div>
+        <SectionHeader title="Migration & Energy Correlation" icon={<MapPin size={16} />} category="economy" />
         <Suspense fallback={<LoadingCard />}>
           <MigrationVsEnergyChart />
         </Suspense>

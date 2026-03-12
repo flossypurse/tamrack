@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { PageHeader } from "@/components/page-header";
 import {
   TrendingUp,
   TrendingDown,
-  Minus,
   Building,
   Building2,
   Activity,
@@ -574,26 +574,19 @@ export default function DeveloperBriefingPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto space-y-5">
       {/* Header */}
-      <header>
-        <div className="flex items-center gap-2 text-[10px] text-muted mb-2">
-          <Link href="/overview/briefing" className="hover:text-accent">Briefings</Link>
-          <ChevronRight size={10} />
-          <span>Developer</span>
-        </div>
-        <div className="flex items-center gap-3 mb-1">
-          <div className="p-2 rounded-lg bg-accent/10">
-            <Building size={20} className="text-accent" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold">Developer / Homebuilder Briefing</h1>
-            <p className="text-xs text-muted">{today}</p>
-          </div>
-        </div>
-        <p className="text-sm text-muted mt-2">
-          Housing starts, permit velocity, absorption signals, and infrastructure pipeline —
-          everything you need to plan land acquisition and project timing.
-        </p>
-      </header>
+      <div className="flex items-center gap-2 text-[10px] text-muted mb-2">
+        <Link href="/overview/briefing" className="hover:text-accent">Briefings</Link>
+        <ChevronRight size={10} />
+        <span>Developer</span>
+      </div>
+      <PageHeader
+        title="Developer / Homebuilder Briefing"
+        description="Housing starts, permit velocity, absorption signals, and infrastructure pipeline — everything you need to plan land acquisition and project timing."
+        category="overview"
+        icon={<Building size={20} />}
+      >
+        <p className="text-xs text-muted">{today}</p>
+      </PageHeader>
 
       {/* Quick Stats */}
       <Suspense fallback={<LoadingGrid />}>

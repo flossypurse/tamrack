@@ -16,8 +16,9 @@ import {
   TrendingUp,
   Building2,
   BarChart3,
-  Users,
 } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   fetchEdmontonCommercialAssessments,
   fetchEdmontonBusinessCategories,
@@ -266,23 +267,18 @@ function LoadingCard() {
 export default function CommercialPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <Store size={20} className="text-amber-400" />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Commercial Pulse
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Commercial property assessments, business formation, category mix, and retail trends.
-          Where is commercial activity concentrating and what kind of businesses are thriving?
-        </p>
-        <div className="flex flex-wrap gap-2 mt-3">
+      <PageHeader
+        title="Commercial Pulse"
+        description="Commercial property assessments, business formation, category mix, and retail trends. Where is commercial activity concentrating and what kind of businesses are thriving?"
+        category="realestate"
+        icon={<Store size={20} />}
+      >
+        <div className="flex flex-wrap gap-2">
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-mono">CRE INVESTORS</span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-mono">FRANCHISE OPS</span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-mono">SITE SELECTION</span>
         </div>
-      </header>
+      </PageHeader>
 
       {/* Key Metrics */}
       <section>
@@ -306,12 +302,7 @@ export default function CommercialPage() {
 
       {/* Activity Trends */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp size={16} className="text-amber-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Activity Trends
-          </h2>
-        </div>
+        <SectionHeader title="Activity Trends" icon={<TrendingUp size={16} />} category="realestate" />
         <div className="grid md:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <CommercialPermitsChart />
@@ -331,12 +322,7 @@ export default function CommercialPage() {
 
       {/* Where */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Building2 size={16} className="text-emerald-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Where is the Commercial Value?
-          </h2>
-        </div>
+        <SectionHeader title="Where is the Commercial Value?" icon={<Building2 size={16} />} category="realestate" />
         <div className="grid md:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <CommercialAssessmentsChart />
@@ -349,12 +335,7 @@ export default function CommercialPage() {
 
       {/* Business Mix */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <BarChart3 size={16} className="text-blue-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Business Mix
-          </h2>
-        </div>
+        <SectionHeader title="Business Mix" icon={<BarChart3 size={16} />} category="realestate" />
         <Suspense fallback={<LoadingCard />}>
           <BusinessCategoriesChart />
         </Suspense>

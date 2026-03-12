@@ -12,6 +12,8 @@ import {
   MultiSeriesLineChart,
   type MultiSeriesPoint,
 } from "@/components/chart";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   TrendingUp,
   Flame,
@@ -302,18 +304,12 @@ function LoadingCard() {
 export default function InvestPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <TrendingUp size={20} className="text-blue-400" />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Alberta Investment Thesis
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Macro cycle position, energy outlook, migration momentum, and real
-          estate trajectory. Built for advisors managing Alberta exposure.
-        </p>
-      </header>
+      <PageHeader
+        title="Alberta Investment Thesis"
+        description="Macro cycle position, energy outlook, migration momentum, and real estate trajectory. Built for advisors managing Alberta exposure."
+        category="intelligence"
+        icon={<TrendingUp size={20} />}
+      />
 
       {/* Key Metrics */}
       <section>
@@ -337,12 +333,7 @@ export default function InvestPage() {
 
       {/* The Macro Cycle */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <BarChart3 size={16} className="text-blue-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Where Are We in the Cycle?
-          </h2>
-        </div>
+        <SectionHeader title="Where Are We in the Cycle?" icon={<BarChart3 size={16} />} category="intelligence" />
         <div className="grid md:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <PolicyRateChart />
@@ -385,12 +376,7 @@ export default function InvestPage() {
 
       {/* Energy Outlook */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Flame size={16} className="text-orange-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            The Engine
-          </h2>
-        </div>
+        <SectionHeader title="The Engine" icon={<Flame size={16} />} category="intelligence" />
         <div className="grid md:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <EnergyIndexChart />
@@ -403,12 +389,7 @@ export default function InvestPage() {
 
       {/* Labour & Migration */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Users size={16} className="text-emerald-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Are People Coming?
-          </h2>
-        </div>
+        <SectionHeader title="Are People Coming?" icon={<Users size={16} />} category="intelligence" />
         <div className="grid md:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <EmploymentChart />
@@ -421,12 +402,7 @@ export default function InvestPage() {
 
       {/* Real Estate */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Home size={16} className="text-violet-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Housing Market Signals
-          </h2>
-        </div>
+        <SectionHeader title="Housing Market Signals" icon={<Home size={16} />} category="intelligence" />
         <div className="grid md:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <HousingStartsChart />
@@ -439,12 +415,7 @@ export default function InvestPage() {
 
       {/* Bull/Bear Case */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <DollarSign size={16} className="text-yellow-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            The Bull/Bear Case
-          </h2>
-        </div>
+        <SectionHeader title="The Bull/Bear Case" icon={<DollarSign size={16} />} category="intelligence" />
         <Card>
           <div className="grid sm:grid-cols-2 gap-6">
             <div>
@@ -499,12 +470,7 @@ export default function InvestPage() {
 
       {/* Historical Context */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <AlertTriangle size={16} className="text-amber-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Historical Context
-          </h2>
-        </div>
+        <SectionHeader title="Historical Context" icon={<AlertTriangle size={16} />} category="intelligence" />
         <Card>
           <CardHeader
             title="Boom & Bust Cycles"

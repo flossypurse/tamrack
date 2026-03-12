@@ -5,10 +5,10 @@ import { TimeSeriesAreaChart } from "@/components/chart";
 import {
   CloudSun,
   Thermometer,
-  Wind,
-  Droplets,
   Eye,
 } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   fetchAlbertaWeather,
   fetchClimateMonthly,
@@ -195,18 +195,12 @@ export const metadata: Metadata = {
 export default function WeatherPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <CloudSun size={20} className="text-sky-400" />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Alberta Weather
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Real-time weather conditions across Alberta — temperature, wind, humidity,
-          and visibility from Environment and Climate Change Canada stations.
-        </p>
-      </header>
+      <PageHeader
+        title="Alberta Weather"
+        description="Real-time weather conditions across Alberta — temperature, wind, humidity, and visibility from Environment and Climate Change Canada stations."
+        category="environment"
+        icon={<CloudSun size={20} />}
+      />
 
       {/* Key Metrics */}
       <section>
@@ -230,12 +224,7 @@ export default function WeatherPage() {
 
       {/* Current Conditions Table */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Thermometer size={16} className="text-sky-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Current Conditions
-          </h2>
-        </div>
+        <SectionHeader title="Current Conditions" icon={<Thermometer size={16} />} category="environment" />
         <Suspense fallback={<LoadingCard />}>
           <CurrentConditionsTable />
         </Suspense>
@@ -243,12 +232,7 @@ export default function WeatherPage() {
 
       {/* Climate History */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Eye size={16} className="text-emerald-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Climate History
-          </h2>
-        </div>
+        <SectionHeader title="Climate History" icon={<Eye size={16} />} category="environment" />
         <div className="grid md:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <EdmontonClimateChart />

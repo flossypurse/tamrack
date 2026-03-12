@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Card, CardHeader } from "@/components/card";
+import { PageHeader } from "@/components/page-header";
 import {
   Scale,
   Check,
@@ -85,18 +86,12 @@ export default function ComparePage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <Scale size={20} className="text-accent" />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Compare Municipalities
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Select up to 5 municipalities and compare key metrics side-by-side.
-          Built for journalists, researchers, and economic development officers.
-        </p>
-      </header>
+      <PageHeader
+        title="Compare Municipalities"
+        description="Select up to 5 municipalities and compare key metrics side-by-side. Built for journalists, researchers, and economic development officers."
+        category="intelligence"
+        icon={<Scale size={20} />}
+      />
 
       {/* Selected pills */}
       {selected.length > 0 && (

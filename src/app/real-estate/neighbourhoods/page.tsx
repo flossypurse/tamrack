@@ -13,6 +13,7 @@ import {
   Minus,
   AlertTriangle,
 } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 import {
   analyzeTransformationZones,
   analyzeTeardownZones,
@@ -402,20 +403,13 @@ export const metadata: Metadata = {
 export default function MicroSignalsPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <Microscope size={20} className="text-accent" />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Micro Signals
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Neighbourhood-level intelligence from cross-analyzing permits,
-          assessments, development activity, renovations, and business
-          licences. This is where macro trends meet street-level
-          opportunities.
-        </p>
-        <div className="flex gap-3 mt-3 text-[10px] text-muted">
+      <PageHeader
+        title="Micro Signals"
+        description="Neighbourhood-level intelligence from cross-analyzing permits, assessments, development activity, renovations, and business licences. This is where macro trends meet street-level opportunities."
+        category="realestate"
+        icon={<Microscope size={20} />}
+      >
+        <div className="flex gap-3 text-[10px] text-muted">
           <span className="flex items-center gap-1">
             <Database size={10} />
             Run{" "}
@@ -425,7 +419,7 @@ export default function MicroSignalsPage() {
             daily to track changes over time
           </span>
         </div>
-      </header>
+      </PageHeader>
 
       {/* How to read this page */}
       <Card>

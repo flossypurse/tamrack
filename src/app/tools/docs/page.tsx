@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Card, CardHeader } from "@/components/card";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   BookOpen,
   Key,
@@ -619,23 +621,12 @@ export default function DocsPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
       {/* Hero */}
-      <div>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-            <BookOpen size={20} className="text-accent" />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">API Reference</h1>
-            <p className="text-xs text-muted">
-              Alberta Pulse Check REST API v1
-            </p>
-          </div>
-        </div>
-        <p className="text-sm text-muted mt-3 max-w-2xl">
-          Programmatic access to Alberta&apos;s economic pulse. Live data from Bank of Canada, Statistics Canada,
-          and 20+ municipal ArcGIS systems — normalized, cross-analyzed, and ready for your models, dashboards, and alerts.
-        </p>
-      </div>
+      <PageHeader
+        title="API Reference"
+        description="Programmatic access to Alberta's economic pulse. Live data from Bank of Canada, Statistics Canada, and 20+ municipal ArcGIS systems — normalized, cross-analyzed, and ready for your models, dashboards, and alerts."
+        category="tools"
+        icon={<BookOpen size={20} />}
+      />
 
       {/* Quick start cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -714,13 +705,7 @@ export default function DocsPage() {
 
       {/* Endpoints */}
       <div>
-        <div className="flex items-center gap-2 mb-4">
-          <Globe size={16} className="text-accent" />
-          <h2 className="text-sm font-semibold">Endpoints</h2>
-          <span className="text-[10px] font-mono bg-background text-muted px-2 py-0.5 rounded-full border border-card-border">
-            {ENDPOINTS.length} endpoints
-          </span>
-        </div>
+        <SectionHeader title="Endpoints" icon={<Globe size={16} />} category="tools" />
         <div className="space-y-3">
           {ENDPOINTS.map((ep) => (
             <EndpointCard key={ep.path} endpoint={ep} />

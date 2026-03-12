@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db";
 import { Card, CardHeader } from "@/components/card";
 import { Users, DollarSign, Key, Activity, TrendingUp, Clock } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 
 interface UserRow {
   id: string;
@@ -92,10 +93,11 @@ export default function AdminPage() {
 
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <h1 className="text-xl font-bold">Admin Dashboard</h1>
-        <p className="text-sm text-muted">Revenue, users, and API usage</p>
-      </header>
+      <PageHeader
+        title="Admin Dashboard"
+        description="Revenue, users, and API usage"
+        category="tools"
+      />
 
       {/* Key Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

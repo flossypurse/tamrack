@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Card } from "@/components/card";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   Database,
   Globe,
@@ -912,22 +914,24 @@ export default function SourcesPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight mb-2">
-          Data Sources
-        </h1>
-        <p className="text-muted text-sm leading-relaxed max-w-3xl">
-          Everything Alberta Pulse Check looks at, explained in plain English. Each
-          data source includes what it is, why it matters for making economic
-          decisions, and how we access it. Sources marked{" "}
-          <span className="text-accent-green font-medium">API</span> can be
-          pulled automatically.{" "}
-          <span className="text-accent font-medium">Download</span> means we
-          fetch files on a schedule.{" "}
-          <span className="text-accent-amber font-medium">Web Only</span> means
-          manual or scraping required.{" "}
-          <span className="text-accent-red font-medium">Paid</span> means it
-          costs money per search.
-        </p>
+        <PageHeader
+          title="Data Sources"
+          description="Everything Alberta Pulse Check looks at, explained in plain English. Each data source includes what it is, why it matters for making economic decisions, and how we access it."
+          category="tools"
+          icon={<Database size={20} />}
+        >
+          <p className="text-sm text-muted leading-relaxed max-w-3xl">
+            Sources marked{" "}
+            <span className="text-accent-green font-medium">API</span> can be
+            pulled automatically.{" "}
+            <span className="text-accent font-medium">Download</span> means we
+            fetch files on a schedule.{" "}
+            <span className="text-accent-amber font-medium">Web Only</span> means
+            manual or scraping required.{" "}
+            <span className="text-accent-red font-medium">Paid</span> means it
+            costs money per search.
+          </p>
+        </PageHeader>
       </div>
 
       {/* Quick stats */}
@@ -969,17 +973,11 @@ export default function SourcesPage() {
       <div className="space-y-10">
         {categories.map((category) => (
           <section key={category.name}>
-            <div className="flex items-start gap-3 mb-3">
-              <category.icon
-                size={20}
-                className="text-accent mt-0.5 shrink-0"
-              />
-              <div>
-                <h2 className="text-lg font-semibold">{category.name}</h2>
-                <p className="text-sm text-muted leading-relaxed mt-1">
-                  {category.description}
-                </p>
-              </div>
+            <div className="mb-3">
+              <SectionHeader title={category.name} icon={<category.icon size={16} />} category="tools" />
+              <p className="text-sm text-muted leading-relaxed ml-6">
+                {category.description}
+              </p>
             </div>
 
             <div className="space-y-3 ml-8">

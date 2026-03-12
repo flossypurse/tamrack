@@ -12,12 +12,12 @@ import {
   MultiSeriesLineChart,
   type MultiSeriesPoint,
 } from "@/components/chart";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   GitBranch,
   Factory,
-  Building2,
   Briefcase,
-  Cpu,
   TrendingUp,
 } from "lucide-react";
 import {
@@ -373,18 +373,12 @@ function DiversificationContext() {
 export default function DiversificationPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <GitBranch size={20} className="text-emerald-400" />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Is Alberta Actually Changing?
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Tracking whether Alberta&apos;s economy is genuinely diversifying away from
-          energy, or just growing everything together during a boom.
-        </p>
-      </header>
+      <PageHeader
+        title="Is Alberta Actually Changing?"
+        description="Tracking whether Alberta's economy is genuinely diversifying away from energy, or just growing everything together during a boom."
+        category="economy"
+        icon={<GitBranch size={20} />}
+      />
 
       {/* Metrics */}
       <section>
@@ -408,12 +402,7 @@ export default function DiversificationPage() {
 
       {/* Hero: GDP by Industry */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Factory size={16} className="text-orange-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Industry Composition
-          </h2>
-        </div>
+        <SectionHeader title="Industry Composition" icon={<Factory size={16} />} category="economy" />
         <Suspense fallback={<LoadingCard />}>
           <GdpByIndustryChart />
         </Suspense>
@@ -421,12 +410,7 @@ export default function DiversificationPage() {
 
       {/* Energy Dependency */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp size={16} className="text-orange-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Energy Dependency
-          </h2>
-        </div>
+        <SectionHeader title="Energy Dependency" icon={<TrendingUp size={16} />} category="economy" />
         <div className="grid lg:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <OilGasShareChart />
@@ -439,12 +423,7 @@ export default function DiversificationPage() {
 
       {/* Business Activity */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Briefcase size={16} className="text-purple-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Business Activity
-          </h2>
-        </div>
+        <SectionHeader title="Business Activity" icon={<Briefcase size={16} />} category="economy" />
         <div className="grid md:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <BusinessLicencesChart />

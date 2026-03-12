@@ -1,19 +1,16 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { PageHeader } from "@/components/page-header";
 import {
   Landmark,
   TrendingUp,
   TrendingDown,
-  Minus,
   Activity,
-  Users,
   Building2,
-  DollarSign,
   ChevronRight,
   BarChart3,
   Briefcase,
   Factory,
-  Shield,
   Scale,
   Layers,
 } from "lucide-react";
@@ -520,26 +517,19 @@ export default function EDOBriefingPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto space-y-5">
       {/* Header */}
-      <header>
-        <div className="flex items-center gap-2 text-[10px] text-muted mb-2">
-          <Link href="/overview/briefing" className="hover:text-accent">Briefings</Link>
-          <ChevronRight size={10} />
-          <span>EDO</span>
-        </div>
-        <div className="flex items-center gap-3 mb-1">
-          <div className="p-2 rounded-lg bg-purple-500/10">
-            <Landmark size={20} className="text-purple-400" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold">Economic Development Officer Briefing</h1>
-            <p className="text-xs text-muted">{today}</p>
-          </div>
-        </div>
-        <p className="text-sm text-muted mt-2">
-          Municipal scorecards, tax competitiveness, business formation, and the major projects pipeline —
-          council-ready intelligence for economic development strategy.
-        </p>
-      </header>
+      <div className="flex items-center gap-2 text-[10px] text-muted mb-2">
+        <Link href="/overview/briefing" className="hover:text-accent">Briefings</Link>
+        <ChevronRight size={10} />
+        <span>EDO</span>
+      </div>
+      <PageHeader
+        title="Economic Development Officer Briefing"
+        description="Municipal scorecards, tax competitiveness, business formation, and the major projects pipeline — council-ready intelligence for economic development strategy."
+        category="overview"
+        icon={<Landmark size={20} />}
+      >
+        <p className="text-xs text-muted">{today}</p>
+      </PageHeader>
 
       {/* Quick Stats */}
       <Suspense fallback={<LoadingGrid />}>

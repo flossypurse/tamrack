@@ -11,11 +11,11 @@ import {
   TimeSeriesAreaChart,
   type MultiSeriesPoint,
 } from "@/components/chart";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   ShieldAlert,
-  TrendingDown,
   AlertTriangle,
-  Activity,
   Home,
   Users,
   Flame,
@@ -392,32 +392,22 @@ function LoadingCard() {
 export default function RiskPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <ShieldAlert size={20} className="text-red-400" />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Market Risk Dashboard
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Composite risk scoring across employment, vacancy, supply pipeline, interest rates, and energy dependency.
-          Designed for lenders, underwriters, and risk-aware investors.
-        </p>
-        <div className="flex flex-wrap gap-2 mt-3">
+      <PageHeader
+        title="Market Risk Dashboard"
+        description="Composite risk scoring across employment, vacancy, supply pipeline, interest rates, and energy dependency. Designed for lenders, underwriters, and risk-aware investors."
+        category="intelligence"
+        icon={<ShieldAlert size={20} />}
+      >
+        <div className="flex flex-wrap gap-2">
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 font-mono">LENDERS</span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-mono">UNDERWRITERS</span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-mono">RISK ANALYSTS</span>
         </div>
-      </header>
+      </PageHeader>
 
       {/* Risk Overview */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <AlertTriangle size={16} className="text-amber-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Risk Assessment
-          </h2>
-        </div>
+        <SectionHeader title="Risk Assessment" icon={<AlertTriangle size={16} />} category="intelligence" />
         <Suspense
           fallback={
             <div className="space-y-4">
@@ -436,36 +426,21 @@ export default function RiskPage() {
 
       {/* Risk Correlations */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Flame size={16} className="text-orange-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            The Alberta Risk Chain
-          </h2>
-        </div>
+        <SectionHeader title="The Alberta Risk Chain" icon={<Flame size={16} />} category="intelligence" />
         <Suspense fallback={<LoadingCard />}>
           <EnergyVsUnemploymentChart />
         </Suspense>
       </section>
 
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Home size={16} className="text-blue-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Rate Sensitivity
-          </h2>
-        </div>
+        <SectionHeader title="Rate Sensitivity" icon={<Home size={16} />} category="intelligence" />
         <Suspense fallback={<LoadingCard />}>
           <RateVsStartsChart />
         </Suspense>
       </section>
 
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Users size={16} className="text-red-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Employment Trend
-          </h2>
-        </div>
+        <SectionHeader title="Employment Trend" icon={<Users size={16} />} category="intelligence" />
         <Suspense fallback={<LoadingCard />}>
           <UnemploymentTrendChart />
         </Suspense>

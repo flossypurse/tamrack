@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { PageHeader } from "@/components/page-header";
 import {
   Newspaper,
   TrendingUp,
@@ -9,7 +10,6 @@ import {
   ChevronRight,
   BarChart3,
   Database,
-  Search,
   Lightbulb,
   MapPin,
   Code,
@@ -410,26 +410,19 @@ export default function JournalistBriefingPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto space-y-5">
       {/* Header */}
-      <header>
-        <div className="flex items-center gap-2 text-[10px] text-muted mb-2">
-          <Link href="/overview/briefing" className="hover:text-accent">Briefings</Link>
-          <ChevronRight size={10} />
-          <span>Journalist</span>
-        </div>
-        <div className="flex items-center gap-3 mb-1">
-          <div className="p-2 rounded-lg bg-emerald-500/10">
-            <Newspaper size={20} className="text-emerald-400" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold">Journalist Briefing</h1>
-            <p className="text-xs text-muted">{today}</p>
-          </div>
-        </div>
-        <p className="text-sm text-muted mt-2">
-          Auto-detected anomalies, data-backed story leads, and a complete
-          reference to every dataset — ready for investigation.
-        </p>
-      </header>
+      <div className="flex items-center gap-2 text-[10px] text-muted mb-2">
+        <Link href="/overview/briefing" className="hover:text-accent">Briefings</Link>
+        <ChevronRight size={10} />
+        <span>Journalist</span>
+      </div>
+      <PageHeader
+        title="Journalist Briefing"
+        description="Auto-detected anomalies, data-backed story leads, and a complete reference to every dataset — ready for investigation."
+        category="overview"
+        icon={<Newspaper size={20} />}
+      >
+        <p className="text-xs text-muted">{today}</p>
+      </PageHeader>
 
       {/* Quick Stats */}
       <Suspense fallback={<LoadingGrid />}>

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { Wind, AlertTriangle, CheckCircle2, Shield } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import { fetchAlbertaAQHI, type AQHIReading } from "@/lib/data-sources";
 
 // ============================================================
@@ -253,15 +255,12 @@ export default function AirQualityPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Wind className="w-6 h-6 text-accent" />
-          Air Quality
-        </h1>
-        <p className="text-sm text-muted mt-1">
-          Real-time Air Quality Health Index (AQHI) monitoring across Alberta stations
-        </p>
-      </div>
+      <PageHeader
+        title="Air Quality"
+        description="Real-time Air Quality Health Index (AQHI) monitoring across Alberta stations"
+        category="environment"
+        icon={<Wind size={20} />}
+      />
 
       {/* AQHI Scale Explainer */}
       <AQHIScaleExplainer />

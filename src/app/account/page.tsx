@@ -3,6 +3,7 @@
 import { useSession, signOut } from "next-auth/react";
 import { User, LogOut, Mail, Calendar } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "@/components/page-header";
 
 export default function AccountPage() {
   const { data: session } = useSession();
@@ -10,7 +11,10 @@ export default function AccountPage() {
 
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-3xl mx-auto space-y-6">
-      <h1 className="text-xl font-bold">Account</h1>
+      <PageHeader
+        title="Account"
+        category="tools"
+      />
 
       <div className="bg-card border border-card-border rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">

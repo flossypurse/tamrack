@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   Siren,
   AlertTriangle,
@@ -182,15 +184,12 @@ export default function EmergenciesPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Siren className="w-6 h-6 text-red-400" />
-          Emergency Alerts
-        </h1>
-        <p className="text-sm text-muted mt-1">
-          Real-time emergency and weather alerts across Alberta
-        </p>
-      </div>
+      <PageHeader
+        title="Emergency Alerts"
+        description="Real-time emergency and weather alerts across Alberta"
+        category="safety"
+        icon={<Siren size={20} />}
+      />
 
       {/* Active Alerts Count */}
       <Suspense
@@ -207,10 +206,7 @@ export default function EmergenciesPage() {
 
       {/* Weather Alerts */}
       <section>
-        <h2 className="text-lg font-semibold flex items-center gap-2 mb-3">
-          <AlertTriangle className="w-5 h-5 text-yellow-400" />
-          Weather Alerts
-        </h2>
+        <SectionHeader title="Weather Alerts" icon={<AlertTriangle size={16} />} category="safety" />
         <Suspense fallback={<LoadingCard />}>
           <WeatherAlertsSection />
         </Suspense>
@@ -218,10 +214,7 @@ export default function EmergenciesPage() {
 
       {/* 511 Traffic Alerts */}
       <section>
-        <h2 className="text-lg font-semibold flex items-center gap-2 mb-3">
-          <Bell className="w-5 h-5 text-orange-400" />
-          511 Traffic Alerts
-        </h2>
+        <SectionHeader title="511 Traffic Alerts" icon={<Bell size={16} />} category="safety" />
         <Suspense fallback={<LoadingCard />}>
           <TrafficAlertsSection />
         </Suspense>

@@ -8,6 +8,8 @@ import {
   MapPin,
   AlertTriangle,
 } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   fetchAlbertaWaterLevels,
   type HydrometricReading,
@@ -166,19 +168,12 @@ export default function WaterPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <header>
-        <div className="flex items-center gap-3 mb-2">
-          <Waves size={24} className="text-blue-400" />
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
-            Water &amp; Rivers
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Monitoring Alberta&apos;s river systems, water levels, and flood risk.
-          Real-time hydrometric data from Environment and Climate Change Canada
-          stations across the province.
-        </p>
-      </header>
+      <PageHeader
+        title="Water & Rivers"
+        description="Monitoring Alberta's river systems, water levels, and flood risk. Real-time hydrometric data from Environment and Climate Change Canada stations across the province."
+        category="environment"
+        icon={<Waves size={20} />}
+      />
 
       {/* Key Metrics */}
       <section>
@@ -202,12 +197,7 @@ export default function WaterPage() {
 
       {/* Water Levels Table */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Gauge size={16} className="text-blue-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Station Readings
-          </h2>
-        </div>
+        <SectionHeader title="Station Readings" icon={<Gauge size={16} />} category="environment" />
         <Suspense fallback={<LoadingCard />}>
           <WaterLevelsTable />
         </Suspense>
@@ -215,12 +205,7 @@ export default function WaterPage() {
 
       {/* Major Rivers */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <MapPin size={16} className="text-cyan-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Major River Basins
-          </h2>
-        </div>
+        <SectionHeader title="Major River Basins" icon={<MapPin size={16} />} category="environment" />
         <Card>
           <CardHeader
             title="Alberta's Major Rivers"
@@ -299,12 +284,7 @@ export default function WaterPage() {
 
       {/* Flood Risk Context */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <AlertTriangle size={16} className="text-amber-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Flood Risk Context
-          </h2>
-        </div>
+        <SectionHeader title="Flood Risk Context" icon={<AlertTriangle size={16} />} category="environment" />
         <Card>
           <CardHeader
             title="Why Water Levels Matter for Property Decisions"

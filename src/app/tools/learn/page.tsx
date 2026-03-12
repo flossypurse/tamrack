@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader } from "@/components/card";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   GraduationCap,
   Brain,
@@ -335,27 +337,17 @@ export const metadata: Metadata = {
 export default function LearnPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto space-y-8">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <GraduationCap size={20} className="text-accent" />
-          <h1 className="text-xl font-semibold tracking-tight">Learn</h1>
-        </div>
-        <p className="text-sm text-muted">
-          Understand the data before you act on it. Work through these tools at
-          your own pace — they use your live dashboard data to make everything
-          concrete.
-        </p>
-      </header>
+      <PageHeader
+        title="Learn"
+        description="Understand the data before you act on it. Work through these tools at your own pace — they use your live dashboard data to make everything concrete."
+        category="tools"
+        icon={<GraduationCap size={20} />}
+      />
 
       {/* Section 1: Self-Assessment */}
       <section>
         <Card>
-          <div className="flex items-center gap-2 mb-4">
-            <Brain size={16} className="text-accent" />
-            <h2 className="text-sm font-medium uppercase tracking-wider text-muted">
-              Where Are You?
-            </h2>
-          </div>
+          <SectionHeader title="Where Are You?" icon={<Brain size={16} />} category="tools" />
           <p className="text-xs text-muted mb-4">
             10 questions to pinpoint your knowledge gaps. Not a test — a
             diagnostic. Every wrong answer comes with a detailed explanation
@@ -368,12 +360,7 @@ export default function LearnPage() {
       {/* Section 2: The Story Right Now */}
       <section>
         <Card>
-          <div className="flex items-center gap-2 mb-4">
-            <Zap size={16} className="text-accent-amber" />
-            <h2 className="text-sm font-medium uppercase tracking-wider text-muted">
-              The Story Right Now
-            </h2>
-          </div>
+          <SectionHeader title="The Story Right Now" icon={<Zap size={16} />} category="tools" />
           <p className="text-xs text-muted mb-4">
             Your dashboard has 20+ indicators. Here&apos;s what they&apos;re
             saying, translated to plain English, using the actual live data.
@@ -387,12 +374,7 @@ export default function LearnPage() {
       {/* Section 3: Indicator Deep Dives */}
       <section>
         <Card>
-          <div className="flex items-center gap-2 mb-4">
-            <BookOpen size={16} className="text-accent-green" />
-            <h2 className="text-sm font-medium uppercase tracking-wider text-muted">
-              Indicator Deep Dives
-            </h2>
-          </div>
+          <SectionHeader title="Indicator Deep Dives" icon={<BookOpen size={16} />} category="tools" />
           <p className="text-xs text-muted mb-4">
             Click any indicator to learn: what it measures, what drives it, how
             to read it, what it connects to, and what to watch out for.
@@ -404,12 +386,7 @@ export default function LearnPage() {
       {/* Section 4: Chain Reactions */}
       <section>
         <Card>
-          <div className="flex items-center gap-2 mb-4">
-            <ArrowRight size={16} className="text-accent" />
-            <h2 className="text-sm font-medium uppercase tracking-wider text-muted">
-              Chain Reactions
-            </h2>
-          </div>
+          <SectionHeader title="Chain Reactions" icon={<ArrowRight size={16} />} category="tools" />
           <p className="text-xs text-muted mb-4">
             Economics is about chains of cause and effect. Pick a trigger event
             and step through what happens next — each step shows the typical

@@ -12,6 +12,8 @@ import {
   MultiSeriesLineChart,
   type MultiSeriesPoint,
 } from "@/components/chart";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   RefreshCw,
   TrendingUp,
@@ -447,18 +449,12 @@ function HistoricalBusts() {
 export default function CyclePage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <RefreshCw size={20} className="text-accent" />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Boom-Bust Tracker
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Where are we in the Alberta cycle? Oil price → jobs → migration →
-          housing → everything. The pattern repeats — the timing varies.
-        </p>
-      </header>
+      <PageHeader
+        title="Boom-Bust Tracker"
+        description="Where are we in the Alberta cycle? Oil price → jobs → migration → housing → everything. The pattern repeats — the timing varies."
+        category="economy"
+        icon={<RefreshCw size={20} />}
+      />
 
       {/* Cycle Assessment */}
       <section>
@@ -483,12 +479,7 @@ export default function CyclePage() {
 
       {/* Key Correlations */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <AlertTriangle size={16} className="text-amber-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Key Correlations
-          </h2>
-        </div>
+        <SectionHeader title="Key Correlations" icon={<AlertTriangle size={16} />} category="economy" />
         <div className="grid lg:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <EnergyVsUnemploymentChart />
@@ -501,12 +492,7 @@ export default function CyclePage() {
 
       {/* Broad Indicators */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp size={16} className="text-emerald-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Broad Indicators
-          </h2>
-        </div>
+        <SectionHeader title="Broad Indicators" icon={<TrendingUp size={16} />} category="economy" />
         <div className="grid md:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <GdpTrendChart />
@@ -519,12 +505,7 @@ export default function CyclePage() {
 
       {/* Historical Context */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <History size={16} className="text-red-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Historical Context
-          </h2>
-        </div>
+        <SectionHeader title="Historical Context" icon={<History size={16} />} category="economy" />
         <HistoricalBusts />
       </section>
 

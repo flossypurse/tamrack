@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   description: "Cross-indicator analysis of Alberta's economy. When multiple leading indicators point the same direction, it's time to pay attention.",
 };
 import { TimeSeriesAreaChart, TimeSeriesBarChart } from "@/components/chart";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   Radar,
   TrendingUp,
@@ -358,16 +360,13 @@ function LoadingCard() {
 export default function SignalsPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <Radar size={20} className="text-accent" />
-          <h1 className="text-xl font-semibold tracking-tight">Signals</h1>
-        </div>
-        <p className="text-sm text-muted">
-          Leading indicators side-by-side. When multiple arrows point the same
-          direction, pay attention.
-        </p>
-        <div className="flex gap-4 mt-3 text-xs text-muted">
+      <PageHeader
+        title="Signals"
+        description="Leading indicators side-by-side. When multiple arrows point the same direction, pay attention."
+        category="overview"
+        icon={<Radar size={20} />}
+      >
+        <div className="flex gap-4 text-xs text-muted">
           <div className="flex items-center gap-1.5">
             <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400">
               LEADING
@@ -381,7 +380,7 @@ export default function SignalsPage() {
             <span>Moves with current activity</span>
           </div>
         </div>
-      </header>
+      </PageHeader>
 
       {/* Signal Summary */}
       <section>
@@ -405,12 +404,7 @@ export default function SignalsPage() {
 
       {/* Section: Money & Borrowing */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Landmark size={16} className="text-accent" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Money &amp; Borrowing
-          </h2>
-        </div>
+        <SectionHeader title="Money & Borrowing" icon={<Landmark size={16} />} category="overview" />
         <div className="grid md:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <PolicyRateChart />
@@ -423,12 +417,7 @@ export default function SignalsPage() {
 
       {/* Section: Construction Pipeline */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Building2 size={16} className="text-accent-amber" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Construction Pipeline
-          </h2>
-        </div>
+        <SectionHeader title="Construction Pipeline" icon={<Building2 size={16} />} category="overview" />
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <BuildingPermitsChart />
@@ -444,12 +433,7 @@ export default function SignalsPage() {
 
       {/* Section: Business & Labour */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Briefcase size={16} className="text-accent-green" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Business &amp; Labour
-          </h2>
-        </div>
+        <SectionHeader title="Business & Labour" icon={<Briefcase size={16} />} category="overview" />
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <BusinessLicencesChart />

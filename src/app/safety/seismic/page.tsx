@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+import { PageHeader } from "@/components/page-header";
 import {
   Activity,
   AlertTriangle,
@@ -359,15 +360,12 @@ export default function EarthquakesPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
-          <Activity className="w-7 h-7 text-accent" />
-          Seismic Activity
-        </h1>
-        <p className="text-sm text-muted mt-1">
-          Monitoring earthquakes in Alberta, including induced seismicity from oil and gas operations.
-        </p>
-      </div>
+      <PageHeader
+        title="Seismic Activity"
+        description="Monitoring earthquakes in Alberta, including induced seismicity from oil and gas operations."
+        category="safety"
+        icon={<Activity size={20} />}
+      />
 
       {/* Key Metrics */}
       <Suspense fallback={<LoadingCard />}>

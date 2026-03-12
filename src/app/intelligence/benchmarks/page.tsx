@@ -4,11 +4,12 @@ import { Card, CardHeader } from "@/components/card";
 import {
   NeighbourhoodBarChart,
 } from "@/components/chart";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   Scale,
   TrendingUp,
   Building2,
-  Users,
   BarChart3,
 } from "lucide-react";
 import {
@@ -298,24 +299,19 @@ export const metadata: Metadata = {
 export default function BenchmarksPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <Scale size={20} className="text-blue-400" />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Municipal Benchmarks
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Side-by-side comparison of all registered municipalities across Alberta.
-          Assessments, parcels, businesses, and vacant lots — pulled live from each municipality&apos;s data systems.
-        </p>
-        <div className="flex flex-wrap gap-2 mt-3">
+      <PageHeader
+        title="Municipal Benchmarks"
+        description="Side-by-side comparison of all registered municipalities across Alberta. Assessments, parcels, businesses, and vacant lots — pulled live from each municipality's data systems."
+        category="intelligence"
+        icon={<Scale size={20} />}
+      >
+        <div className="flex flex-wrap gap-2">
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-mono">EDOs</span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-mono">INVESTORS</span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 font-mono">SITE SELECTION</span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-mono">DEVELOPERS</span>
         </div>
-      </header>
+      </PageHeader>
 
       {/* Provincial context */}
       <section>
@@ -326,12 +322,7 @@ export default function BenchmarksPage() {
 
       {/* Full comparison table */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Building2 size={16} className="text-blue-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Full Comparison
-          </h2>
-        </div>
+        <SectionHeader title="Full Comparison" icon={<Building2 size={16} />} category="intelligence" />
         <Suspense fallback={<LoadingCard />}>
           <BenchmarkOverview />
         </Suspense>
@@ -339,12 +330,7 @@ export default function BenchmarksPage() {
 
       {/* Assessment comparison */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp size={16} className="text-blue-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Assessment Comparison
-          </h2>
-        </div>
+        <SectionHeader title="Assessment Comparison" icon={<TrendingUp size={16} />} category="intelligence" />
         <Suspense fallback={<LoadingCard />}>
           <AssessmentComparison />
         </Suspense>
@@ -352,12 +338,7 @@ export default function BenchmarksPage() {
 
       {/* Parcel counts */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <BarChart3 size={16} className="text-emerald-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Development Density
-          </h2>
-        </div>
+        <SectionHeader title="Development Density" icon={<BarChart3 size={16} />} category="intelligence" />
         <Suspense fallback={<LoadingCard />}>
           <ParcelCountComparison />
         </Suspense>

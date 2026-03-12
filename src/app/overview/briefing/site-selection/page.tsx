@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { PageHeader } from "@/components/page-header";
 import {
   TrendingUp,
   TrendingDown,
-  Minus,
   MapPin,
   Users,
   Store,
@@ -505,26 +505,19 @@ export default function SiteSelectionBriefingPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto space-y-5">
       {/* Header */}
-      <header>
-        <div className="flex items-center gap-2 text-[10px] text-muted mb-2">
-          <Link href="/overview/briefing" className="hover:text-accent">Briefings</Link>
-          <ChevronRight size={10} />
-          <span>Site Selection</span>
-        </div>
-        <div className="flex items-center gap-3 mb-1">
-          <div className="p-2 rounded-lg bg-cyan-500/10">
-            <MapPin size={20} className="text-cyan-400" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold">Site Selection Briefing</h1>
-            <p className="text-xs text-muted">{today}</p>
-          </div>
-        </div>
-        <p className="text-sm text-muted mt-2">
-          Population corridors, business density, trade area gaps, and growth
-          signals — everything for location and franchise decisions.
-        </p>
-      </header>
+      <div className="flex items-center gap-2 text-[10px] text-muted mb-2">
+        <Link href="/overview/briefing" className="hover:text-accent">Briefings</Link>
+        <ChevronRight size={10} />
+        <span>Site Selection</span>
+      </div>
+      <PageHeader
+        title="Site Selection Briefing"
+        description="Population corridors, business density, trade area gaps, and growth signals — everything for location and franchise decisions."
+        category="overview"
+        icon={<MapPin size={20} />}
+      >
+        <p className="text-xs text-muted">{today}</p>
+      </PageHeader>
 
       {/* Quick Stats */}
       <Suspense fallback={<LoadingGrid />}>

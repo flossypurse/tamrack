@@ -36,7 +36,6 @@ import {
 } from "@/lib/data-sources";
 import {
   Home,
-  TrendingUp,
   Hammer,
   MapPin,
   FileText,
@@ -46,6 +45,8 @@ import {
   Construction,
   Landmark,
 } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 
 // ============================================================
 // Key metrics
@@ -1150,17 +1151,18 @@ export const metadata: Metadata = {
 export default function RealEstatePage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <h1 className="text-xl font-semibold tracking-tight">
-          Real Estate Intelligence
-        </h1>
-        <p className="text-sm text-muted mt-1">
-          Where should you be prospecting this week? Live data from Edmonton,
-          Calgary, Strathcona County, St. Albert, and 20+ municipalities. See{" "}
+      <PageHeader
+        title="Real Estate Intelligence"
+        description="Where should you be prospecting this week? Live data from Edmonton, Calgary, Strathcona County, St. Albert, and 20+ municipalities."
+        category="realestate"
+        icon={<Home size={20} />}
+      >
+        <p className="text-sm text-muted">
+          See{" "}
           <a href="/real-estate/prospects" className="text-accent hover:underline">Prospect Leads</a>{" "}
           for province-wide actionable leads.
         </p>
-      </header>
+      </PageHeader>
 
       {/* Prospecting Guide */}
       <ProspectingGuide />
@@ -1187,12 +1189,7 @@ export default function RealEstatePage() {
 
       {/* Section: Metro-wide (StatsCan CMA) */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Globe size={16} className="text-accent" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Edmonton Metro (CMA) — All Municipalities
-          </h2>
-        </div>
+        <SectionHeader title="Edmonton Metro (CMA) — All Municipalities" icon={<Globe size={16} />} category="realestate" />
         <p className="text-xs text-muted mb-3">
           Covers Edmonton, Parkland County, Spruce Grove, Stony Plain, St.
           Albert, Strathcona County, Leduc, and all other CMA municipalities.
@@ -1212,12 +1209,7 @@ export default function RealEstatePage() {
 
       {/* Section: Housing Market (CMHC) */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Home size={16} className="text-blue-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Housing Market (CMHC via StatsCan)
-          </h2>
-        </div>
+        <SectionHeader title="Housing Market (CMHC via StatsCan)" icon={<Home size={16} />} category="realestate" />
         <p className="text-xs text-muted mb-3">
           Housing starts, completions, and units under construction for the Edmonton CMA. Sourced from CMHC surveys published through Statistics Canada.
         </p>
@@ -1236,12 +1228,7 @@ export default function RealEstatePage() {
 
       {/* Section: Rental Market */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Home size={16} className="text-emerald-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Rental Market (CMHC Survey)
-          </h2>
-        </div>
+        <SectionHeader title="Rental Market (CMHC Survey)" icon={<Home size={16} />} category="realestate" />
         <p className="text-xs text-muted mb-3">
           Annual October survey — vacancy rates and average rents for the Edmonton CMA.
           Low vacancy (&lt;3%) means strong rental demand; rising vacancy signals softening.
@@ -1253,12 +1240,7 @@ export default function RealEstatePage() {
 
       {/* Section: Mill Rates */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <DollarSign size={16} className="text-green-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Property Tax Rates — Mill Rate Comparison
-          </h2>
-        </div>
+        <SectionHeader title="Property Tax Rates — Mill Rate Comparison" icon={<DollarSign size={16} />} category="realestate" />
         <p className="text-xs text-muted mb-3">
           Compare property tax rates across Edmonton metro municipalities. Lower mill rate = lower tax for same assessed value.
         </p>
@@ -1269,12 +1251,7 @@ export default function RealEstatePage() {
 
       {/* Section: Road Construction */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Construction size={16} className="text-amber-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Edmonton — Road &amp; Infrastructure Construction
-          </h2>
-        </div>
+        <SectionHeader title="Edmonton — Road & Infrastructure Construction" icon={<Construction size={16} />} category="realestate" />
         <p className="text-xs text-muted mb-3">
           Active on-street construction permits. Infrastructure spend precedes property value increases — new roads and LRT lines drive demand in adjacent areas.
         </p>
@@ -1290,12 +1267,7 @@ export default function RealEstatePage() {
 
       {/* Section: Major Projects */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Landmark size={16} className="text-violet-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Edmonton Metro — Major Projects ($5M+)
-          </h2>
-        </div>
+        <SectionHeader title="Edmonton Metro — Major Projects ($5M+)" icon={<Landmark size={16} />} category="realestate" />
         <p className="text-xs text-muted mb-3">
           Alberta&apos;s inventory of major capital projects. New hospitals, schools, LRT lines, and industrial facilities
           drive local housing demand — a new project announcement signals future area growth.
@@ -1307,12 +1279,7 @@ export default function RealEstatePage() {
 
       {/* Section: Edmonton Hot Zones */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <MapPin size={16} className="text-accent-green" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Edmonton — Hot Zones
-          </h2>
-        </div>
+        <SectionHeader title="Edmonton — Hot Zones" icon={<MapPin size={16} />} category="realestate" />
         <div className="grid lg:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <HotZonesChart />
@@ -1325,12 +1292,7 @@ export default function RealEstatePage() {
 
       {/* Section: Edmonton Signals */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Home size={16} className="text-purple-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Edmonton — Listing Signals
-          </h2>
-        </div>
+        <SectionHeader title="Edmonton — Listing Signals" icon={<Home size={16} />} category="realestate" />
         <div className="grid lg:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <RedevelopingAreasChart />
@@ -1343,12 +1305,7 @@ export default function RealEstatePage() {
 
       {/* Section: Edmonton Renovation */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Hammer size={16} className="text-cyan-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Edmonton — Renovation Activity
-          </h2>
-        </div>
+        <SectionHeader title="Edmonton — Renovation Activity" icon={<Hammer size={16} />} category="realestate" />
         <div className="grid lg:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <HomeRenovationChart />
@@ -1361,12 +1318,7 @@ export default function RealEstatePage() {
 
       {/* Section: Edmonton Dev Permits */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <FileText size={16} className="text-accent-amber" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Edmonton — Development Permit Feed
-          </h2>
-        </div>
+        <SectionHeader title="Edmonton — Development Permit Feed" icon={<FileText size={16} />} category="realestate" />
         <Suspense fallback={<LoadingTable />}>
           <EdmontonDevPermitsTable />
         </Suspense>
@@ -1374,12 +1326,7 @@ export default function RealEstatePage() {
 
       {/* Section: Strathcona County */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Building2 size={16} className="text-orange-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Strathcona County (Sherwood Park)
-          </h2>
-        </div>
+        <SectionHeader title="Strathcona County (Sherwood Park)" icon={<Building2 size={16} />} category="realestate" />
         <div className="grid lg:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <StrathconaSubdivisionsChart />
@@ -1397,12 +1344,7 @@ export default function RealEstatePage() {
 
       {/* Section: St. Albert */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Building2 size={16} className="text-purple-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            St. Albert
-          </h2>
-        </div>
+        <SectionHeader title="St. Albert" icon={<Building2 size={16} />} category="realestate" />
         <div className="grid lg:grid-cols-2 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <StAlbertAssessmentsChart />

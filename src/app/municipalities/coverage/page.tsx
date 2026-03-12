@@ -1,4 +1,5 @@
 import { Card, CardHeader, MetricCard } from "@/components/card";
+import { PageHeader } from "@/components/page-header";
 import {
   MUNICIPALITY_REGISTRY,
   getLiveMunicipalities,
@@ -8,7 +9,7 @@ import {
   type DataCapability,
   type MunicipalityConfig,
 } from "@/lib/municipality-registry";
-import { Database, CheckCircle2, XCircle, Clock, Globe } from "lucide-react";
+import { Database, Globe } from "lucide-react";
 
 export const metadata = {
   title: "Data Coverage Matrix — Alberta Municipality Data Sources",
@@ -62,15 +63,12 @@ export default function CoveragePage() {
 
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-          <Database size={22} className="text-cyan-400" />
-          Data Coverage
-        </h1>
-        <p className="text-sm text-muted mt-1">
-          What data is available for every Alberta municipality on the platform.
-        </p>
-      </header>
+      <PageHeader
+        title="Data Coverage"
+        description="What data is available for every Alberta municipality on the platform."
+        category="municipalities"
+        icon={<Database size={22} />}
+      />
 
       {/* Summary Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { CreditCard, Key, Loader2, Copy, Check, Trash2, Plus, ExternalLink } from "lucide-react";
 import { trackEvent } from "@/components/analytics";
+import { PageHeader } from "@/components/page-header";
 
 interface ApiKeyRow {
   id: string;
@@ -100,7 +101,10 @@ export default function BillingPage() {
 
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-3xl mx-auto space-y-6">
-      <h1 className="text-xl font-bold">Billing & API Keys</h1>
+      <PageHeader
+        title="Billing & API Keys"
+        category="tools"
+      />
 
       {/* Subscription Status */}
       <div className="bg-card border border-card-border rounded-xl p-6 space-y-4">

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
-import { Landmark, Users, MapPin, Mail, Vote } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { Landmark, MapPin, Mail, Vote } from "lucide-react";
 import {
   fetchAlbertaMLAs,
   fetchAlbertaElectoralDistricts,
@@ -268,16 +269,12 @@ export default function ElectionsPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Landmark className="w-6 h-6 text-accent" />
-          Alberta Politics
-        </h1>
-        <p className="text-sm text-muted mt-1">
-          Tracking Alberta&apos;s elected officials and electoral districts.
-          Live data from the Represent API.
-        </p>
-      </div>
+      <PageHeader
+        title="Alberta Politics"
+        description="Tracking Alberta's elected officials and electoral districts. Live data from the Represent API."
+        category="safety"
+        icon={<Landmark size={20} />}
+      />
 
       {/* Party Breakdown + Metrics */}
       <Suspense fallback={<LoadingCard />}>

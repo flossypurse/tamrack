@@ -17,6 +17,8 @@ import {
   DollarSign,
   BarChart3,
 } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   fetchStatCanTimeSeries,
   STATSCAN_SERIES,
@@ -273,23 +275,18 @@ function LoadingCard() {
 export default function RentalPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <Home size={20} className="text-red-400" />
-          <h1 className="text-xl font-semibold tracking-tight">
-            Rental Intelligence
-          </h1>
-        </div>
-        <p className="text-sm text-muted">
-          Vacancy rates, average rents by unit type, and the relationship between new supply and rental tightness.
-          Edmonton CMA data from CMHC annual surveys.
-        </p>
-        <div className="flex flex-wrap gap-2 mt-3">
+      <PageHeader
+        title="Rental Intelligence"
+        description="Vacancy rates, average rents by unit type, and the relationship between new supply and rental tightness. Edmonton CMA data from CMHC annual surveys."
+        category="realestate"
+        icon={<Home size={20} />}
+      >
+        <div className="flex flex-wrap gap-2">
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 font-mono">LENDERS</span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-mono">INVESTORS</span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-mono">PROPERTY MANAGERS</span>
         </div>
-      </header>
+      </PageHeader>
 
       {/* Key Metrics */}
       <section>
@@ -313,12 +310,7 @@ export default function RentalPage() {
 
       {/* Vacancy Rate */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingDown size={16} className="text-red-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Market Tightness
-          </h2>
-        </div>
+        <SectionHeader title="Market Tightness" icon={<TrendingDown size={16} />} category="realestate" />
         <Suspense fallback={<LoadingCard />}>
           <VacancyChart />
         </Suspense>
@@ -326,12 +318,7 @@ export default function RentalPage() {
 
       {/* Rent Trends */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <DollarSign size={16} className="text-emerald-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Rent Levels
-          </h2>
-        </div>
+        <SectionHeader title="Rent Levels" icon={<DollarSign size={16} />} category="realestate" />
         <Suspense fallback={<LoadingCard />}>
           <RentTrendsChart />
         </Suspense>
@@ -339,12 +326,7 @@ export default function RentalPage() {
 
       {/* Vacancy vs Starts */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <BarChart3 size={16} className="text-blue-400" />
-          <h2 className="text-sm font-medium text-muted uppercase tracking-wider">
-            Supply vs Tightness
-          </h2>
-        </div>
+        <SectionHeader title="Supply vs Tightness" icon={<BarChart3 size={16} />} category="realestate" />
         <Suspense fallback={<LoadingCard />}>
           <VacancyVsStartsChart />
         </Suspense>

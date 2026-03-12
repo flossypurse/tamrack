@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PageHeader } from "@/components/page-header";
 import {
   Home,
   Building,
@@ -97,16 +98,12 @@ export const metadata: Metadata = {
 export default function BriefingPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
-      <header>
-        <div className="flex items-center gap-2 mb-1">
-          <Briefcase size={20} className="text-accent" />
-          <h1 className="text-lg font-semibold">Briefings</h1>
-        </div>
-        <p className="text-sm text-muted">
-          Intelligence reports tailored to how you make decisions.
-          Pick your role — get the data that matters, pre-analysed, with action items.
-        </p>
-      </header>
+      <PageHeader
+        title="Briefings"
+        description="Intelligence reports tailored to how you make decisions. Pick your role — get the data that matters, pre-analysed, with action items."
+        category="overview"
+        icon={<Briefcase size={20} />}
+      />
 
       <div className="grid gap-3">
         {roles.map((role) => {
