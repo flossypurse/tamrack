@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
+import { computeTimeRange } from "@/lib/time-range";
 
 export const metadata: Metadata = {
   title: "Alberta Boom-Bust Cycle Tracker",
@@ -251,7 +252,7 @@ async function EnergyVsUnemploymentChart() {
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
   return (
-    <ChartCard chartId="macro-energy-vs-unemployment" title="Energy Price vs Unemployment">
+    <ChartCard chartId="macro-energy-vs-unemployment" title="Energy Price vs Unemployment" timeRange={computeTimeRange(merged)} source="Bank of Canada · StatsCan">
       <Card>
         <CardHeader
           title="Energy Price vs Unemployment"
@@ -298,7 +299,7 @@ async function EnergyVsHousingChart() {
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
   return (
-    <ChartCard chartId="macro-energy-vs-housing" title="Energy Price vs Housing Starts">
+    <ChartCard chartId="macro-energy-vs-housing" title="Energy Price vs Housing Starts" timeRange={computeTimeRange(merged)} source="Bank of Canada · StatsCan">
       <Card>
         <CardHeader
           title="Energy Price vs Housing Starts"
@@ -323,7 +324,7 @@ async function GdpTrendChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_GDP;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
   return (
-    <ChartCard chartId="macro-gdp" title="Alberta Real GDP">
+    <ChartCard chartId="macro-gdp" title="Alberta Real GDP" timeRange={computeTimeRange(data)} source="StatsCan">
       <Card>
         <CardHeader
           title="Alberta Real GDP"
@@ -340,7 +341,7 @@ async function CpiTrendChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_CPI;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 60);
   return (
-    <ChartCard chartId="macro-cpi" title="Alberta CPI">
+    <ChartCard chartId="macro-cpi" title="Alberta CPI" timeRange={computeTimeRange(data)} source="StatsCan">
       <Card>
         <CardHeader
           title="Alberta CPI"
@@ -359,7 +360,7 @@ async function AAXChart() {
   const data = allData.slice(-240); // ~20 years of monthly data
   const latest = data.at(-1);
   return (
-    <ChartCard chartId="macro-aax" title="Alberta Activity Index (AAX)">
+    <ChartCard chartId="macro-aax" title="Alberta Activity Index (AAX)" timeRange={computeTimeRange(data)} source="Alberta Treasury Board">
       <Card>
         <CardHeader
           title="Alberta Activity Index (AAX)"

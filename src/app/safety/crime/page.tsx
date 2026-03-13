@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
+import { computeTimeRange } from "@/lib/time-range";
 import { PageHeader } from "@/components/page-header";
 import { SectionHeader } from "@/components/section-header";
 import { TimeSeriesAreaChart, TimeSeriesBarChart } from "@/components/chart";
@@ -279,6 +280,7 @@ async function CalgaryCrimeByCategoryChart() {
     <ChartCard
       chartId="safety-calgary-crime-by-category"
       title="Calgary Crime by Category"
+      source="Calgary Open Data"
     >
       <Card>
         <CardHeader
@@ -315,6 +317,8 @@ async function CalgaryCrimeTrendChart() {
     <ChartCard
       chartId="safety-calgary-crime-trend"
       title="Calgary Monthly Crime Trend"
+      timeRange={computeTimeRange(data)}
+      source="Calgary Open Data"
     >
       <Card>
         <CardHeader

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
+import { computeTimeRange } from "@/lib/time-range";
 
 export const metadata: Metadata = {
   title: "Alberta Labour Market Data",
@@ -125,8 +126,9 @@ async function LabourMetrics() {
 async function UnemploymentChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_UNEMPLOYMENT_RATE;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 60);
+  const timeRange = computeTimeRange(data);
   return (
-    <ChartCard chartId="macro-unemployment" title="Alberta Unemployment Rate">
+    <ChartCard chartId="macro-unemployment" title="Alberta Unemployment Rate" timeRange={timeRange} source="StatsCan LFS">
       <Card>
         <CardHeader
           title="Alberta Unemployment Rate"
@@ -146,8 +148,9 @@ async function UnemploymentChart() {
 async function EmploymentChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_EMPLOYMENT;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 60);
+  const timeRange = computeTimeRange(data);
   return (
-    <ChartCard chartId="macro-employment" title="Alberta Employment">
+    <ChartCard chartId="macro-employment" title="Alberta Employment" timeRange={timeRange} source="StatsCan LFS">
       <Card>
         <CardHeader
           title="Alberta Employment (thousands)"
@@ -163,8 +166,9 @@ async function EmploymentChart() {
 async function ParticipationChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_PARTICIPATION_RATE;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 60);
+  const timeRange = computeTimeRange(data);
   return (
-    <ChartCard chartId="macro-participation" title="Participation Rate">
+    <ChartCard chartId="macro-participation" title="Participation Rate" timeRange={timeRange} source="StatsCan LFS">
       <Card>
         <CardHeader
           title="Participation Rate"
@@ -205,9 +209,10 @@ async function EmploymentVsUnemploymentChart() {
   const merged = Array.from(dateMap.values())
     .filter((p) => p.employment && p.unemployment)
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const timeRange = computeTimeRange(merged);
 
   return (
-    <ChartCard chartId="macro-employment-vs-unemployment" title="Employment vs Unemployment Rate">
+    <ChartCard chartId="macro-employment-vs-unemployment" title="Employment vs Unemployment Rate" timeRange={timeRange} source="StatsCan LFS">
       <Card>
         <CardHeader
           title="Employment vs Unemployment Rate"
@@ -231,8 +236,9 @@ async function EmploymentVsUnemploymentChart() {
 async function WeeklyEarningsChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_WEEKLY_EARNINGS;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 60);
+  const timeRange = computeTimeRange(data);
   return (
-    <ChartCard chartId="macro-weekly-earnings" title="Average Weekly Earnings">
+    <ChartCard chartId="macro-weekly-earnings" title="Average Weekly Earnings" timeRange={timeRange} source="StatsCan LFS">
       <Card>
         <CardHeader
           title="Average Weekly Earnings"
@@ -252,8 +258,9 @@ async function WeeklyEarningsChart() {
 async function EmploymentRateChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_EMPLOYMENT_RATE;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 60);
+  const timeRange = computeTimeRange(data);
   return (
-    <ChartCard chartId="macro-employment-rate" title="Employment Rate">
+    <ChartCard chartId="macro-employment-rate" title="Employment Rate" timeRange={timeRange} source="StatsCan LFS">
       <Card>
         <CardHeader
           title="Employment Rate"

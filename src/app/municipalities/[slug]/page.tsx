@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { SectionHeader } from "@/components/section-header";
 import { NeighbourhoodBarChart } from "@/components/chart";
 import { ChartCard } from "@/components/chart-card";
+import { computeTimeRange } from "@/lib/time-range";
 import {
   getMunicipality,
   getLiveMunicipalities,
@@ -122,7 +123,7 @@ async function AssessmentsByZoningChart({ slug }: { slug: string }) {
   }));
 
   return (
-    <ChartCard chartId={`${slug}-assessment-by-zone`} title={`${config.name} — Avg Assessment by Zone`}>
+    <ChartCard chartId={`${slug}-assessment-by-zone`} title={`${config.name} — Avg Assessment by Zone`} source={config.dataSource}>
       <Card>
         <CardHeader
           title="Avg Assessment by Zone"
@@ -153,7 +154,7 @@ async function AssessmentCountChart({ slug }: { slug: string }) {
   }));
 
   return (
-    <ChartCard chartId={`${slug}-properties-by-zone`} title={`${config.name} — Properties by Zone`}>
+    <ChartCard chartId={`${slug}-properties-by-zone`} title={`${config.name} — Properties by Zone`} source={config.dataSource}>
       <Card>
         <CardHeader
           title="Properties by Zone"
@@ -191,7 +192,7 @@ async function AssessmentsByNeighbourhood({ slug }: { slug: string }) {
   const label = groupBy === "neighbourhood" ? "Neighbourhood" : "Subdivision";
 
   return (
-    <ChartCard chartId={`${slug}-assessment-by-${groupBy}`} title={`${config.name} — Avg Assessment by ${label}`}>
+    <ChartCard chartId={`${slug}-assessment-by-${groupBy}`} title={`${config.name} — Avg Assessment by ${label}`} source={config.dataSource}>
       <Card>
         <CardHeader
           title={`Avg Assessment by ${label}`}
@@ -230,7 +231,7 @@ async function BusinessSection({ slug }: { slug: string }) {
   return (
     <section>
       <SectionHeader title="Business Activity" icon={<Store size={16} />} category="municipalities" />
-      <ChartCard chartId={`${slug}-businesses`} title={`${config.name} — Businesses by Category`}>
+      <ChartCard chartId={`${slug}-businesses`} title={`${config.name} — Businesses by Category`} source={config.dataSource}>
         <Card>
           <CardHeader
             title="Businesses by Category"
@@ -265,7 +266,7 @@ async function VacantSection({ slug }: { slug: string }) {
   return (
     <section>
       <SectionHeader title="Vacant Land" icon={<MapPin size={16} />} category="municipalities" />
-      <ChartCard chartId={`${slug}-vacant`} title={`${config.name} — Vacant Lots`}>
+      <ChartCard chartId={`${slug}-vacant`} title={`${config.name} — Vacant Lots`} source={config.dataSource}>
         <Card>
           <CardHeader
             title="Vacant Lots by Zone"
@@ -347,7 +348,7 @@ async function PermitSection({ slug }: { slug: string }) {
   return (
     <section>
       <SectionHeader title="Development Permits" icon={<FileText size={16} />} category="municipalities" />
-      <ChartCard chartId={`${slug}-permits`} title={`${config.name} — Permits`}>
+      <ChartCard chartId={`${slug}-permits`} title={`${config.name} — Permits`} source={config.dataSource}>
         <Card>
           <CardHeader
             title="Permits by Area"

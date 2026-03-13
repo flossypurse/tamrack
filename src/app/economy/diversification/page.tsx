@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ChartCard } from "@/components/chart-card";
+import { computeTimeRange } from "@/lib/time-range";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 
 export const metadata: Metadata = {
@@ -187,7 +188,7 @@ async function GdpByIndustryChart() {
   );
 
   return (
-    <ChartCard chartId="macro-gdp-by-industry" title="GDP by Industry — Alberta">
+    <ChartCard chartId="macro-gdp-by-industry" title="GDP by Industry — Alberta" timeRange={computeTimeRange(merged)} source="StatsCan">
       <Card>
         <CardHeader
           title="GDP by Industry — Alberta"
@@ -243,7 +244,7 @@ async function OilGasShareChart() {
   }
 
   return (
-    <ChartCard chartId="macro-oil-gas-share" title="Oil & Gas Share of GDP">
+    <ChartCard chartId="macro-oil-gas-share" title="Oil & Gas Share of GDP" timeRange={computeTimeRange(shareData)} source="StatsCan">
       <Card>
         <CardHeader
           title="Oil & Gas Share of GDP"
@@ -268,7 +269,7 @@ async function TechGdpChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_GDP_TECH;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
   return (
-    <ChartCard chartId="macro-tech-gdp" title="Tech & Professional Services GDP">
+    <ChartCard chartId="macro-tech-gdp" title="Tech & Professional Services GDP" timeRange={computeTimeRange(data)} source="StatsCan">
       <Card>
         <CardHeader
           title="Tech & Professional Services GDP"
@@ -284,7 +285,7 @@ async function TechGdpChart() {
 async function BusinessLicencesChart() {
   const data = await fetchEdmontonBusinessLicences();
   return (
-    <ChartCard chartId="macro-business-licences" title="Edmonton Business Licences">
+    <ChartCard chartId="macro-business-licences" title="Edmonton Business Licences" timeRange={computeTimeRange(data)} source="City of Edmonton">
       <Card>
         <CardHeader
           title="Edmonton Business Licences"
@@ -303,7 +304,7 @@ async function BusinessLicencesChart() {
 async function BuildingPermitsChart() {
   const data = await fetchEdmontonPermitsSummary();
   return (
-    <ChartCard chartId="macro-building-permits" title="Edmonton Building Permits">
+    <ChartCard chartId="macro-building-permits" title="Edmonton Building Permits" timeRange={computeTimeRange(data)} source="City of Edmonton">
       <Card>
         <CardHeader
           title="Edmonton Building Permits"

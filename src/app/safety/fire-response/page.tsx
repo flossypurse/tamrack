@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
+import { computeTimeRange } from "@/lib/time-range";
 import { PageHeader } from "@/components/page-header";
 import { SectionHeader } from "@/components/section-header";
 import { TimeSeriesAreaChart, TimeSeriesBarChart } from "@/components/chart";
@@ -150,7 +151,7 @@ async function IncidentsByTypeSection() {
   const maxCount = Math.max(...data.map((d) => d.count));
 
   return (
-    <ChartCard chartId="fire-incidents-by-type" title="Edmonton Fire Incidents by Type">
+    <ChartCard chartId="fire-incidents-by-type" title="Edmonton Fire Incidents by Type" source="City of Edmonton">
       <Card>
         <CardHeader
           title="Edmonton Fire Incidents by Type"
@@ -200,7 +201,7 @@ async function IncidentsByTypeSection() {
 async function MonthlyTrendSection() {
   const data = await fetchEdmontonFireMonthlyTrend(3);
   return (
-    <ChartCard chartId="fire-monthly-trend" title="Edmonton Fire/EMS Monthly Call Volume">
+    <ChartCard chartId="fire-monthly-trend" title="Edmonton Fire/EMS Monthly Call Volume" timeRange={computeTimeRange(data)} source="City of Edmonton">
       <Card>
         <CardHeader
           title="Monthly Call Volume"

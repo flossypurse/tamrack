@@ -10,13 +10,17 @@ import {
   Flame,
   Globe,
   HardHat,
+  Heart,
   Landmark,
+  Leaf,
   MapPin,
   Newspaper,
   PiggyBank,
   Shield,
+  ShieldAlert,
   TrendingUp,
   Users,
+  Wrench,
   Zap,
 } from "lucide-react";
 import {
@@ -34,7 +38,7 @@ import { HeroVisualization } from "@/components/hero-viz";
 export const metadata: Metadata = {
   title: "Alberta Pulse Check — Real-Time Economic Intelligence for Alberta",
   description:
-    "Live economic data from 8+ government sources across 22 Alberta municipalities. Building permits, assessments, energy prices, labour market, migration, and more — updated daily.",
+    "Live economic data from 18+ government sources across 30 Alberta municipalities. Economy, real estate, energy, health, safety, environment, and more — updated hourly.",
   alternates: { canonical: "https://albertapulsecheck.ca" },
   openGraph: {
     images: [
@@ -165,13 +169,21 @@ const dataSources = [
   { name: "Bank of Canada", feeds: 13 },
   { name: "Statistics Canada", feeds: 40 },
   { name: "Edmonton Open Data", feeds: 5 },
-  { name: "Calgary Open Data", feeds: 4 },
+  { name: "Calgary Open Data", feeds: 8 },
   { name: "Alberta Regional Dashboard", feeds: 54 },
   { name: "Canada Energy Regulator", feeds: 16 },
-  { name: "ArcGIS Municipal", feeds: 20 },
+  { name: "ArcGIS Municipal", feeds: 22 },
   { name: "IRCC Immigration", feeds: 5 },
   { name: "Alberta Major Projects", feeds: 2 },
   { name: "CMHC Housing", feeds: 6 },
+  { name: "AESO Electricity", feeds: 3 },
+  { name: "AER Well Licences", feeds: 1 },
+  { name: "CWFIS Wildfire", feeds: 2 },
+  { name: "511 Alberta", feeds: 1 },
+  { name: "Alberta CKAN Health", feeds: 3 },
+  { name: "Infrastructure Canada", feeds: 2 },
+  { name: "Edmonton Fire & EMS", feeds: 1 },
+  { name: "CRA Tax Stats", feeds: 1 },
 ];
 
 const totalFeeds = dataSources.reduce((sum, s) => sum + s.feeds, 0);
@@ -458,7 +470,7 @@ export default function LandingPage() {
       <section className="relative max-w-full px-4 py-10 lg:py-28">
         <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
-          <h2 className="text-xl sm:text-2xl font-bold">Deep, not wide</h2>
+          <h2 className="text-xl sm:text-2xl font-bold">The full picture</h2>
           <p className="text-sm text-muted mt-2">
             Every page is built on real government data — not scraped, not estimated, not stale
           </p>
@@ -470,8 +482,12 @@ export default function LandingPage() {
             { icon: Building2, title: "Real Estate Intel", desc: "Permits, assessments, housing starts, rental vacancy, prospects", href: "/real-estate", count: "7 pages" },
             { icon: Flame, title: "Energy & Drilling", desc: "Pipeline throughput, well licences, commodity prices, AESO grid", href: "/economy/energy", count: "16 CER feeds" },
             { icon: Users, title: "Labour & Migration", desc: "Employment, participation, earnings, interprovincial flows, IRCC data", href: "/economy/labour", count: "5 IRCC feeds" },
-            { icon: TrendingUp, title: "Intelligence", desc: "Benchmarks, corridors, risk scoring, investment thesis", href: "/intelligence", count: "5 analysis tools" },
+            { icon: TrendingUp, title: "Intelligence", desc: "Benchmarks, corridors, risk scoring, investment thesis, compare", href: "/intelligence", count: "6 analysis tools" },
             { icon: Zap, title: "Leading Signals", desc: "Cross-indicator analysis separating leading from lagging", href: "/overview/signals", count: "Multi-source" },
+            { icon: Leaf, title: "Environment", desc: "Weather, air quality, water levels, wildfire tracking with historical trends", href: "/environment", count: "5 pages" },
+            { icon: Heart, title: "Health & Demographics", desc: "Life expectancy, mortality, births & deaths, demographic trends", href: "/health", count: "3 pages" },
+            { icon: ShieldAlert, title: "Public Safety", desc: "Crime stats, fire response, traffic alerts, seismic, emergencies", href: "/safety", count: "7 pages" },
+            { icon: Wrench, title: "Tools & API", desc: "REST API access, embeddable charts, data source directory, learn hub", href: "/tools", count: "4 pages" },
           ].map((section) => (
             <Link
               key={section.title}
@@ -503,7 +519,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             {dataSources.map((source) => (
               <div
                 key={source.name}

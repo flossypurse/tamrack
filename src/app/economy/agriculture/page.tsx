@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
+import { computeTimeRange } from "@/lib/time-range";
 
 export const metadata: Metadata = {
   title: "Alberta Agriculture & Farm Economy",
@@ -124,8 +125,9 @@ async function AgricultureMetrics() {
 
 async function AgCommodityChart() {
   const data = await fetchBoCTimeSeries(BOC_SERIES.BCPI_AGRICULTURE, 240);
+  const timeRange = computeTimeRange(data);
   return (
-    <ChartCard chartId="macro-ag-commodity" title="BoC Agriculture Commodity Price Index">
+    <ChartCard chartId="macro-ag-commodity" title="BoC Agriculture Commodity Price Index" timeRange={timeRange} source="Bank of Canada BCPI">
       <Card>
         <CardHeader
           title="BoC Agriculture Commodity Price Index"
@@ -145,8 +147,9 @@ async function AgCommodityChart() {
 async function AgGdpChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_GDP_AGRICULTURE;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
+  const timeRange = computeTimeRange(data);
   return (
-    <ChartCard chartId="macro-ag-gdp" title="Agriculture GDP — Alberta">
+    <ChartCard chartId="macro-ag-gdp" title="Agriculture GDP — Alberta" timeRange={timeRange} source="StatsCan">
       <Card>
         <CardHeader
           title="Agriculture GDP — Alberta"
@@ -163,7 +166,7 @@ async function FarmCashReceiptsChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_FARM_CASH_RECEIPTS;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
   return (
-    <ChartCard chartId="macro-farm-receipts" title="Farm Cash Receipts — Alberta">
+    <ChartCard chartId="macro-farm-receipts" title="Farm Cash Receipts — Alberta" timeRange={computeTimeRange(data)} source="StatsCan">
       <Card>
         <CardHeader
           title="Farm Cash Receipts — Alberta"
@@ -203,7 +206,7 @@ async function CropVsLivestockChart() {
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
   return (
-    <ChartCard chartId="macro-crop-vs-livestock" title="Crop vs Livestock Receipts">
+    <ChartCard chartId="macro-crop-vs-livestock" title="Crop vs Livestock Receipts" timeRange={computeTimeRange(merged)} source="StatsCan">
       <Card>
         <CardHeader
           title="Crop vs Livestock Receipts"
@@ -242,7 +245,7 @@ async function AgVsEnergyChart() {
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
   return (
-    <ChartCard chartId="macro-ag-vs-energy" title="Agriculture vs Energy Commodity Prices">
+    <ChartCard chartId="macro-ag-vs-energy" title="Agriculture vs Energy Commodity Prices" timeRange={computeTimeRange(merged)} source="Bank of Canada BCPI">
       <Card>
         <CardHeader
           title="Agriculture vs Energy Commodity Prices"

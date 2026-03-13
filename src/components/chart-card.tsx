@@ -9,11 +9,15 @@ interface ChartCardProps {
   chartId: string;
   /** Chart title shown in export watermark */
   title: string;
+  /** Human-readable time range (e.g. "Jan 2006 – Mar 2026 · 20 years") */
+  timeRange?: string;
+  /** Data source attribution (e.g. "Bank of Canada", "StatsCan 36-10-0402") */
+  source?: string;
   /** Chart content (the actual Recharts component) */
   children: ReactNode;
 }
 
-export function ChartCard({ chartId, title, children }: ChartCardProps) {
+export function ChartCard({ chartId, title, timeRange, source, children }: ChartCardProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const [showEmbed, setShowEmbed] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -21,6 +25,9 @@ export function ChartCard({ chartId, title, children }: ChartCardProps) {
 
   const origin = typeof window !== "undefined" ? window.location.origin : "https://albertapulse.com";
   const embedSnippet = `<div data-ap-chart="${chartId}"></div>\n<script src="${origin}/embed/widget.js"><\/script>`;
+
+  const shareUrl = `${origin}/embed/${chartId}`;
+  const shareText = `${title} — Alberta Pulse`;
 
   const handleCopy = useCallback(async () => {
     try {
@@ -59,32 +66,81 @@ export function ChartCard({ chartId, title, children }: ChartCardProps) {
     }
   }, [chartId, exporting]);
 
+  const handleShareTwitter = useCallback(() => {
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+    window.open(url, "_blank", "noopener,noreferrer,width=550,height=420");
+  }, [shareText, shareUrl]);
+
+  const handleShareLinkedIn = useCallback(() => {
+    const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+    window.open(url, "_blank", "noopener,noreferrer,width=550,height=420");
+  }, [shareUrl]);
+
   return (
-    <div className="relative group">
-      {/* Action buttons — visible on hover */}
-      <div className="absolute top-2 right-2 z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={() => setShowEmbed(!showEmbed)}
-          className="flex items-center gap-1 text-[10px] text-muted hover:text-accent transition-colors px-2 py-1 rounded-md bg-card/80 backdrop-blur-sm border border-card-border hover:border-accent/30"
-          title="Embed this chart"
-        >
-          <Code size={12} />
-          Embed
-        </button>
-        <button
-          onClick={handleExport}
-          disabled={exporting}
-          className="flex items-center gap-1 text-[10px] text-muted hover:text-accent transition-colors px-2 py-1 rounded-md bg-card/80 backdrop-blur-sm border border-card-border hover:border-accent/30 disabled:opacity-50"
-          title="Download as PNG"
-        >
-          <Download size={12} />
-          {exporting ? "..." : "PNG"}
-        </button>
+    <div className="relative">
+      {/* Chart content — ref for PNG export */}
+      <div ref={chartRef}>
+        {children}
       </div>
 
-      {/* Embed code popover */}
+      {/* Bottom toolbar: time range + source on left, actions on right */}
+      <div className="flex items-center justify-between mt-1.5 px-1 gap-2">
+        {/* Left side: time range + source */}
+        <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+          {timeRange && (
+            <span className="text-[9px] text-muted/60 font-mono whitespace-nowrap">
+              {timeRange}
+            </span>
+          )}
+          {source && (
+            <span className="text-[9px] text-muted/40 font-mono whitespace-nowrap truncate">
+              {timeRange ? "·" : ""} {source}
+            </span>
+          )}
+          {!timeRange && !source && (
+            <span className="text-[8px] text-muted/30 font-mono">
+              albertapulse.com
+            </span>
+          )}
+        </div>
+
+        {/* Right side: action buttons — always visible */}
+        <div className="flex items-center gap-0.5 shrink-0">
+          <button
+            onClick={handleShareTwitter}
+            className="text-[9px] text-muted/40 hover:text-accent transition-colors px-1.5 py-0.5 rounded"
+            title="Share on X/Twitter"
+          >
+            𝕏
+          </button>
+          <button
+            onClick={handleShareLinkedIn}
+            className="text-[9px] text-muted/40 hover:text-accent transition-colors px-1.5 py-0.5 rounded"
+            title="Share on LinkedIn"
+          >
+            in
+          </button>
+          <button
+            onClick={() => setShowEmbed(!showEmbed)}
+            className="flex items-center gap-0.5 text-[9px] text-muted/40 hover:text-accent transition-colors px-1.5 py-0.5 rounded"
+            title="Embed this chart"
+          >
+            <Code size={10} />
+          </button>
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex items-center gap-0.5 text-[9px] text-muted/40 hover:text-accent transition-colors px-1.5 py-0.5 rounded disabled:opacity-50"
+            title="Download as PNG"
+          >
+            <Download size={10} />
+          </button>
+        </div>
+      </div>
+
+      {/* Embed code popover — anchored to bottom-right */}
       {showEmbed && (
-        <div className="absolute top-10 right-2 z-50 w-80 bg-card border border-card-border rounded-lg shadow-xl p-3">
+        <div className="absolute bottom-8 right-0 z-50 w-80 bg-card border border-card-border rounded-lg shadow-xl p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-medium text-muted uppercase tracking-wider">
               Embed Code
@@ -113,17 +169,6 @@ export function ChartCard({ chartId, title, children }: ChartCardProps) {
           </p>
         </div>
       )}
-
-      {/* Chart content — ref for PNG export */}
-      <div ref={chartRef}>
-        {children}
-        {/* Watermark for PNG exports (always rendered but subtle) */}
-        <div className="flex items-center justify-end mt-1 px-1">
-          <span className="text-[8px] text-muted/30 font-mono">
-            albertapulse.com
-          </span>
-        </div>
-      </div>
     </div>
   );
 }

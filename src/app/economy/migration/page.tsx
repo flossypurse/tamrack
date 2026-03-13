@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
+import { computeTimeRange } from "@/lib/time-range";
 
 export const metadata: Metadata = {
   title: "Alberta Migration & Population Growth",
@@ -129,7 +130,7 @@ async function PopulationChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_POPULATION;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
   return (
-    <ChartCard chartId="macro-population" title="Alberta Population">
+    <ChartCard chartId="macro-population" title="Alberta Population" timeRange={computeTimeRange(data)} source="StatsCan">
       <Card>
         <CardHeader
           title="Alberta Population"
@@ -151,7 +152,7 @@ async function ImmigrationChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_IMMIGRATION;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
   return (
-    <ChartCard chartId="macro-immigration" title="International Immigration to Alberta">
+    <ChartCard chartId="macro-immigration" title="International Immigration to Alberta" timeRange={computeTimeRange(data)} source="StatsCan">
       <Card>
         <CardHeader
           title="International Immigration to Alberta"
@@ -172,7 +173,7 @@ async function InterprovincialChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_NET_INTERPROVINCIAL;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
   return (
-    <ChartCard chartId="macro-interprovincial" title="Net Interprovincial Migration">
+    <ChartCard chartId="macro-interprovincial" title="Net Interprovincial Migration" timeRange={computeTimeRange(data)} source="StatsCan">
       <Card>
         <CardHeader
           title="Net Interprovincial Migration"
@@ -238,7 +239,7 @@ async function MigrationComponentsChart() {
   );
 
   return (
-    <ChartCard chartId="macro-migration-components" title="Population Growth Components">
+    <ChartCard chartId="macro-migration-components" title="Population Growth Components" timeRange={computeTimeRange(merged)} source="StatsCan">
       <Card>
         <CardHeader
           title="Population Growth Components"
@@ -292,7 +293,7 @@ async function MigrationVsEnergyChart() {
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
   return (
-    <ChartCard chartId="macro-migration-vs-energy" title="Net Migration vs Energy Prices">
+    <ChartCard chartId="macro-migration-vs-energy" title="Net Migration vs Energy Prices" timeRange={computeTimeRange(merged)} source="StatsCan · Bank of Canada">
       <Card>
         <CardHeader
           title="Net Migration vs Energy Prices"

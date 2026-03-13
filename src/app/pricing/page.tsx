@@ -2,22 +2,25 @@ import Link from "next/link";
 import { Activity, Check, ArrowRight } from "lucide-react";
 
 const free = [
-  "Macro economy dashboard (6 pages)",
+  "Macro economy dashboard (8 pages)",
   "Municipality explorer & coverage map",
   "Energy, drilling, agriculture overviews",
   "Labour & migration data",
-  "Weather, air quality, wildfire pages",
-  "Data source directory",
+  "Environment: weather, air quality, water, wildfire",
+  "Health & demographics overview",
+  "Public safety: crime, fire, traffic, emergencies",
+  "Data source directory & learn hub",
 ];
 
 const pro = [
   "Everything in Free, plus:",
-  "Deep-dive dashboards for 22+ municipalities",
+  "Deep-dive dashboards for 30 municipalities",
   "Neighbourhood-level assessments & permits",
   "Real estate intel: rental, commercial, pipeline",
   "Growth corridors, benchmarks, risk analysis",
   "Investment thesis & compare tools",
-  "Daily briefings (general + realtor)",
+  "9 role-based briefings (realtor, investor, energy, EDO, …)",
+  "AESO electricity, CER pipeline, immigration dashboards",
   "REST API access (1,000 req/day)",
   "Embeddable charts for any indicator",
   "Priority data requests",

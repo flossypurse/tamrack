@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
+import { computeTimeRange } from "@/lib/time-range";
 
 export const metadata: Metadata = {
   title: "Alberta Energy Data — Oil, Gas & Commodities",
@@ -135,8 +136,9 @@ async function EnergyMetrics() {
 
 async function EnergyPriceChart() {
   const data = await fetchBoCTimeSeries(BOC_SERIES.BCPI_ENERGY, 240);
+  const timeRange = computeTimeRange(data);
   return (
-    <ChartCard chartId="macro-energy-price" title="BoC Energy Commodity Price Index">
+    <ChartCard chartId="macro-energy-price" title="BoC Energy Commodity Price Index" timeRange={timeRange} source="Bank of Canada BCPI">
       <Card>
         <CardHeader
           title="BoC Energy Commodity Price Index"
@@ -154,8 +156,9 @@ async function EnergyPriceChart() {
 
 async function AllCommoditiesChart() {
   const data = await fetchBoCTimeSeries(BOC_SERIES.BCPI_ALL, 240);
+  const timeRange = computeTimeRange(data);
   return (
-    <ChartCard chartId="macro-all-commodities" title="BoC All Commodities Index">
+    <ChartCard chartId="macro-all-commodities" title="BoC All Commodities Index" timeRange={timeRange} source="Bank of Canada BCPI">
       <Card>
         <CardHeader
           title="BoC All Commodities Index"
@@ -188,9 +191,10 @@ async function EnergyVsCadChart() {
   const merged = Array.from(dateMap.values())
     .filter((p) => p.energy && p.cad)
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const timeRange = computeTimeRange(merged);
 
   return (
-    <ChartCard chartId="macro-energy-vs-cad" title="Energy Price vs CAD/USD">
+    <ChartCard chartId="macro-energy-vs-cad" title="Energy Price vs CAD/USD" timeRange={timeRange} source="Bank of Canada">
       <Card>
         <CardHeader
           title="Energy Price vs CAD/USD"
@@ -213,8 +217,9 @@ async function EnergyVsCadChart() {
 
 async function NonEnergyChart() {
   const data = await fetchBoCTimeSeries(BOC_SERIES.BCPI_NON_ENERGY, 120);
+  const timeRange = computeTimeRange(data);
   return (
-    <ChartCard chartId="macro-non-energy" title="Non-Energy Commodity Index">
+    <ChartCard chartId="macro-non-energy" title="Non-Energy Commodity Index" timeRange={timeRange} source="Bank of Canada BCPI">
       <Card>
         <CardHeader
           title="Non-Energy Commodity Index"
@@ -230,8 +235,9 @@ async function NonEnergyChart() {
 async function OilGasGdpChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_GDP_MINING_OIL_GAS;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
+  const timeRange = computeTimeRange(data);
   return (
-    <ChartCard chartId="macro-oil-gas-gdp" title="Alberta Mining/Oil & Gas GDP">
+    <ChartCard chartId="macro-oil-gas-gdp" title="Alberta Mining/Oil & Gas GDP" timeRange={timeRange} source="StatsCan 36-10-0402">
       <Card>
         <CardHeader
           title="Alberta Mining/Oil & Gas GDP"
@@ -247,8 +253,9 @@ async function OilGasGdpChart() {
 async function ConstructionGdpChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_GDP_CONSTRUCTION;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
+  const timeRange = computeTimeRange(data);
   return (
-    <ChartCard chartId="macro-construction-gdp" title="Alberta Construction GDP">
+    <ChartCard chartId="macro-construction-gdp" title="Alberta Construction GDP" timeRange={timeRange} source="StatsCan 36-10-0402">
       <Card>
         <CardHeader
           title="Alberta Construction GDP"
@@ -263,8 +270,9 @@ async function ConstructionGdpChart() {
 
 async function CadUsdChart() {
   const data = await fetchBoCTimeSeries(BOC_SERIES.CAD_USD, 240);
+  const timeRange = computeTimeRange(data);
   return (
-    <ChartCard chartId="macro-cad-usd" title="CAD/USD Exchange Rate">
+    <ChartCard chartId="macro-cad-usd" title="CAD/USD Exchange Rate" timeRange={timeRange} source="Bank of Canada">
       <Card>
         <CardHeader
           title="CAD/USD Exchange Rate"
