@@ -19,14 +19,14 @@ export function HeroVisualization() {
 
     let animationId: number;
     let time = 0;
+    let scrollY = 0;
+    const parallaxFactor = 0.35; // background scrolls at 35% of content speed
 
     const colors = [
-      { r: 59, g: 130, b: 246 },  // blue
-      { r: 16, g: 185, b: 129 },  // green
-      { r: 249, g: 115, b: 22 },  // orange
-      { r: 239, g: 68, b: 68 },   // red
-      { r: 168, g: 85, b: 247 },  // purple
-      { r: 6, g: 182, b: 212 },   // cyan
+      { r: 212, g: 134, b: 58 },  // brand accent orange (dominant)
+      { r: 212, g: 134, b: 58 },  // brand accent orange (weighted)
+      { r: 120, g: 160, b: 158 }, // muted teal
+      { r: 140, g: 150, b: 165 }, // soft slate
     ];
 
     interface Node {
@@ -74,10 +74,13 @@ export function HeroVisualization() {
       nodes = [];
       const spacingX = 90;
       const spacingY = 80;
+      // Extend grid vertically so parallax reveals dots as you scroll
+      const extraHeight = h * 2; // cover enough for a full page scroll
+      const totalH = h + extraHeight;
       const cols = Math.ceil(w / spacingX) + 1;
-      const rows = Math.ceil(h / spacingY) + 1;
+      const rows = Math.ceil(totalH / spacingY) + 1;
       const offsetX = (w - (cols - 1) * spacingX) / 2;
-      const offsetY = (h - (rows - 1) * spacingY) / 2;
+      const offsetY = 0; // start from top, grid extends well below viewport
 
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
@@ -99,7 +102,9 @@ export function HeroVisualization() {
     function spawnPulse() {
       const color = colors[Math.floor(Math.random() * colors.length)];
       const cx = w * (0.15 + Math.random() * 0.7);
-      const cy = h * (0.15 + Math.random() * 0.7);
+      // Spawn pulses near the current scroll-adjusted viewport
+      const viewCenter = scrollY * parallaxFactor + h * 0.5;
+      const cy = viewCenter + (Math.random() - 0.5) * h * 0.8;
 
       pulses.push({
         cx,
@@ -112,12 +117,20 @@ export function HeroVisualization() {
       });
     }
 
+    function onScroll() {
+      scrollY = window.scrollY;
+    }
+
     function draw() {
       time += 1;
       ctx!.clearRect(0, 0, w, h);
 
-      // Spawn pulses periodically
-      if (time % 120 === 0) spawnPulse();
+      // Apply parallax offset — shift everything up as user scrolls down
+      ctx!.save();
+      ctx!.translate(0, -scrollY * parallaxFactor);
+
+      // Spawn pulses periodically (~every 5 seconds at 60fps)
+      if (time % 300 === 0) spawnPulse();
       if (time === 1) spawnPulse();
 
       // Update and draw pulses
@@ -218,6 +231,7 @@ export function HeroVisualization() {
         }
       }
 
+      ctx!.restore();
       animationId = requestAnimationFrame(draw);
     }
 
@@ -225,10 +239,12 @@ export function HeroVisualization() {
     draw();
 
     window.addEventListener("resize", resize);
+    window.addEventListener("scroll", onScroll, { passive: true });
 
     return () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener("resize", resize);
+      window.removeEventListener("scroll", onScroll);
     };
   }, []);
 
