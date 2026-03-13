@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+import { ChartCard } from "@/components/chart-card";
+import { computeTimeRange } from "@/lib/time-range";
 
 export const metadata: Metadata = {
   title: "Alberta Rental Market Intelligence",
@@ -126,18 +128,21 @@ async function VacancyChart() {
     STATSCAN_SERIES.EDMONTON_VACANCY_RATE.coordinate,
     20
   );
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Rental Vacancy Rate — Edmonton CMA"
-        subtitle="CMHC October survey. Below 3% = tight market, above 5% = tenant's market."
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#ef4444" height={280} valueSuffix="%" />
-      <p className="text-[10px] text-muted/60 mt-2">
-        A healthy market sits between 3-5%. Below 3% puts upward pressure on rents and signals investor opportunity. Above 5% signals oversupply risk.
-      </p>
-    </Card>
+    <ChartCard chartId="re-rental-vacancy" title="Rental Vacancy Rate — Edmonton CMA" timeRange={timeRange} source="CMHC">
+      <Card>
+        <CardHeader
+          title="Rental Vacancy Rate — Edmonton CMA"
+          subtitle="CMHC October survey. Below 3% = tight market, above 5% = tenant's market."
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#ef4444" height={280} valueSuffix="%" />
+        <p className="text-[10px] text-muted/60 mt-2">
+          A healthy market sits between 3-5%. Below 3% puts upward pressure on rents and signals investor opportunity. Above 5% signals oversupply risk.
+        </p>
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -184,25 +189,28 @@ async function RentTrendsChart() {
   const merged = Array.from(dateMap.values()).sort((a, b) =>
     String(a.date).localeCompare(String(b.date))
   );
+  const timeRange = computeTimeRange(merged);
 
   return (
-    <Card>
-      <CardHeader
-        title="Average Rents by Unit Type — Edmonton CMA"
-        subtitle="Annual CMHC rent survey — tracks existing tenancies, not asking rents"
-        badge="LIVE"
-      />
-      <MultiSeriesLineChart
-        data={merged}
-        series={[
-          { key: "bachelor", label: "Bachelor", color: "#94a3b8", prefix: "$" },
-          { key: "oneBed", label: "1-Bed", color: "#3b82f6", prefix: "$" },
-          { key: "twoBed", label: "2-Bed", color: "#10b981", prefix: "$" },
-          { key: "threeBed", label: "3-Bed", color: "#f59e0b", prefix: "$" },
-        ]}
-        height={300}
-      />
-    </Card>
+    <ChartCard chartId="re-rent-trends" title="Average Rents by Unit Type — Edmonton CMA" timeRange={timeRange} source="CMHC">
+      <Card>
+        <CardHeader
+          title="Average Rents by Unit Type — Edmonton CMA"
+          subtitle="Annual CMHC rent survey — tracks existing tenancies, not asking rents"
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "bachelor", label: "Bachelor", color: "#94a3b8", prefix: "$" },
+            { key: "oneBed", label: "1-Bed", color: "#3b82f6", prefix: "$" },
+            { key: "twoBed", label: "2-Bed", color: "#10b981", prefix: "$" },
+            { key: "threeBed", label: "3-Bed", color: "#f59e0b", prefix: "$" },
+          ]}
+          height={300}
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -236,24 +244,27 @@ async function VacancyVsStartsChart() {
     }
   }
   merged.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const timeRange = computeTimeRange(merged);
 
   return (
-    <Card>
-      <CardHeader
-        title="Vacancy Rate vs Housing Starts"
-        subtitle="When starts surge and vacancy drops — expect rent increases. When both rise — oversupply."
-        badge="LIVE"
-      />
-      <MultiSeriesLineChart
-        data={merged}
-        series={[
-          { key: "vacancy", label: "Vacancy %", color: "#ef4444", suffix: "%", yAxisId: "left" },
-          { key: "annualStarts", label: "Annual Starts", color: "#3b82f6", yAxisId: "right" },
-        ]}
-        height={280}
-        dualAxis
-      />
-    </Card>
+    <ChartCard chartId="re-vacancy-vs-starts" title="Vacancy Rate vs Housing Starts" timeRange={timeRange} source="CMHC">
+      <Card>
+        <CardHeader
+          title="Vacancy Rate vs Housing Starts"
+          subtitle="When starts surge and vacancy drops — expect rent increases. When both rise — oversupply."
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "vacancy", label: "Vacancy %", color: "#ef4444", suffix: "%", yAxisId: "left" },
+            { key: "annualStarts", label: "Annual Starts", color: "#3b82f6", yAxisId: "right" },
+          ]}
+          height={280}
+          dualAxis
+        />
+      </Card>
+    </ChartCard>
   );
 }
 

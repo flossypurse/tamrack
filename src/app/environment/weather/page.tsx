@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+import { ChartCard } from "@/components/chart-card";
+import { computeTimeRange } from "@/lib/time-range";
 import { TimeSeriesAreaChart } from "@/components/chart";
 import {
   CloudSun,
@@ -144,15 +146,18 @@ async function EdmontonClimateChart() {
   const data: TimeSeriesPoint[] = await fetchClimateMonthly("3012216", 120).catch(
     () => [] as TimeSeriesPoint[]
   );
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton Monthly Mean Temperature"
-        subtitle="Blatchford station — 10-year monthly history"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#f97316" height={280} />
-    </Card>
+    <ChartCard chartId="weather-edmonton-climate" title="Edmonton Monthly Mean Temperature" timeRange={timeRange} source="ECCC GeoMet">
+      <Card>
+        <CardHeader
+          title="Edmonton Monthly Mean Temperature"
+          subtitle="Blatchford station — 10-year monthly history"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#f97316" height={280} />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -160,15 +165,18 @@ async function CalgaryClimateChart() {
   const data: TimeSeriesPoint[] = await fetchClimateMonthly("3031093", 120).catch(
     () => [] as TimeSeriesPoint[]
   );
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Calgary Monthly Mean Temperature"
-        subtitle="Calgary Int'l station — 10-year monthly history"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#3b82f6" height={280} />
-    </Card>
+    <ChartCard chartId="weather-calgary-climate" title="Calgary Monthly Mean Temperature" timeRange={timeRange} source="ECCC GeoMet">
+      <Card>
+        <CardHeader
+          title="Calgary Monthly Mean Temperature"
+          subtitle="Calgary Int'l station — 10-year monthly history"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#3b82f6" height={280} />
+      </Card>
+    </ChartCard>
   );
 }
 

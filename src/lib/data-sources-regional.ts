@@ -178,6 +178,8 @@ async function runWithConcurrency<T>(
 
 /**
  * Fetch a single indicator for ALL municipalities.
+ * Retries once after 2s if the first attempt fails (Alberta API is flaky).
+ * Persists successful fetches to the DB so future fallbacks have data.
  */
 export async function fetchRegionalIndicator(
   indicator: string,
@@ -185,21 +187,69 @@ export async function fetchRegionalIndicator(
   const encoded = resolveIndicator(indicator);
   const url = buildUrl(encoded);
 
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      const res = await fetch(url, { next: { revalidate: 86400 } });
+      if (!res.ok) {
+        console.warn(`[regional] ${indicator}: HTTP ${res.status} (attempt ${attempt + 1})`);
+        continue;
+      }
+
+      // Guard: check content-type is JSON before parsing
+      const contentType = res.headers.get("content-type") || "";
+      const body = await res.text();
+
+      if (!body || body.length === 0) {
+        console.warn(`[regional] ${indicator}: empty response (attempt ${attempt + 1})`);
+        continue;
+      }
+
+      if (!contentType.includes("json") && !body.startsWith("[")) {
+        console.warn(`[regional] ${indicator}: non-JSON response (${contentType}) (attempt ${attempt + 1})`);
+        continue;
+      }
+
+      const raw: RawRegionalRecord[] = JSON.parse(body);
+      const parsed = raw.map(parseRecord);
+      if (parsed.length === 0) {
+        continue;
+      }
+
+      // Persist to DB in the background so future fallbacks have data
+      persistToDb(indicator, parsed).catch(() => {});
+
+      return parsed;
+    } catch (err) {
+      console.warn(`[regional] ${indicator}: fetch error (attempt ${attempt + 1}):`, err);
+    }
+  }
+
+  console.error(`[regional] ${indicator}: all attempts failed — trying DB fallback`);
+  return dbFallback(indicator);
+}
+
+/** Persist fetched data to PostgreSQL so future fallbacks have data */
+async function persistToDb(indicator: string, data: RegionalDataPoint[]): Promise<void> {
   try {
-    const res = await fetch(url, { next: { revalidate: 86400 } });
-    if (!res.ok) {
-      console.error(`[regional] ${indicator}: HTTP ${res.status} — trying DB fallback`);
-      return dbFallback(indicator);
+    const { upsertRegionalIndicator } = await import("./db");
+    // Batch insert — limit to avoid blocking for too long
+    const batch = data.slice(0, 2000);
+    for (const pt of batch) {
+      await upsertRegionalIndicator(
+        pt.csduid,
+        pt.municipality,
+        indicator,
+        pt.period,
+        pt.value,
+        pt.unit
+      );
     }
-    const raw: RawRegionalRecord[] = await res.json();
-    const parsed = raw.map(parseRecord);
-    if (parsed.length === 0) {
-      return dbFallback(indicator);
-    }
-    return parsed;
-  } catch (err) {
-    console.error(`[regional] Failed to fetch ${indicator} — trying DB fallback:`, err);
-    return dbFallback(indicator);
+    console.log(`[regional] Persisted ${batch.length} rows for "${indicator}"`);
+  } catch {
+    // Silently ignore — persistence is best-effort
   }
 }
 

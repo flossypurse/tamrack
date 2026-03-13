@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader } from "@/components/card";
+import { ChartCard } from "@/components/chart-card";
 import {
   NeighbourhoodBarChart,
 } from "@/components/chart";
@@ -132,22 +133,24 @@ async function AssessmentComparison() {
     .map((b) => ({ neighbourhood: b.name, value: b.metrics.avgAssessment }));
 
   return (
-    <Card>
-      <CardHeader
-        title="Average Assessment by Municipality"
-        subtitle="Higher average = more expensive properties. Compare to find value opportunities."
-        badge="LIVE"
-      />
-      <NeighbourhoodBarChart
-        data={data}
-        dataKey="value"
-        labelKey="neighbourhood"
-        color="#3b82f6"
-        height={Math.max(300, data.length * 28)}
-        valuePrefix="$"
-        tooltipLabel="Avg Assessment"
-      />
-    </Card>
+    <ChartCard chartId="bench-avg-assessment" title="Average Assessment by Municipality" source="Municipal ArcGIS">
+      <Card>
+        <CardHeader
+          title="Average Assessment by Municipality"
+          subtitle="Higher average = more expensive properties. Compare to find value opportunities."
+          badge="LIVE"
+        />
+        <NeighbourhoodBarChart
+          data={data}
+          dataKey="value"
+          labelKey="neighbourhood"
+          color="#3b82f6"
+          height={Math.max(300, data.length * 28)}
+          valuePrefix="$"
+          tooltipLabel="Avg Assessment"
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -159,21 +162,23 @@ async function ParcelCountComparison() {
     .map((b) => ({ neighbourhood: b.name, value: b.metrics.totalParcels }));
 
   return (
-    <Card>
-      <CardHeader
-        title="Total Parcels by Municipality"
-        subtitle="A proxy for development density — more parcels = more built-out."
-        badge="LIVE"
-      />
-      <NeighbourhoodBarChart
-        data={data}
-        dataKey="value"
-        labelKey="neighbourhood"
-        color="#10b981"
-        height={Math.max(300, data.length * 28)}
-        tooltipLabel="Parcels"
-      />
-    </Card>
+    <ChartCard chartId="bench-parcel-count" title="Total Parcels by Municipality" source="Municipal ArcGIS">
+      <Card>
+        <CardHeader
+          title="Total Parcels by Municipality"
+          subtitle="A proxy for development density — more parcels = more built-out."
+          badge="LIVE"
+        />
+        <NeighbourhoodBarChart
+          data={data}
+          dataKey="value"
+          labelKey="neighbourhood"
+          color="#10b981"
+          height={Math.max(300, data.length * 28)}
+          tooltipLabel="Parcels"
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -187,21 +192,23 @@ async function VacantLotComparison() {
   if (data.length === 0) return null;
 
   return (
-    <Card>
-      <CardHeader
-        title="Vacant Lots by Municipality"
-        subtitle="Where is buildable land still available? Developers and land bankers watch this."
-        badge="LIVE"
-      />
-      <NeighbourhoodBarChart
-        data={data}
-        dataKey="value"
-        labelKey="neighbourhood"
-        color="#f59e0b"
-        height={Math.max(200, data.length * 28)}
-        tooltipLabel="Vacant Lots"
-      />
-    </Card>
+    <ChartCard chartId="bench-vacant-lots" title="Vacant Lots by Municipality" source="Municipal ArcGIS">
+      <Card>
+        <CardHeader
+          title="Vacant Lots by Municipality"
+          subtitle="Where is buildable land still available? Developers and land bankers watch this."
+          badge="LIVE"
+        />
+        <NeighbourhoodBarChart
+          data={data}
+          dataKey="value"
+          labelKey="neighbourhood"
+          color="#f59e0b"
+          height={Math.max(200, data.length * 28)}
+          tooltipLabel="Vacant Lots"
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -215,21 +222,23 @@ async function BusinessCountComparison() {
   if (data.length === 0) return null;
 
   return (
-    <Card>
-      <CardHeader
-        title="Active Businesses by Municipality"
-        subtitle="Business density signals commercial maturity. More businesses per capita = stronger local economy."
-        badge="LIVE"
-      />
-      <NeighbourhoodBarChart
-        data={data}
-        dataKey="value"
-        labelKey="neighbourhood"
-        color="#8b5cf6"
-        height={Math.max(200, data.length * 28)}
-        tooltipLabel="Businesses"
-      />
-    </Card>
+    <ChartCard chartId="bench-businesses" title="Active Businesses by Municipality" source="Municipal ArcGIS">
+      <Card>
+        <CardHeader
+          title="Active Businesses by Municipality"
+          subtitle="Business density signals commercial maturity. More businesses per capita = stronger local economy."
+          badge="LIVE"
+        />
+        <NeighbourhoodBarChart
+          data={data}
+          dataKey="value"
+          labelKey="neighbourhood"
+          color="#8b5cf6"
+          height={Math.max(200, data.length * 28)}
+          tooltipLabel="Businesses"
+        />
+      </Card>
+    </ChartCard>
   );
 }
 

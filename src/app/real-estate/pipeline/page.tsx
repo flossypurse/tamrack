@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+import { ChartCard } from "@/components/chart-card";
+import { computeTimeRange } from "@/lib/time-range";
 
 export const metadata: Metadata = {
   title: "Alberta Housing Development Pipeline",
@@ -120,18 +122,21 @@ async function StartsChart() {
     STATSCAN_SERIES.EDMONTON_HOUSING_STARTS.coordinate,
     60
   );
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Housing Starts — Edmonton CMA"
-        subtitle="New housing units started each month. The leading indicator of future supply."
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#3b82f6" height={280} />
-      <p className="text-[10px] text-muted/60 mt-2">
-        Rising starts signal developer confidence. A surge followed by a drop often precedes oversupply.
-      </p>
-    </Card>
+    <ChartCard chartId="re-housing-starts" title="Housing Starts — Edmonton CMA" timeRange={timeRange} source="StatsCan">
+      <Card>
+        <CardHeader
+          title="Housing Starts — Edmonton CMA"
+          subtitle="New housing units started each month. The leading indicator of future supply."
+          badge="LIVE"
+        />
+        <TimeSeriesBarChart data={data} color="#3b82f6" height={280} />
+        <p className="text-[10px] text-muted/60 mt-2">
+          Rising starts signal developer confidence. A surge followed by a drop often precedes oversupply.
+        </p>
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -141,15 +146,18 @@ async function CompletionsChart() {
     STATSCAN_SERIES.EDMONTON_HOUSING_COMPLETIONS.coordinate,
     60
   );
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Housing Completions — Edmonton CMA"
-        subtitle="Units completed and ready for occupancy each month."
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#10b981" height={250} />
-    </Card>
+    <ChartCard chartId="re-housing-completions" title="Housing Completions — Edmonton CMA" timeRange={timeRange} source="StatsCan">
+      <Card>
+        <CardHeader
+          title="Housing Completions — Edmonton CMA"
+          subtitle="Units completed and ready for occupancy each month."
+          badge="LIVE"
+        />
+        <TimeSeriesBarChart data={data} color="#10b981" height={250} />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -159,18 +167,21 @@ async function UnderConstructionChart() {
     STATSCAN_SERIES.EDMONTON_UNDER_CONSTRUCTION.coordinate,
     60
   );
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Units Under Construction — Edmonton CMA"
-        subtitle="Total units currently being built. The supply pipeline."
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#8b5cf6" height={250} />
-      <p className="text-[10px] text-muted/60 mt-2">
-        When this number grows faster than completions, expect delivery delays and potential cost overruns.
-      </p>
-    </Card>
+    <ChartCard chartId="re-under-construction" title="Units Under Construction — Edmonton CMA" timeRange={timeRange} source="StatsCan">
+      <Card>
+        <CardHeader
+          title="Units Under Construction — Edmonton CMA"
+          subtitle="Total units currently being built. The supply pipeline."
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#8b5cf6" height={250} />
+        <p className="text-[10px] text-muted/60 mt-2">
+          When this number grows faster than completions, expect delivery delays and potential cost overruns.
+        </p>
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -209,28 +220,31 @@ async function PipelineOverlayChart() {
   const merged = Array.from(dateMap.values()).sort((a, b) =>
     String(a.date).localeCompare(String(b.date))
   );
+  const timeRange = computeTimeRange(merged);
 
   return (
-    <Card>
-      <CardHeader
-        title="Full Pipeline Overlay"
-        subtitle="Starts → Under Construction → Completions. Watch for divergences."
-        badge="LIVE"
-      />
-      <MultiSeriesLineChart
-        data={merged}
-        series={[
-          { key: "starts", label: "Starts", color: "#3b82f6", yAxisId: "left" },
-          { key: "completions", label: "Completions", color: "#10b981", yAxisId: "left" },
-          { key: "underConstruction", label: "Under Construction", color: "#8b5cf6", yAxisId: "right" },
-        ]}
-        height={300}
-        dualAxis
-      />
-      <p className="text-[10px] text-muted/60 mt-2">
-        When starts exceed completions for months, the &quot;under construction&quot; backlog grows — signaling either strong demand or impending oversupply.
-      </p>
-    </Card>
+    <ChartCard chartId="re-pipeline-overlay" title="Full Pipeline Overlay" timeRange={timeRange} source="StatsCan">
+      <Card>
+        <CardHeader
+          title="Full Pipeline Overlay"
+          subtitle="Starts → Under Construction → Completions. Watch for divergences."
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "starts", label: "Starts", color: "#3b82f6", yAxisId: "left" },
+            { key: "completions", label: "Completions", color: "#10b981", yAxisId: "left" },
+            { key: "underConstruction", label: "Under Construction", color: "#8b5cf6", yAxisId: "right" },
+          ]}
+          height={300}
+          dualAxis
+        />
+        <p className="text-[10px] text-muted/60 mt-2">
+          When starts exceed completions for months, the &quot;under construction&quot; backlog grows — signaling either strong demand or impending oversupply.
+        </p>
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -259,24 +273,27 @@ async function StartsVsPermitsChart() {
   const merged = Array.from(dateMap.values())
     .filter((p) => p.starts && p.permitValue)
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const timeRange = computeTimeRange(merged);
 
   return (
-    <Card>
-      <CardHeader
-        title="Housing Starts vs Permit Value"
-        subtitle="Permits lead starts by 3-6 months — watch for divergences"
-        badge="LIVE"
-      />
-      <MultiSeriesLineChart
-        data={merged}
-        series={[
-          { key: "starts", label: "Housing Starts", color: "#3b82f6", yAxisId: "left" },
-          { key: "permitValue", label: "Permit Value ($)", color: "#f59e0b", prefix: "$", yAxisId: "right" },
-        ]}
-        height={280}
-        dualAxis
-      />
-    </Card>
+    <ChartCard chartId="re-starts-vs-permits" title="Housing Starts vs Permit Value" timeRange={timeRange} source="StatsCan">
+      <Card>
+        <CardHeader
+          title="Housing Starts vs Permit Value"
+          subtitle="Permits lead starts by 3-6 months — watch for divergences"
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "starts", label: "Housing Starts", color: "#3b82f6", yAxisId: "left" },
+            { key: "permitValue", label: "Permit Value ($)", color: "#f59e0b", prefix: "$", yAxisId: "right" },
+          ]}
+          height={280}
+          dualAxis
+        />
+      </Card>
+    </ChartCard>
   );
 }
 

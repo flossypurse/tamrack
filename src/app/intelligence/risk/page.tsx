@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+import { ChartCard } from "@/components/chart-card";
+import { computeTimeRange } from "@/lib/time-range";
 
 export const metadata: Metadata = {
   title: "Alberta Market Risk Dashboard",
@@ -270,15 +272,18 @@ async function UnemploymentTrendChart() {
     STATSCAN_SERIES.AB_UNEMPLOYMENT_RATE.coordinate,
     60
   );
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Alberta Unemployment Rate"
-        subtitle="The lagging indicator of economic health. Rising unemployment = rising default risk."
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#ef4444" height={250} valueSuffix="%" />
-    </Card>
+    <ChartCard chartId="risk-unemployment" title="Alberta Unemployment Rate" timeRange={timeRange} source="StatsCan">
+      <Card>
+        <CardHeader
+          title="Alberta Unemployment Rate"
+          subtitle="The lagging indicator of economic health. Rising unemployment = rising default risk."
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#ef4444" height={250} valueSuffix="%" />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -308,23 +313,26 @@ async function RateVsStartsChart() {
     .filter((p) => typeof p.rate === "number" && typeof p.starts === "number" && p.starts > 0)
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
+  const timeRange = computeTimeRange(merged);
   return (
-    <Card>
-      <CardHeader
-        title="Policy Rate vs Housing Starts"
-        subtitle="When rates rise, starts fall 6-12 months later. The mortgage stress transmission channel."
-        badge="LIVE"
-      />
-      <MultiSeriesLineChart
-        data={merged}
-        series={[
-          { key: "rate", label: "BoC Rate %", color: "#ef4444", suffix: "%", yAxisId: "left" },
-          { key: "starts", label: "Housing Starts", color: "#3b82f6", yAxisId: "right" },
-        ]}
-        height={280}
-        dualAxis
-      />
-    </Card>
+    <ChartCard chartId="risk-rate-vs-starts" title="Policy Rate vs Housing Starts" timeRange={timeRange} source="Bank of Canada / StatsCan">
+      <Card>
+        <CardHeader
+          title="Policy Rate vs Housing Starts"
+          subtitle="When rates rise, starts fall 6-12 months later. The mortgage stress transmission channel."
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "rate", label: "BoC Rate %", color: "#ef4444", suffix: "%", yAxisId: "left" },
+            { key: "starts", label: "Housing Starts", color: "#3b82f6", yAxisId: "right" },
+          ]}
+          height={280}
+          dualAxis
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -354,23 +362,26 @@ async function EnergyVsUnemploymentChart() {
     .filter((p) => typeof p.energy === "number" && typeof p.unemployment === "number" && p.unemployment > 0)
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
+  const timeRange = computeTimeRange(merged);
   return (
-    <Card>
-      <CardHeader
-        title="Energy Index vs Unemployment"
-        subtitle="Alberta's fundamental risk: energy drops → jobs drop → real estate follows. The lag is 6-18 months."
-        badge="LIVE"
-      />
-      <MultiSeriesLineChart
-        data={merged}
-        series={[
-          { key: "energy", label: "Energy Index", color: "#f97316", yAxisId: "left" },
-          { key: "unemployment", label: "Unemployment %", color: "#ef4444", suffix: "%", yAxisId: "right" },
-        ]}
-        height={280}
-        dualAxis
-      />
-    </Card>
+    <ChartCard chartId="risk-energy-vs-unemployment" title="Energy Index vs Unemployment" timeRange={timeRange} source="Bank of Canada / StatsCan">
+      <Card>
+        <CardHeader
+          title="Energy Index vs Unemployment"
+          subtitle="Alberta's fundamental risk: energy drops → jobs drop → real estate follows. The lag is 6-18 months."
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "energy", label: "Energy Index", color: "#f97316", yAxisId: "left" },
+            { key: "unemployment", label: "Unemployment %", color: "#ef4444", suffix: "%", yAxisId: "right" },
+          ]}
+          height={280}
+          dualAxis
+        />
+      </Card>
+    </ChartCard>
   );
 }
 

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+import { ChartCard } from "@/components/chart-card";
+import { computeTimeRange } from "@/lib/time-range";
 
 export const metadata: Metadata = {
   title: "Alberta Commercial Real Estate Pulse",
@@ -107,92 +109,104 @@ async function CommercialMetrics() {
 async function CommercialAssessmentsChart() {
   const data = await fetchEdmontonCommercialAssessments(15);
   return (
-    <Card>
-      <CardHeader
-        title="Top Commercial Neighbourhoods by Total Assessment"
-        subtitle="Where is commercial property value concentrated? Higher totals = established commercial districts."
-        badge="LIVE"
-      />
-      <NeighbourhoodBarChart
-        data={data}
-        dataKey="totalValue"
-        labelKey="neighbourhood"
-        color="#f59e0b"
-        height={400}
-        valuePrefix="$"
-        tooltipLabel="Total Assessment"
-      />
-    </Card>
+    <ChartCard chartId="re-commercial-assessments" title="Top Commercial Neighbourhoods by Total Assessment" source="City of Edmonton">
+      <Card>
+        <CardHeader
+          title="Top Commercial Neighbourhoods by Total Assessment"
+          subtitle="Where is commercial property value concentrated? Higher totals = established commercial districts."
+          badge="LIVE"
+        />
+        <NeighbourhoodBarChart
+          data={data}
+          dataKey="totalValue"
+          labelKey="neighbourhood"
+          color="#f59e0b"
+          height={400}
+          valuePrefix="$"
+          tooltipLabel="Total Assessment"
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function BusinessCategoriesChart() {
   const data = await fetchEdmontonBusinessCategories(15);
   return (
-    <Card>
-      <CardHeader
-        title="Business Licences by Category"
-        subtitle="What kinds of businesses are operating? Reveals the commercial mix."
-        badge="LIVE"
-      />
-      <NeighbourhoodBarChart
-        data={data.map((d) => ({ neighbourhood: d.category, value: d.count }))}
-        dataKey="value"
-        labelKey="neighbourhood"
-        color="#3b82f6"
-        height={400}
-        tooltipLabel="Active Licences"
-      />
-    </Card>
+    <ChartCard chartId="re-business-categories" title="Business Licences by Category" source="City of Edmonton">
+      <Card>
+        <CardHeader
+          title="Business Licences by Category"
+          subtitle="What kinds of businesses are operating? Reveals the commercial mix."
+          badge="LIVE"
+        />
+        <NeighbourhoodBarChart
+          data={data.map((d) => ({ neighbourhood: d.category, value: d.count }))}
+          dataKey="value"
+          labelKey="neighbourhood"
+          color="#3b82f6"
+          height={400}
+          tooltipLabel="Active Licences"
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function BusinessDensityChart() {
   const data = await fetchEdmontonBusinessesByNeighbourhood(15);
   return (
-    <Card>
-      <CardHeader
-        title="Business Density by Neighbourhood"
-        subtitle="Where are businesses clustering? High density = commercial gravity + foot traffic."
-        badge="LIVE"
-      />
-      <NeighbourhoodBarChart
-        data={data.map((d) => ({ neighbourhood: d.neighbourhood, value: d.count }))}
-        dataKey="value"
-        labelKey="neighbourhood"
-        color="#10b981"
-        height={400}
-        tooltipLabel="Active Businesses"
-      />
-    </Card>
+    <ChartCard chartId="re-business-density" title="Business Density by Neighbourhood" source="City of Edmonton">
+      <Card>
+        <CardHeader
+          title="Business Density by Neighbourhood"
+          subtitle="Where are businesses clustering? High density = commercial gravity + foot traffic."
+          badge="LIVE"
+        />
+        <NeighbourhoodBarChart
+          data={data.map((d) => ({ neighbourhood: d.neighbourhood, value: d.count }))}
+          dataKey="value"
+          labelKey="neighbourhood"
+          color="#10b981"
+          height={400}
+          tooltipLabel="Active Businesses"
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function CommercialPermitsChart() {
   const data = await fetchEdmontonCommercialPermits();
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Commercial Building Permits — Edmonton"
-        subtitle="Monthly commercial permit activity. Rising = business confidence in brick-and-mortar."
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#f59e0b" height={250} />
-    </Card>
+    <ChartCard chartId="re-commercial-permits" title="Commercial Building Permits — Edmonton" timeRange={timeRange} source="City of Edmonton">
+      <Card>
+        <CardHeader
+          title="Commercial Building Permits — Edmonton"
+          subtitle="Monthly commercial permit activity. Rising = business confidence in brick-and-mortar."
+          badge="LIVE"
+        />
+        <TimeSeriesBarChart data={data} color="#f59e0b" height={250} />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function BusinessLicenceTrendChart() {
   const data = await fetchEdmontonBusinessLicences();
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="New Business Licences — Edmonton"
-        subtitle="Monthly new/renewed licences. The pulse of business formation."
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#3b82f6" height={250} />
-    </Card>
+    <ChartCard chartId="re-business-licences" title="New Business Licences — Edmonton" timeRange={timeRange} source="City of Edmonton">
+      <Card>
+        <CardHeader
+          title="New Business Licences — Edmonton"
+          subtitle="Monthly new/renewed licences. The pulse of business formation."
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#3b82f6" height={250} />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -202,15 +216,18 @@ async function RetailSalesChart() {
     STATSCAN_SERIES.AB_RETAIL_SALES.coordinate,
     40
   );
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Alberta Retail Sales"
-        subtitle="Monthly retail trade — consumer spending confidence signal"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#8b5cf6" height={250} compact valuePrefix="$" />
-    </Card>
+    <ChartCard chartId="re-retail-sales" title="Alberta Retail Sales" timeRange={timeRange} source="StatsCan">
+      <Card>
+        <CardHeader
+          title="Alberta Retail Sales"
+          subtitle="Monthly retail trade — consumer spending confidence signal"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#8b5cf6" height={250} compact valuePrefix="$" />
+      </Card>
+    </ChartCard>
   );
 }
 

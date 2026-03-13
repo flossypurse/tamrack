@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+import { ChartCard } from "@/components/chart-card";
+import { computeTimeRange } from "@/lib/time-range";
 
 export const metadata: Metadata = {
   title: "Alberta Drilling & Well Activity",
@@ -141,33 +143,39 @@ async function DrillingMetrics() {
 
 async function EnergyPriceTrendsChart() {
   const data = await fetchBoCTimeSeries(BOC_SERIES.BCPI_ENERGY, 120);
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Energy Price Trends"
-        subtitle="BoC Energy Commodity Price Index — crude, natural gas, coal. The leading signal for drilling activity."
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#f97316" height={280} />
-      <p className="text-[10px] text-muted/60 mt-2">
-        Energy prices lead drilling activity by 4-8 weeks. A sustained drop below ~300 signals rig laydowns.
-      </p>
-    </Card>
+    <ChartCard chartId="drilling-energy-index" title="Energy Price Trends" timeRange={timeRange} source="Bank of Canada">
+      <Card>
+        <CardHeader
+          title="Energy Price Trends"
+          subtitle="BoC Energy Commodity Price Index — crude, natural gas, coal. The leading signal for drilling activity."
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#f97316" height={280} />
+        <p className="text-[10px] text-muted/60 mt-2">
+          Energy prices lead drilling activity by 4-8 weeks. A sustained drop below ~300 signals rig laydowns.
+        </p>
+      </Card>
+    </ChartCard>
   );
 }
 
 async function OilGasGdpChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_GDP_MINING_OIL_GAS;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Oil & Gas GDP Trend"
-        subtitle="Real GDP — mining, quarrying, oil & gas extraction (chained 2017$)"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#f59e0b" height={280} />
-    </Card>
+    <ChartCard chartId="drilling-oil-gas-gdp" title="Oil & Gas GDP Trend" timeRange={timeRange} source="StatsCan">
+      <Card>
+        <CardHeader
+          title="Oil & Gas GDP Trend"
+          subtitle="Real GDP — mining, quarrying, oil & gas extraction (chained 2017$)"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#f59e0b" height={280} />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -192,41 +200,47 @@ async function EnergyVsCadChart() {
     .filter((p) => p.energy && p.cad)
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
+  const timeRange = computeTimeRange(merged);
   return (
-    <Card>
-      <CardHeader
-        title="Energy vs CAD/USD Correlation"
-        subtitle="When energy prices move, the loonie follows — the petrodollar effect in real time"
-        badge="LIVE"
-      />
-      <MultiSeriesLineChart
-        data={merged}
-        series={[
-          { key: "energy", label: "Energy Index", color: "#f97316", yAxisId: "left" },
-          { key: "cad", label: "CAD/USD", color: "#10b981", prefix: "$", yAxisId: "right" },
-        ]}
-        height={280}
-        dualAxis
-      />
-    </Card>
+    <ChartCard chartId="drilling-energy-vs-cad" title="Energy vs CAD/USD Correlation" timeRange={timeRange} source="Bank of Canada">
+      <Card>
+        <CardHeader
+          title="Energy vs CAD/USD Correlation"
+          subtitle="When energy prices move, the loonie follows — the petrodollar effect in real time"
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "energy", label: "Energy Index", color: "#f97316", yAxisId: "left" },
+            { key: "cad", label: "CAD/USD", color: "#10b981", prefix: "$", yAxisId: "right" },
+          ]}
+          height={280}
+          dualAxis
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function ConstructionGdpChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_GDP_CONSTRUCTION;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Construction Activity"
-        subtitle="Real GDP — construction sector (chained 2017$). Proxy for drilling infrastructure and oilfield construction spend."
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#06b6d4" height={280} />
-      <p className="text-[10px] text-muted/60 mt-2">
-        Construction GDP captures pipeline builds, facility construction, and camp expansions tied to drilling booms.
-      </p>
-    </Card>
+    <ChartCard chartId="drilling-construction-gdp" title="Construction Activity" timeRange={timeRange} source="StatsCan">
+      <Card>
+        <CardHeader
+          title="Construction Activity"
+          subtitle="Real GDP — construction sector (chained 2017$). Proxy for drilling infrastructure and oilfield construction spend."
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#06b6d4" height={280} />
+        <p className="text-[10px] text-muted/60 mt-2">
+          Construction GDP captures pipeline builds, facility construction, and camp expansions tied to drilling booms.
+        </p>
+      </Card>
+    </ChartCard>
   );
 }
 

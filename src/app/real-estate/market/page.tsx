@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+import { ChartCard } from "@/components/chart-card";
+import { computeTimeRange } from "@/lib/time-range";
 import {
   TimeSeriesAreaChart,
   TimeSeriesBarChart,
@@ -163,15 +165,18 @@ async function KeyMetrics() {
 async function MetroUnitsChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.EDMONTON_CMA_RES_UNITS;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 36);
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton CMA — Dwelling Units Created"
-        subtitle="Monthly, all municipalities (StatsCan 34-10-0292)"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#3b82f6" />
-    </Card>
+    <ChartCard chartId="re-metro-dwelling-units" title="Edmonton CMA — Dwelling Units Created" timeRange={timeRange} source="StatsCan">
+      <Card>
+        <CardHeader
+          title="Edmonton CMA — Dwelling Units Created"
+          subtitle="Monthly, all municipalities (StatsCan 34-10-0292)"
+          badge="LIVE"
+        />
+        <TimeSeriesBarChart data={data} color="#3b82f6" />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -179,35 +184,41 @@ async function MetroPermitValueChart() {
   const { tableId, coordinate } =
     STATSCAN_SERIES.EDMONTON_CMA_RES_PERMIT_VALUE;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 36);
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton CMA — Residential Permit Value"
-        subtitle="Monthly ($000s), all municipalities"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart
-        data={data}
-        color="#10b981"
-        valuePrefix="$"
-        compact
-      />
-    </Card>
+    <ChartCard chartId="re-metro-permit-value" title="Edmonton CMA — Residential Permit Value" timeRange={timeRange} source="StatsCan">
+      <Card>
+        <CardHeader
+          title="Edmonton CMA — Residential Permit Value"
+          subtitle="Monthly ($000s), all municipalities"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart
+          data={data}
+          color="#10b981"
+          valuePrefix="$"
+          compact
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function MetroSingleFamilyChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.EDMONTON_CMA_SINGLE_UNITS;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 36);
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton CMA — Single-Family Units"
-        subtitle="Monthly new single-detached dwelling units"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#f59e0b" />
-    </Card>
+    <ChartCard chartId="re-metro-single-family" title="Edmonton CMA — Single-Family Units" timeRange={timeRange} source="StatsCan">
+      <Card>
+        <CardHeader
+          title="Edmonton CMA — Single-Family Units"
+          subtitle="Monthly new single-detached dwelling units"
+          badge="LIVE"
+        />
+        <TimeSeriesBarChart data={data} color="#f59e0b" />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -498,21 +509,23 @@ async function RoadConstructionSummary() {
   if (!byType.length) return null;
 
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton — Construction Permits by Type"
-        subtitle="All active on-street construction and maintenance permits"
-        badge="LIVE"
-      />
-      <NeighbourhoodBarChart
-        data={byType}
-        dataKey="count"
-        labelKey="type"
-        color="#f59e0b"
-        tooltipLabel="Permits"
-        height={Math.max(250, byType.length * 28)}
-      />
-    </Card>
+    <ChartCard chartId="re-edmonton-road-construction-types" title="Edmonton — Construction Permits by Type" source="City of Edmonton">
+      <Card>
+        <CardHeader
+          title="Edmonton — Construction Permits by Type"
+          subtitle="All active on-street construction and maintenance permits"
+          badge="LIVE"
+        />
+        <NeighbourhoodBarChart
+          data={byType}
+          dataKey="count"
+          labelKey="type"
+          color="#f59e0b"
+          tooltipLabel="Permits"
+          height={Math.max(250, byType.length * 28)}
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -565,25 +578,27 @@ async function MajorProjectsTable() {
         />
       </div>
       <div className="grid lg:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader
-            title="Investment by Sector"
-            subtitle="Edmonton metro area — total project value ($M)"
-            badge="LIVE"
-          />
-          <NeighbourhoodBarChart
-            data={bySector.map((s) => ({
-              neighbourhood: `${s.sector} (${s.count})`,
-              value: s.totalCost,
-            }))}
-            dataKey="value"
-            color="#8b5cf6"
-            valuePrefix="$"
-            valueSuffix="M"
-            tooltipLabel="Total $M"
-            height={Math.max(250, bySector.length * 32)}
-          />
-        </Card>
+        <ChartCard chartId="re-major-projects-sector" title="Investment by Sector" source="Alberta Major Projects">
+          <Card>
+            <CardHeader
+              title="Investment by Sector"
+              subtitle="Edmonton metro area — total project value ($M)"
+              badge="LIVE"
+            />
+            <NeighbourhoodBarChart
+              data={bySector.map((s) => ({
+                neighbourhood: `${s.sector} (${s.count})`,
+                value: s.totalCost,
+              }))}
+              dataKey="value"
+              color="#8b5cf6"
+              valuePrefix="$"
+              valueSuffix="M"
+              tooltipLabel="Total $M"
+              height={Math.max(250, bySector.length * 32)}
+            />
+          </Card>
+        </ChartCard>
         <Card>
           <CardHeader
             title="Top 20 Projects by Value"
@@ -644,117 +659,130 @@ async function MajorProjectsTable() {
 
 async function NewUnitsChart() {
   const data = await fetchResidentialPermitTrend();
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton — New Housing Units Permitted"
-        subtitle="Monthly total — singles, semis, rowhousing"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#3b82f6" />
-    </Card>
+    <ChartCard chartId="re-edmonton-new-units" title="Edmonton — New Housing Units Permitted" timeRange={timeRange} source="City of Edmonton">
+      <Card>
+        <CardHeader
+          title="Edmonton — New Housing Units Permitted"
+          subtitle="Monthly total — singles, semis, rowhousing"
+          badge="LIVE"
+        />
+        <TimeSeriesBarChart data={data} color="#3b82f6" />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function HotZonesChart() {
   const data = await fetchHotNeighbourhoods(15);
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton — Where New Homes Are Being Built"
-        subtitle="Top 15 neighbourhoods by units permitted in 2025"
-        badge="LIVE"
-      />
-      <NeighbourhoodBarChart
-        data={data}
-        dataKey="units"
-        color="#10b981"
-        tooltipLabel="Units"
-        height={420}
-      />
-    </Card>
+    <ChartCard chartId="re-edmonton-hot-zones" title="Edmonton — Where New Homes Are Being Built" source="City of Edmonton">
+      <Card>
+        <CardHeader
+          title="Edmonton — Where New Homes Are Being Built"
+          subtitle="Top 15 neighbourhoods by units permitted in 2025"
+          badge="LIVE"
+        />
+        <NeighbourhoodBarChart
+          data={data}
+          dataKey="units"
+          color="#10b981"
+          tooltipLabel="Units"
+          height={420}
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function ConstructionValueChart() {
   const data = await fetchHotNeighbourhoods(15);
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton — Construction $ by Neighbourhood"
-        subtitle="Total residential construction value, 2025"
-        badge="LIVE"
-      />
-      <NeighbourhoodBarChart
-        data={data}
-        dataKey="totalValue"
-        color="#f59e0b"
-        valuePrefix="$"
-        tooltipLabel="Total Value"
-        height={420}
-      />
-    </Card>
+    <ChartCard chartId="re-edmonton-construction-value" title="Edmonton — Construction $ by Neighbourhood" source="City of Edmonton">
+      <Card>
+        <CardHeader
+          title="Edmonton — Construction $ by Neighbourhood"
+          subtitle="Total residential construction value, 2025"
+          badge="LIVE"
+        />
+        <NeighbourhoodBarChart
+          data={data}
+          dataKey="totalValue"
+          color="#f59e0b"
+          valuePrefix="$"
+          tooltipLabel="Total Value"
+          height={420}
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function HighValueAssessmentsChart() {
   const data = await fetchTopNeighbourhoodAssessments(15);
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton — Highest Assessed Neighbourhoods"
-        subtitle="Avg residential assessment — owners sitting on equity"
-        badge="LIVE"
-      />
-      <NeighbourhoodBarChart
-        data={data}
-        dataKey="avgValue"
-        color="#ec4899"
-        valuePrefix="$"
-        tooltipLabel="Avg Assessment"
-        height={420}
-      />
-    </Card>
+    <ChartCard chartId="re-edmonton-high-assessments" title="Edmonton — Highest Assessed Neighbourhoods" source="City of Edmonton">
+      <Card>
+        <CardHeader
+          title="Edmonton — Highest Assessed Neighbourhoods"
+          subtitle="Avg residential assessment — owners sitting on equity"
+          badge="LIVE"
+        />
+        <NeighbourhoodBarChart
+          data={data}
+          dataKey="avgValue"
+          color="#ec4899"
+          valuePrefix="$"
+          tooltipLabel="Avg Assessment"
+          height={420}
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function RedevelopingAreasChart() {
   const data = await fetchRedevelopingActivity();
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton — Redeveloping Neighbourhoods"
-        subtitle="Residential dev permits in 'Redeveloping' areas — teardowns & infill"
-        badge="LIVE"
-      />
-      <NeighbourhoodBarChart
-        data={data}
-        dataKey="permits"
-        color="#a855f7"
-        tooltipLabel="Permits"
-        height={420}
-      />
-    </Card>
+    <ChartCard chartId="re-edmonton-redeveloping" title="Edmonton — Redeveloping Neighbourhoods" source="City of Edmonton">
+      <Card>
+        <CardHeader
+          title="Edmonton — Redeveloping Neighbourhoods"
+          subtitle="Residential dev permits in 'Redeveloping' areas — teardowns & infill"
+          badge="LIVE"
+        />
+        <NeighbourhoodBarChart
+          data={data}
+          dataKey="permits"
+          color="#a855f7"
+          tooltipLabel="Permits"
+          height={420}
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function HomeRenovationChart() {
   const data = await fetchHomeImprovementHotspots();
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton — Home Improvement Hotspots"
-        subtitle="Where owners are investing in renovations"
-        badge="LIVE"
-      />
-      <NeighbourhoodBarChart
-        data={data}
-        dataKey="permits"
-        color="#06b6d4"
-        tooltipLabel="Permits"
-        height={420}
-      />
-    </Card>
+    <ChartCard chartId="re-edmonton-renovation" title="Edmonton — Home Improvement Hotspots" source="City of Edmonton">
+      <Card>
+        <CardHeader
+          title="Edmonton — Home Improvement Hotspots"
+          subtitle="Where owners are investing in renovations"
+          badge="LIVE"
+        />
+        <NeighbourhoodBarChart
+          data={data}
+          dataKey="permits"
+          color="#06b6d4"
+          tooltipLabel="Permits"
+          height={420}
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -833,42 +861,46 @@ async function EdmontonDevPermitsTable() {
 async function StrathconaSubdivisionsChart() {
   const data = await fetchStrathconaHotSubdivisions();
   return (
-    <Card>
-      <CardHeader
-        title="Strathcona County — Hot Subdivisions"
-        subtitle="Residential development permits by subdivision, 2024+"
-        badge="LIVE"
-      />
-      <NeighbourhoodBarChart
-        data={data}
-        dataKey="permits"
-        labelKey="subdivision"
-        color="#f97316"
-        tooltipLabel="Permits"
-        height={420}
-      />
-    </Card>
+    <ChartCard chartId="re-strathcona-subdivisions" title="Strathcona County — Hot Subdivisions" source="Strathcona County">
+      <Card>
+        <CardHeader
+          title="Strathcona County — Hot Subdivisions"
+          subtitle="Residential development permits by subdivision, 2024+"
+          badge="LIVE"
+        />
+        <NeighbourhoodBarChart
+          data={data}
+          dataKey="permits"
+          labelKey="subdivision"
+          color="#f97316"
+          tooltipLabel="Permits"
+          height={420}
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function StrathconaAssessmentsChart() {
   const data = await fetchStrathconaAssessmentsByArea();
   return (
-    <Card>
-      <CardHeader
-        title="Strathcona County — Assessments by Type"
-        subtitle="Avg assessed value by building type (top 5000 properties)"
-        badge="LIVE"
-      />
-      <NeighbourhoodBarChart
-        data={data}
-        dataKey="avgValue"
-        color="#ec4899"
-        valuePrefix="$"
-        tooltipLabel="Avg Assessment"
-        height={420}
-      />
-    </Card>
+    <ChartCard chartId="re-strathcona-assessments" title="Strathcona County — Assessments by Type" source="Strathcona County">
+      <Card>
+        <CardHeader
+          title="Strathcona County — Assessments by Type"
+          subtitle="Avg assessed value by building type (top 5000 properties)"
+          badge="LIVE"
+        />
+        <NeighbourhoodBarChart
+          data={data}
+          dataKey="avgValue"
+          color="#ec4899"
+          valuePrefix="$"
+          tooltipLabel="Avg Assessment"
+          height={420}
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -925,21 +957,23 @@ async function StrathconaPermitsTable() {
 async function StAlbertAssessmentsChart() {
   const data = await fetchStAlbertAssessmentsByNeighbourhood();
   return (
-    <Card>
-      <CardHeader
-        title="St. Albert — Assessments by Neighbourhood"
-        subtitle="Avg residential assessed value, 2025"
-        badge="LIVE"
-      />
-      <NeighbourhoodBarChart
-        data={data}
-        dataKey="avgValue"
-        color="#a855f7"
-        valuePrefix="$"
-        tooltipLabel="Avg Assessment"
-        height={420}
-      />
-    </Card>
+    <ChartCard chartId="re-stalbert-assessments" title="St. Albert — Assessments by Neighbourhood" source="City of St. Albert">
+      <Card>
+        <CardHeader
+          title="St. Albert — Assessments by Neighbourhood"
+          subtitle="Avg residential assessed value, 2025"
+          badge="LIVE"
+        />
+        <NeighbourhoodBarChart
+          data={data}
+          dataKey="avgValue"
+          color="#a855f7"
+          valuePrefix="$"
+          tooltipLabel="Avg Assessment"
+          height={420}
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -1006,45 +1040,54 @@ async function StAlbertDevPermitsTable() {
 async function HousingStartsChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.EDMONTON_HOUSING_STARTS;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 36);
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton CMA — Housing Starts"
-        subtitle="Monthly, all dwelling types (CMHC via StatsCan 34-10-0143)"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#3b82f6" />
-    </Card>
+    <ChartCard chartId="re-cmhc-housing-starts" title="Edmonton CMA — Housing Starts" timeRange={timeRange} source="CMHC">
+      <Card>
+        <CardHeader
+          title="Edmonton CMA — Housing Starts"
+          subtitle="Monthly, all dwelling types (CMHC via StatsCan 34-10-0143)"
+          badge="LIVE"
+        />
+        <TimeSeriesBarChart data={data} color="#3b82f6" />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function HousingCompletionsChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.EDMONTON_HOUSING_COMPLETIONS;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 36);
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton CMA — Housing Completions"
-        subtitle="Monthly completions (CMHC via StatsCan 34-10-0145)"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#10b981" />
-    </Card>
+    <ChartCard chartId="re-cmhc-completions" title="Edmonton CMA — Housing Completions" timeRange={timeRange} source="CMHC">
+      <Card>
+        <CardHeader
+          title="Edmonton CMA — Housing Completions"
+          subtitle="Monthly completions (CMHC via StatsCan 34-10-0145)"
+          badge="LIVE"
+        />
+        <TimeSeriesBarChart data={data} color="#10b981" />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function UnderConstructionChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.EDMONTON_UNDER_CONSTRUCTION;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 36);
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton CMA — Under Construction"
-        subtitle="Units under construction (CMHC via StatsCan 34-10-0147)"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#f59e0b" />
-    </Card>
+    <ChartCard chartId="re-cmhc-under-construction" title="Edmonton CMA — Under Construction" timeRange={timeRange} source="CMHC">
+      <Card>
+        <CardHeader
+          title="Edmonton CMA — Under Construction"
+          subtitle="Units under construction (CMHC via StatsCan 34-10-0147)"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#f59e0b" />
+      </Card>
+    </ChartCard>
   );
 }
 

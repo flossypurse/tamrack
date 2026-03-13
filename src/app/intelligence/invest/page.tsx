@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+import { ChartCard } from "@/components/chart-card";
+import { computeTimeRange } from "@/lib/time-range";
 
 export const metadata: Metadata = {
   title: "Alberta Investment Thesis",
@@ -148,29 +150,35 @@ async function KeyMetrics() {
 
 async function PolicyRateChart() {
   const data = await fetchBoCTimeSeries(BOC_SERIES.POLICY_RATE, 120);
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="BoC Policy Rate Trend"
-        subtitle="The cost of capital — rate cuts signal easing, rate hikes signal tightening"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#3b82f6" height={280} />
-    </Card>
+    <ChartCard chartId="invest-policy-rate" title="BoC Policy Rate Trend" timeRange={timeRange} source="Bank of Canada">
+      <Card>
+        <CardHeader
+          title="BoC Policy Rate Trend"
+          subtitle="The cost of capital — rate cuts signal easing, rate hikes signal tightening"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#3b82f6" height={280} />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function EnergyIndexChart() {
   const data = await fetchBoCTimeSeries(BOC_SERIES.BCPI_ENERGY, 240);
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="BoC Energy Commodity Price Index"
-        subtitle="The master signal for Alberta — tracks crude, natural gas, coal"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#f97316" height={280} />
-    </Card>
+    <ChartCard chartId="invest-energy-index" title="BoC Energy Commodity Price Index" timeRange={timeRange} source="Bank of Canada">
+      <Card>
+        <CardHeader
+          title="BoC Energy Commodity Price Index"
+          subtitle="The master signal for Alberta — tracks crude, natural gas, coal"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#f97316" height={280} />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -194,79 +202,91 @@ async function EnergyVsCadChart() {
     .filter((p) => p.energy && p.cad)
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
+  const timeRange = computeTimeRange(merged);
   return (
-    <Card>
-      <CardHeader
-        title="Energy Price vs CAD/USD"
-        subtitle="The petro-dollar correlation — energy drives the loonie"
-        badge="LIVE"
-      />
-      <MultiSeriesLineChart
-        data={merged}
-        series={[
-          {
-            key: "energy",
-            label: "Energy Index",
-            color: "#f97316",
-            yAxisId: "left",
-          },
-          {
-            key: "cad",
-            label: "CAD/USD",
-            color: "#10b981",
-            prefix: "$",
-            yAxisId: "right",
-          },
-        ]}
-        height={280}
-        dualAxis
-      />
-    </Card>
+    <ChartCard chartId="invest-energy-vs-cad" title="Energy Price vs CAD/USD" timeRange={timeRange} source="Bank of Canada">
+      <Card>
+        <CardHeader
+          title="Energy Price vs CAD/USD"
+          subtitle="The petro-dollar correlation — energy drives the loonie"
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            {
+              key: "energy",
+              label: "Energy Index",
+              color: "#f97316",
+              yAxisId: "left",
+            },
+            {
+              key: "cad",
+              label: "CAD/USD",
+              color: "#10b981",
+              prefix: "$",
+              yAxisId: "right",
+            },
+          ]}
+          height={280}
+          dualAxis
+        />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function EmploymentChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_EMPLOYMENT;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 40);
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Alberta Employment"
-        subtitle="Total employment, seasonally adjusted — the jobs signal"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#10b981" height={280} compact />
-    </Card>
+    <ChartCard chartId="invest-employment" title="Alberta Employment" timeRange={timeRange} source="StatsCan">
+      <Card>
+        <CardHeader
+          title="Alberta Employment"
+          subtitle="Total employment, seasonally adjusted — the jobs signal"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#10b981" height={280} compact />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function MigrationChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.AB_NET_INTERPROVINCIAL;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 20);
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Net Interprovincial Migration"
-        subtitle="People voting with their feet — positive = Alberta is attracting Canadians"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#3b82f6" height={280} />
-    </Card>
+    <ChartCard chartId="invest-migration" title="Net Interprovincial Migration" timeRange={timeRange} source="StatsCan">
+      <Card>
+        <CardHeader
+          title="Net Interprovincial Migration"
+          subtitle="People voting with their feet — positive = Alberta is attracting Canadians"
+          badge="LIVE"
+        />
+        <TimeSeriesBarChart data={data} color="#3b82f6" height={280} />
+      </Card>
+    </ChartCard>
   );
 }
 
 async function HousingStartsChart() {
   const { tableId, coordinate } = STATSCAN_SERIES.EDMONTON_HOUSING_STARTS;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 24);
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton CMA Housing Starts"
-        subtitle="New construction activity — leading indicator of supply pipeline"
-        badge="LIVE"
-      />
-      <TimeSeriesBarChart data={data} color="#8b5cf6" height={280} />
-    </Card>
+    <ChartCard chartId="invest-housing-starts" title="Edmonton CMA Housing Starts" timeRange={timeRange} source="StatsCan">
+      <Card>
+        <CardHeader
+          title="Edmonton CMA Housing Starts"
+          subtitle="New construction activity — leading indicator of supply pipeline"
+          badge="LIVE"
+        />
+        <TimeSeriesBarChart data={data} color="#8b5cf6" height={280} />
+      </Card>
+    </ChartCard>
   );
 }
 
@@ -274,15 +294,18 @@ async function PermitValueChart() {
   const { tableId, coordinate } =
     STATSCAN_SERIES.EDMONTON_CMA_RES_PERMIT_VALUE;
   const data = await fetchStatCanTimeSeries(tableId, coordinate, 24);
+  const timeRange = computeTimeRange(data);
   return (
-    <Card>
-      <CardHeader
-        title="Edmonton CMA Residential Permit Value"
-        subtitle="Dollar value of residential building permits — developer confidence"
-        badge="LIVE"
-      />
-      <TimeSeriesAreaChart data={data} color="#f59e0b" height={280} compact />
-    </Card>
+    <ChartCard chartId="invest-permit-value" title="Edmonton CMA Residential Permit Value" timeRange={timeRange} source="StatsCan">
+      <Card>
+        <CardHeader
+          title="Edmonton CMA Residential Permit Value"
+          subtitle="Dollar value of residential building permits — developer confidence"
+          badge="LIVE"
+        />
+        <TimeSeriesAreaChart data={data} color="#f59e0b" height={280} compact />
+      </Card>
+    </ChartCard>
   );
 }
 
