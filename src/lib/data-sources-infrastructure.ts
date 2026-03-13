@@ -317,6 +317,171 @@ export async function fetchWildfireHistorical(): Promise<WildfireRecord[]> {
 }
 
 // ============================================================
+// CWFIS Active Fires (Natural Resources Canada)
+// ============================================================
+
+const CWFIS_ACTIVE_FIRES_URL =
+  "https://cwfis.cfs.nrcan.gc.ca/downloads/activefires/activefires.csv";
+
+const HISTORICAL_WILDFIRE_CSV_URL =
+  "https://open.alberta.ca/dataset/a221e7a0-4f46-4be7-9c5a-e29de9a3447e/resource/80480824-0c50-456c-9723-f9d4fc136141/download/fp-historical-wildfire-data-2006-2025.csv";
+
+export interface CWFISFire {
+  agency: string;
+  firename: string;
+  lat: number;
+  lon: number;
+  startdate: string;
+  hectares: number;
+  stageOfControl: string;
+  responseType: string;
+}
+
+export interface HistoricalWildfire {
+  year: number;
+  fireNumber: string;
+  size: number;
+  sizeClass: string;
+  latitude: number;
+  longitude: number;
+  generalCause: string;
+  startDate: string;
+}
+
+export interface WildfireYearlySummary {
+  year: number;
+  count: number;
+  totalHectares: number;
+}
+
+export interface WildfireCauseBreakdown {
+  cause: string;
+  count: number;
+  totalHectares: number;
+}
+
+/**
+ * Fetch active fires from CWFIS (Canadian Wildland Fire Information System),
+ * filtered to Alberta (agency === "ab").
+ */
+export async function fetchCWFISActiveFires(): Promise<CWFISFire[]> {
+  try {
+    const rows = await fetchCSV(CWFIS_ACTIVE_FIRES_URL);
+    return rows
+      .filter(
+        (r) =>
+          (r["agency"] ?? r["Agency"] ?? "").toLowerCase() === "ab"
+      )
+      .map((r) => ({
+        agency: r["agency"] ?? r["Agency"] ?? "",
+        firename: r["firename"] ?? r["FireName"] ?? r["fire_name"] ?? "",
+        lat: parseFloat(r["lat"] ?? r["Lat"] ?? r["latitude"] ?? "0") || 0,
+        lon: parseFloat(r["lon"] ?? r["Lon"] ?? r["longitude"] ?? "0") || 0,
+        startdate: r["startdate"] ?? r["StartDate"] ?? r["start_date"] ?? "",
+        hectares:
+          parseFloat(r["hectares"] ?? r["Hectares"] ?? r["ha"] ?? "0") || 0,
+        stageOfControl:
+          r["stage_of_control"] ?? r["StageOfControl"] ?? r["status"] ?? "",
+        responseType:
+          r["response_type"] ?? r["ResponseType"] ?? r["type"] ?? "",
+      }));
+  } catch (err) {
+    console.error("CWFIS active fires fetch error:", err);
+    return [];
+  }
+}
+
+/**
+ * Fetch historical wildfire data from Alberta Open Data direct CSV (2006-2025).
+ * Optionally filter to fires starting from a given year.
+ */
+export async function fetchHistoricalWildfires(
+  startYear?: number
+): Promise<HistoricalWildfire[]> {
+  try {
+    const rows = await fetchCSV(HISTORICAL_WILDFIRE_CSV_URL);
+    const fires = rows.map((r) => ({
+      year:
+        parseInt(r["YEAR"] ?? r["Year"] ?? r["year"] ?? "0", 10),
+      fireNumber: r["FIRE_NUMBER"] ?? r["Fire_Number"] ?? r["fire_number"] ?? "",
+      size:
+        parseFloat(
+          r["CURRENT_SIZE"] ?? r["Current_Size"] ?? r["SIZE_HA"] ?? r["Size"] ?? "0"
+        ) || 0,
+      sizeClass: r["SIZE_CLASS"] ?? r["Size_Class"] ?? r["size_class"] ?? "",
+      latitude:
+        parseFloat(r["LATITUDE"] ?? r["Latitude"] ?? r["lat"] ?? "0") || 0,
+      longitude:
+        parseFloat(r["LONGITUDE"] ?? r["Longitude"] ?? r["lon"] ?? "0") || 0,
+      generalCause:
+        r["GENERAL_CAUSE"] ?? r["General_Cause"] ?? r["general_cause"] ?? "",
+      startDate:
+        r["FIRE_START_DATE"] ?? r["Fire_Start_Date"] ?? r["start_date"] ?? "",
+    }));
+    if (startYear) {
+      return fires.filter((f) => f.year >= startYear);
+    }
+    return fires;
+  } catch (err) {
+    console.error("Historical wildfire CSV fetch error:", err);
+    return [];
+  }
+}
+
+/**
+ * Aggregate historical fires by year for trend charts.
+ * Returns yearly fire count and total hectares burned.
+ */
+export async function fetchWildfireYearlySummary(): Promise<
+  WildfireYearlySummary[]
+> {
+  const fires = await fetchHistoricalWildfires();
+  const byYear = new Map<number, { count: number; totalHectares: number }>();
+
+  for (const f of fires) {
+    if (f.year < 2006) continue;
+    const entry = byYear.get(f.year) ?? { count: 0, totalHectares: 0 };
+    entry.count += 1;
+    entry.totalHectares += f.size;
+    byYear.set(f.year, entry);
+  }
+
+  return Array.from(byYear.entries())
+    .map(([year, data]) => ({
+      year,
+      count: data.count,
+      totalHectares: Math.round(data.totalHectares),
+    }))
+    .sort((a, b) => a.year - b.year);
+}
+
+/**
+ * Aggregate historical fires by general cause (Lightning, Human, etc.).
+ */
+export async function fetchWildfireCauseBreakdown(): Promise<
+  WildfireCauseBreakdown[]
+> {
+  const fires = await fetchHistoricalWildfires();
+  const byCause = new Map<string, { count: number; totalHectares: number }>();
+
+  for (const f of fires) {
+    const cause = f.generalCause || "Unknown";
+    const entry = byCause.get(cause) ?? { count: 0, totalHectares: 0 };
+    entry.count += 1;
+    entry.totalHectares += f.size;
+    byCause.set(cause, entry);
+  }
+
+  return Array.from(byCause.entries())
+    .map(([cause, data]) => ({
+      cause,
+      count: data.count,
+      totalHectares: Math.round(data.totalHectares),
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
+// ============================================================
 // Alberta Tourism (CKAN)
 // ============================================================
 

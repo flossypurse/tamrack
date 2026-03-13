@@ -7,16 +7,34 @@ import {
   Car,
   Activity,
   Landmark,
+  Shield,
+  Flame,
   ArrowRight,
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Alberta Public Safety — Traffic, Seismic, Emergencies & Politics",
+  title: "Alberta Public Safety — Crime, Fire Response, Traffic, Seismic & More",
   description:
-    "Alberta public safety data — highway conditions, seismic activity, emergency alerts, and political landscape. Real-time data from provincial and federal monitoring systems.",
+    "Alberta public safety data — crime severity index, fire and emergency response, highway conditions, seismic activity, emergency alerts, and political landscape. Real-time data from provincial and federal monitoring systems.",
 };
 
 const pages = [
+  {
+    href: "/safety/crime",
+    icon: Shield,
+    title: "Crime & Safety",
+    description:
+      "Crime Severity Index across 200+ Alberta police jurisdictions from the Alberta Regional Dashboard, plus community-level crime statistics for Calgary from Socrata Open Data. The CSI measures both the volume and severity of police-reported crime — a higher value means more crime and/or more serious offences. Canada's baseline is 100 (2006). Useful for evaluating neighbourhood safety, insurance risk, and property investment decisions.",
+    sources: "Alberta Regional Dashboard, Calgary Open Data (Socrata)",
+  },
+  {
+    href: "/safety/fire-response",
+    icon: Flame,
+    title: "Fire & Emergency Response",
+    description:
+      "Edmonton fire and EMS incident data (927K+ records since 2015) from Edmonton Open Data, active wildfire tracking from CWFIS (Natural Resources Canada), and real-time Alberta 511 alerts. Covers medical calls, structure fires, hazmat, traffic accidents, and more — broken down by neighbourhood and event type. Essential context for insurance, property valuation near fire-prone areas, and understanding municipal service capacity.",
+    sources: "Edmonton Open Data (Socrata), CWFIS (NRCan), Alberta 511",
+  },
   {
     href: "/safety/traffic",
     icon: Car,
@@ -58,7 +76,7 @@ export default function SafetyPage() {
         title="Public Safety"
         category="safety"
         icon={<Siren size={22} />}
-        description="Real-time alerts, road conditions, seismic monitoring, and political landscape."
+        description="Crime data, fire and emergency response, road conditions, seismic monitoring, alerts, and political landscape."
       />
 
       {/* Explainer */}
@@ -127,6 +145,14 @@ export default function SafetyPage() {
           Common terms in this section
         </h3>
         <dl className="space-y-2 text-sm">
+          <div>
+            <dt className="font-medium text-foreground inline">Crime Severity Index (CSI)</dt>
+            <dd className="text-muted inline">
+              {" "}— A Statistics Canada measure that combines the volume and severity of police-reported crime.
+              Canada&apos;s baseline is 100 (set in 2006). A CSI above 100 means more/worse crime than the national
+              2006 baseline. Useful for comparing safety across municipalities.
+            </dd>
+          </div>
           <div>
             <dt className="font-medium text-foreground inline">Induced seismicity</dt>
             <dd className="text-muted inline">

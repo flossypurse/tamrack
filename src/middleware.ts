@@ -9,12 +9,12 @@ const publicRoutes = [
   "/dashboard", "/municipalities",
   "/municipalities/coverage",
   // Category overview pages — rich SEO landing pages, no gated data
-  "/economy", "/real-estate", "/intelligence", "/environment", "/safety", "/tools",
+  "/economy", "/real-estate", "/intelligence", "/environment", "/health", "/safety", "/tools",
 ];
 const publicPrefixes = [
   "/api/auth", "/api/webhooks", "/api/health", "/api/og", "/embed/",
   // Category pages — all public for SEO (rank for "Alberta [topic]" queries)
-  "/economy/", "/environment/", "/safety/",
+  "/economy/", "/environment/", "/health/", "/safety/",
   "/overview/signals",
   // Tools
   "/tools/learn", "/tools/sources",
@@ -26,7 +26,7 @@ const freePages = [
   "/dashboard",
   "/municipalities",
   // Category overview pages — always free
-  "/economy", "/real-estate", "/intelligence", "/environment", "/safety", "/tools",
+  "/economy", "/real-estate", "/intelligence", "/environment", "/health", "/safety", "/tools",
   // Briefings hub only — individual briefings require subscription
   "/overview/briefing",
   "/tools/learn", "/tools/docs", "/tools/sources",
@@ -36,7 +36,7 @@ const freePages = [
   "/economy/drilling", "/intelligence/compare",
 ];
 const freePrefixes = [
-  "/economy/", "/environment/", "/safety/",
+  "/economy/", "/environment/", "/health/", "/safety/",
   "/overview/signals",
 ];
 

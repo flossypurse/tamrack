@@ -27,6 +27,7 @@ import {
   User,
   LogOut,
   Shield,
+  HeartPulse,
   Globe,
   Sun,
   Moon,
@@ -172,10 +173,21 @@ const coreSections: NavSection[] = [
     ],
   },
   {
+    label: "Health",
+    icon: HeartPulse,
+    items: [
+      { href: "/health", label: "Overview", icon: HeartPulse },
+      { href: "/health/demographics", label: "Demographics", icon: HeartPulse },
+      { href: "/health/mortality", label: "Mortality", icon: HeartPulse },
+    ],
+  },
+  {
     label: "Public Safety",
     icon: Siren,
     items: [
       { href: "/safety", label: "Overview", icon: Siren },
+      { href: "/safety/crime", label: "Crime & Safety", icon: Shield },
+      { href: "/safety/fire-response", label: "Fire Response", icon: Flame },
       { href: "/safety/traffic", label: "Traffic & Roads", icon: Car },
       { href: "/safety/seismic", label: "Seismic", icon: Activity },
       { href: "/safety/emergencies", label: "Emergencies", icon: Siren },
@@ -297,7 +309,7 @@ export function Nav() {
     if (href === "/dashboard") return pathname === "/dashboard";
     if (href === "/municipalities") return pathname === "/municipalities";
     // Category overview pages need exact match
-    if (href === "/economy" || href === "/real-estate" || href === "/intelligence" || href === "/environment" || href === "/safety" || href === "/tools") return pathname === href;
+    if (href === "/economy" || href === "/real-estate" || href === "/intelligence" || href === "/environment" || href === "/health" || href === "/safety" || href === "/tools") return pathname === href;
     return pathname.startsWith(href);
   };
 
