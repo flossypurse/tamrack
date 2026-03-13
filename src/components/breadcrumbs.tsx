@@ -95,9 +95,24 @@ export function Breadcrumbs() {
   // Categories with sub-pages: use first segment as category breadcrumb
   const category = segments[0];
 
+  // Categories that have their own index page
+  const CATEGORY_HREFS: Record<string, string> = {
+    economy: "/economy",
+    "real-estate": "/real-estate",
+    intelligence: "/intelligence",
+    environment: "/environment",
+    safety: "/safety",
+    municipalities: "/municipalities",
+    tools: "/tools",
+    overview: "/dashboard",
+  };
+
   if (segments.length >= 2 && LABELS[category]) {
-    // Category crumb (not linked — it's just a grouping, not a page)
-    crumbs.push({ label: LABELS[category] });
+    // Category crumb — linked if it has an index page
+    crumbs.push({
+      label: LABELS[category],
+      href: CATEGORY_HREFS[category],
+    });
 
     // Municipality deep-dive: /municipalities/[slug]
     if (category === "municipalities" && segments[1] !== "coverage") {
