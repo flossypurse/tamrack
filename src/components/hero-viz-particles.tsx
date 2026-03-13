@@ -68,7 +68,7 @@ export function HeroVisualization() {
         vx: (Math.random() - 0.5) * 0.3,
         vy: (Math.random() - 0.5) * 0.2,
         radius: Math.random() * 2 + 1,
-        opacity: Math.random() * 0.4 + 0.3,
+        opacity: Math.random() * 0.3 + 0.2,
         color: colors[Math.floor(Math.random() * colors.length)],
       }));
 
@@ -92,7 +92,7 @@ export function HeroVisualization() {
       for (const wave of waves) {
         wave.offset += wave.speed;
         ctx!.beginPath();
-        ctx!.strokeStyle = `rgba(${wave.color}, 0.2)`;
+        ctx!.strokeStyle = `rgba(${wave.color}, 0.14)`;
         ctx!.lineWidth = 1.5;
 
         for (let x = 0; x < w; x += 2) {
@@ -129,7 +129,7 @@ export function HeroVisualization() {
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           if (dist < 100) {
-            const opacity = (1 - dist / 100) * 0.15;
+            const opacity = (1 - dist / 100) * 0.1;
             ctx!.beginPath();
             ctx!.strokeStyle = `rgba(${particles[i].color}, ${opacity})`;
             ctx!.lineWidth = 0.5;

@@ -333,7 +333,7 @@ export default function LandingPage() {
           <h1 className="text-3xl sm:text-5xl font-bold leading-tight">
             Economic intelligence
             <br />
-            <span className="text-accent">built in Alberta, for Alberta</span>
+            <span className="text-accent">built in Alberta, for Alberta <img src="/mapleleaf.svg" alt="Canada" width={56} height={56} className="inline-block align-baseline opacity-50 ml-1" /></span>
           </h1>
           <p className="text-muted text-lg max-w-2xl mx-auto">
             {totalFeeds}+ live data feeds from {dataSources.length} government sources,
