@@ -15,9 +15,12 @@
     "collect:wells": "npx tsx scripts/collect.ts --source wells",
     "collect:immigration": "npx tsx scripts/collect.ts --source immigration",
     "collect:projects": "npx tsx scripts/collect.ts --source projects",
-    "collect:macro": "npx tsx scripts/collect.ts --source macro"
+    "collect:macro": "npx tsx scripts/collect.ts --source macro",
+    "worker": "npx tsx worker.ts"
   },
   "dependencies": {
+    "@resonatehq/sdk": "^0.9.6",
+    "@types/pg": "^8.18.0",
     "better-sqlite3": "^12.6.2",
     "date-fns": "^4.1.0",
     "html-to-image": "^1.11.13",
@@ -26,6 +29,7 @@
     "next-auth": "^5.0.0-beta.30",
     "next-themes": "^0.4.6",
     "nodemailer": "^7.0.13",
+    "pg": "^8.20.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "recharts": "^3.8.0",

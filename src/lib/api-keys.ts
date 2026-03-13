@@ -12,58 +12,65 @@ export function generateApiKey(): { key: string; id: string; prefix: string; has
   return { key, id, prefix, hash };
 }
 
-export function createApiKey(userId: string, name: string = "Default"): { key: string; id: string; prefix: string } {
-  const db = getDb();
+export async function createApiKey(userId: string, name: string = "Default"): Promise<{ key: string; id: string; prefix: string }> {
+  const pool = await getDb();
   const { key, id, prefix, hash } = generateApiKey();
-  db.prepare(
-    `INSERT INTO api_keys (id, user_id, key_hash, key_prefix, name) VALUES (?, ?, ?, ?, ?)`
-  ).run(id, userId, hash, prefix, name);
+  await pool.query(
+    `INSERT INTO api_keys (id, user_id, key_hash, key_prefix, name) VALUES ($1, $2, $3, $4, $5)`,
+    [id, userId, hash, prefix, name]
+  );
   return { key, id, prefix };
 }
 
-export function validateApiKey(key: string): { userId: string; keyId: string } | null {
-  const db = getDb();
+export async function validateApiKey(key: string): Promise<{ userId: string; keyId: string } | null> {
+  const pool = await getDb();
   const hash = createHash("sha256").update(key).digest("hex");
-  const row = db.prepare(
-    `SELECT id, user_id FROM api_keys WHERE key_hash = ? AND revoked_at IS NULL`
-  ).get(hash) as { id: string; user_id: string } | undefined;
+  const { rows } = await pool.query(
+    `SELECT id, user_id FROM api_keys WHERE key_hash = $1 AND revoked_at IS NULL`,
+    [hash]
+  );
 
-  if (!row) return null;
+  if (!rows[0]) return null;
 
   // Update last_used_at
-  db.prepare(`UPDATE api_keys SET last_used_at = datetime('now') WHERE id = ?`).run(row.id);
+  await pool.query(`UPDATE api_keys SET last_used_at = NOW() WHERE id = $1`, [rows[0].id]);
 
-  return { userId: row.user_id, keyId: row.id };
+  return { userId: rows[0].user_id, keyId: rows[0].id };
 }
 
-export function revokeApiKey(keyId: string, userId: string): boolean {
-  const db = getDb();
-  const result = db.prepare(
-    `UPDATE api_keys SET revoked_at = datetime('now') WHERE id = ? AND user_id = ?`
-  ).run(keyId, userId);
-  return result.changes > 0;
+export async function revokeApiKey(keyId: string, userId: string): Promise<boolean> {
+  const pool = await getDb();
+  const result = await pool.query(
+    `UPDATE api_keys SET revoked_at = NOW() WHERE id = $1 AND user_id = $2`,
+    [keyId, userId]
+  );
+  return (result.rowCount ?? 0) > 0;
 }
 
-export function getUserApiKeys(userId: string) {
-  const db = getDb();
-  return db.prepare(
-    `SELECT id, key_prefix, name, last_used_at, created_at, revoked_at FROM api_keys WHERE user_id = ? ORDER BY created_at DESC`
-  ).all(userId) as { id: string; key_prefix: string; name: string; last_used_at: string | null; created_at: string; revoked_at: string | null }[];
+export async function getUserApiKeys(userId: string) {
+  const pool = await getDb();
+  const { rows } = await pool.query(
+    `SELECT id, key_prefix, name, last_used_at, created_at, revoked_at FROM api_keys WHERE user_id = $1 ORDER BY created_at DESC`,
+    [userId]
+  );
+  return rows as { id: string; key_prefix: string; name: string; last_used_at: string | null; created_at: string; revoked_at: string | null }[];
 }
 
-export function checkRateLimit(keyId: string): { allowed: boolean; remaining: number } {
-  const db = getDb();
-  const row = db.prepare(
-    `SELECT COUNT(*) as cnt FROM api_usage WHERE api_key_id = ? AND timestamp > datetime('now', '-1 day')`
-  ).get(keyId) as { cnt: number };
+export async function checkRateLimit(keyId: string): Promise<{ allowed: boolean; remaining: number }> {
+  const pool = await getDb();
+  const { rows } = await pool.query(
+    `SELECT COUNT(*) as cnt FROM api_usage WHERE api_key_id = $1 AND timestamp > NOW() - INTERVAL '1 day'`,
+    [keyId]
+  );
 
-  const remaining = Math.max(0, DAILY_RATE_LIMIT - row.cnt);
+  const remaining = Math.max(0, DAILY_RATE_LIMIT - Number(rows[0].cnt));
   return { allowed: remaining > 0, remaining };
 }
 
-export function logApiUsage(keyId: string | null, userId: string | null, endpoint: string, status: number) {
-  const db = getDb();
-  db.prepare(
-    `INSERT INTO api_usage (api_key_id, user_id, endpoint, response_status) VALUES (?, ?, ?, ?)`
-  ).run(keyId, userId, endpoint, status);
+export async function logApiUsage(keyId: string | null, userId: string | null, endpoint: string, status: number) {
+  const pool = await getDb();
+  await pool.query(
+    `INSERT INTO api_usage (api_key_id, user_id, endpoint, response_status) VALUES ($1, $2, $3, $4)`,
+    [keyId, userId, endpoint, status]
+  );
 }

@@ -1,15 +1,9 @@
+export const dynamic = "force-dynamic";
+
 import { getDb } from "@/lib/db";
 import { Card, CardHeader } from "@/components/card";
 import { Users, DollarSign, Key, Activity, TrendingUp, Clock } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-
-interface UserRow {
-  id: string;
-  email: string;
-  name: string | null;
-  role: string;
-  created_at: string;
-}
 
 interface SubRow {
   status: string;
@@ -28,49 +22,49 @@ interface ApiUsageRow {
   cnt: number;
 }
 
-function getAdminStats() {
-  const db = getDb();
+async function getAdminStats() {
+  const pool = await getDb();
 
-  const totalUsers = (db.prepare(`SELECT COUNT(*) as cnt FROM users`).get() as { cnt: number }).cnt;
+  const totalUsers = Number((await pool.query(`SELECT COUNT(*) as cnt FROM users`)).rows[0].cnt);
 
-  const subsByStatus = db.prepare(
+  const subsByStatus = (await pool.query(
     `SELECT status, COUNT(*) as cnt FROM subscriptions GROUP BY status`
-  ).all() as SubRow[];
+  )).rows as SubRow[];
 
-  const activeCount = subsByStatus.find((s) => s.status === "active")?.cnt ?? 0;
-  const trialingCount = subsByStatus.find((s) => s.status === "trialing")?.cnt ?? 0;
-  const canceledCount = subsByStatus.find((s) => s.status === "canceled")?.cnt ?? 0;
-  const pastDueCount = subsByStatus.find((s) => s.status === "past_due")?.cnt ?? 0;
+  const activeCount = Number(subsByStatus.find((s) => s.status === "active")?.cnt ?? 0);
+  const trialingCount = Number(subsByStatus.find((s) => s.status === "trialing")?.cnt ?? 0);
+  const canceledCount = Number(subsByStatus.find((s) => s.status === "canceled")?.cnt ?? 0);
+  const pastDueCount = Number(subsByStatus.find((s) => s.status === "past_due")?.cnt ?? 0);
 
   const mrr = activeCount * 29;
 
-  const totalApiKeys = (db.prepare(
+  const totalApiKeys = Number((await pool.query(
     `SELECT COUNT(*) as cnt FROM api_keys WHERE revoked_at IS NULL`
-  ).get() as { cnt: number }).cnt;
+  )).rows[0].cnt);
 
-  const apiRequestsToday = (db.prepare(
-    `SELECT COUNT(*) as cnt FROM api_usage WHERE timestamp > datetime('now', '-1 day')`
-  ).get() as { cnt: number }).cnt;
+  const apiRequestsToday = Number((await pool.query(
+    `SELECT COUNT(*) as cnt FROM api_usage WHERE timestamp > NOW() - INTERVAL '1 day'`
+  )).rows[0].cnt);
 
-  const recentUsers = db.prepare(
+  const recentUsers = (await pool.query(
     `SELECT u.email, u.name, u.created_at, COALESCE(s.status, 'none') as status
      FROM users u LEFT JOIN subscriptions s ON u.id = s.user_id
      ORDER BY u.created_at DESC LIMIT 20`
-  ).all() as RecentUser[];
+  )).rows as RecentUser[];
 
-  const topEndpoints = db.prepare(
+  const topEndpoints = (await pool.query(
     `SELECT endpoint, COUNT(*) as cnt FROM api_usage
-     WHERE timestamp > datetime('now', '-7 days')
+     WHERE timestamp > NOW() - INTERVAL '7 days'
      GROUP BY endpoint ORDER BY cnt DESC LIMIT 10`
-  ).all() as ApiUsageRow[];
+  )).rows as ApiUsageRow[];
 
-  const signupsLast7 = (db.prepare(
-    `SELECT COUNT(*) as cnt FROM users WHERE created_at > datetime('now', '-7 days')`
-  ).get() as { cnt: number }).cnt;
+  const signupsLast7 = Number((await pool.query(
+    `SELECT COUNT(*) as cnt FROM users WHERE created_at > NOW() - INTERVAL '7 days'`
+  )).rows[0].cnt);
 
-  const signupsLast30 = (db.prepare(
-    `SELECT COUNT(*) as cnt FROM users WHERE created_at > datetime('now', '-30 days')`
-  ).get() as { cnt: number }).cnt;
+  const signupsLast30 = Number((await pool.query(
+    `SELECT COUNT(*) as cnt FROM users WHERE created_at > NOW() - INTERVAL '30 days'`
+  )).rows[0].cnt);
 
   return {
     totalUsers,
@@ -88,8 +82,8 @@ function getAdminStats() {
   };
 }
 
-export default function AdminPage() {
-  const stats = getAdminStats();
+export default async function AdminPage() {
+  const stats = await getAdminStats();
 
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
@@ -160,7 +154,7 @@ export default function AdminPage() {
             {stats.topEndpoints.map((e) => (
               <div key={e.endpoint} className="flex items-center justify-between px-2 py-1.5 text-sm">
                 <code className="text-xs text-muted font-mono">{e.endpoint}</code>
-                <span className="text-foreground font-medium">{e.cnt.toLocaleString()}</span>
+                <span className="text-foreground font-medium">{Number(e.cnt).toLocaleString()}</span>
               </div>
             ))}
             {stats.topEndpoints.length === 0 && (

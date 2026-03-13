@@ -6,21 +6,21 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export async function createCheckoutSession(userId: string, email: string) {
-  const db = getDb();
+  const pool = await getDb();
 
-  // Check for existing Stripe customer
-  const sub = db.prepare(
-    `SELECT stripe_customer_id FROM subscriptions WHERE user_id = ?`
-  ).get(userId) as { stripe_customer_id: string | null } | undefined;
-
-  let customerId = sub?.stripe_customer_id;
+  const { rows } = await pool.query(
+    `SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1`,
+    [userId]
+  );
+  let customerId = rows[0]?.stripe_customer_id as string | null;
 
   if (!customerId) {
     const customer = await stripe.customers.create({ email, metadata: { userId } });
     customerId = customer.id;
-    db.prepare(
-      `UPDATE subscriptions SET stripe_customer_id = ? WHERE user_id = ?`
-    ).run(customerId, userId);
+    await pool.query(
+      `UPDATE subscriptions SET stripe_customer_id = $1 WHERE user_id = $2`,
+      [customerId, userId]
+    );
   }
 
   const session = await stripe.checkout.sessions.create({
@@ -36,17 +36,18 @@ export async function createCheckoutSession(userId: string, email: string) {
 }
 
 export async function createPortalSession(userId: string) {
-  const db = getDb();
-  const sub = db.prepare(
-    `SELECT stripe_customer_id FROM subscriptions WHERE user_id = ?`
-  ).get(userId) as { stripe_customer_id: string | null } | undefined;
+  const pool = await getDb();
+  const { rows } = await pool.query(
+    `SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1`,
+    [userId]
+  );
 
-  if (!sub?.stripe_customer_id) {
+  if (!rows[0]?.stripe_customer_id) {
     throw new Error("No Stripe customer found");
   }
 
   const session = await stripe.billingPortal.sessions.create({
-    customer: sub.stripe_customer_id,
+    customer: rows[0].stripe_customer_id,
     return_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing`,
   });
 
@@ -57,48 +58,49 @@ export async function createPortalSession(userId: string) {
 // Webhook handlers — update local subscription state
 // ============================================================
 
-export function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  const db = getDb();
+export async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  const pool = await getDb();
   const userId = session.metadata?.userId;
   const subscriptionId = session.subscription as string;
   const customerId = session.customer as string;
 
   if (!userId) return;
 
-  db.prepare(
-    `UPDATE subscriptions SET id = ?, stripe_customer_id = ?, status = 'active', updated_at = datetime('now') WHERE user_id = ?`
-  ).run(subscriptionId, customerId, userId);
+  await pool.query(
+    `UPDATE subscriptions SET id = $1, stripe_customer_id = $2, status = 'active', updated_at = NOW() WHERE user_id = $3`,
+    [subscriptionId, customerId, userId]
+  );
 }
 
-export function handleInvoicePaid(invoice: Stripe.Invoice) {
-  const db = getDb();
+export async function handleInvoicePaid(invoice: Stripe.Invoice) {
+  const pool = await getDb();
   const customerId = invoice.customer as string;
 
-  // Only process subscription invoices
   const lineItem = invoice.lines?.data?.[0];
   if (!lineItem) return;
 
   const period = lineItem.period;
-  db.prepare(
-    `UPDATE subscriptions SET status = 'active', current_period_start = ?, current_period_end = ?, updated_at = datetime('now') WHERE stripe_customer_id = ?`
-  ).run(
-    period?.start ? new Date(period.start * 1000).toISOString() : null,
-    period?.end ? new Date(period.end * 1000).toISOString() : null,
-    customerId
+  await pool.query(
+    `UPDATE subscriptions SET status = 'active', current_period_start = $1, current_period_end = $2, updated_at = NOW() WHERE stripe_customer_id = $3`,
+    [
+      period?.start ? new Date(period.start * 1000).toISOString() : null,
+      period?.end ? new Date(period.end * 1000).toISOString() : null,
+      customerId,
+    ]
   );
 }
 
-export function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-  const db = getDb();
+export async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  const pool = await getDb();
   const customerId = invoice.customer as string;
-  db.prepare(
-    `UPDATE subscriptions SET status = 'past_due', updated_at = datetime('now') WHERE stripe_customer_id = ?`
-  ).run(customerId);
+  await pool.query(
+    `UPDATE subscriptions SET status = 'past_due', updated_at = NOW() WHERE stripe_customer_id = $1`,
+    [customerId]
+  );
 }
 
-export function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  const db = getDb();
-  // Period info is now on items in newer Stripe API versions
+export async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  const pool = await getDb();
   const item = subscription.items?.data?.[0];
   const periodStart = item?.current_period_start
     ? new Date(item.current_period_start * 1000).toISOString()
@@ -107,20 +109,22 @@ export function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     ? new Date(item.current_period_end * 1000).toISOString()
     : null;
 
-  db.prepare(
-    `UPDATE subscriptions SET status = ?, cancel_at_period_end = ?, current_period_start = ?, current_period_end = ?, updated_at = datetime('now') WHERE stripe_customer_id = ?`
-  ).run(
-    subscription.status === "active" ? "active" : subscription.status === "trialing" ? "trialing" : subscription.status,
-    subscription.cancel_at_period_end ? 1 : 0,
-    periodStart,
-    periodEnd,
-    subscription.customer as string
+  await pool.query(
+    `UPDATE subscriptions SET status = $1, cancel_at_period_end = $2, current_period_start = $3, current_period_end = $4, updated_at = NOW() WHERE stripe_customer_id = $5`,
+    [
+      subscription.status === "active" ? "active" : subscription.status === "trialing" ? "trialing" : subscription.status,
+      subscription.cancel_at_period_end ? 1 : 0,
+      periodStart,
+      periodEnd,
+      subscription.customer as string,
+    ]
   );
 }
 
-export function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const db = getDb();
-  db.prepare(
-    `UPDATE subscriptions SET status = 'canceled', cancel_at_period_end = 0, updated_at = datetime('now') WHERE stripe_customer_id = ?`
-  ).run(subscription.customer as string);
+export async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  const pool = await getDb();
+  await pool.query(
+    `UPDATE subscriptions SET status = 'canceled', cancel_at_period_end = 0, updated_at = NOW() WHERE stripe_customer_id = $1`,
+    [subscription.customer as string]
+  );
 }

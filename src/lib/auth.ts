@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import Nodemailer from "next-auth/providers/nodemailer";
 import Google from "next-auth/providers/google";
-import { SQLiteAdapter } from "./auth-adapter";
+import { PostgresAdapter } from "./auth-adapter";
 import { getDb } from "./db";
 
 // Send magic link via Mailgun HTTP API (avoids SMTP port issues on Railway)
@@ -61,7 +61,7 @@ async function sendVerificationRequest(params: {
 export const { handlers, signIn, signOut, auth } = NextAuth({
   debug: true,
   trustHost: true,
-  adapter: SQLiteAdapter(),
+  adapter: PostgresAdapter(),
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
@@ -106,12 +106,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (user || trigger === "update") {
           const userId = (user?.id ?? token.sub) as string;
           console.log(`[auth] jwt: loading user data for ${userId}`);
-          const db = getDb();
+          const pool = await getDb();
 
-          const dbUser = db.prepare(`SELECT role FROM users WHERE id = ?`).get(userId) as { role: string } | undefined;
-          const sub = db.prepare(
-            `SELECT status, trial_end, current_period_end, cancel_at_period_end FROM subscriptions WHERE user_id = ?`
-          ).get(userId) as {
+          const { rows: userRows } = await pool.query(`SELECT role FROM users WHERE id = $1`, [userId]);
+          const dbUser = userRows[0] as { role: string } | undefined;
+          const { rows: subRows } = await pool.query(
+            `SELECT status, trial_end, current_period_end, cancel_at_period_end FROM subscriptions WHERE user_id = $1`,
+            [userId]
+          );
+          const sub = subRows[0] as {
             status: string;
             trial_end: string | null;
             current_period_end: string | null;
