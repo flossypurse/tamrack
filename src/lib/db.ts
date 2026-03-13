@@ -263,6 +263,37 @@ const MIGRATION_SQL = `
       UNIQUE(snapshot_date, source, name)
     );
 
+    -- ============================================================
+    -- CRM tables
+    -- ============================================================
+
+    CREATE TABLE IF NOT EXISTS crm_contacts (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT DEFAULT '',
+      phone TEXT DEFAULT '',
+      organization TEXT DEFAULT '',
+      role TEXT DEFAULT '',
+      municipality TEXT DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'lead',
+      source TEXT DEFAULT '',
+      notes TEXT DEFAULT '',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS crm_activities (
+      id SERIAL PRIMARY KEY,
+      contact_id INTEGER NOT NULL REFERENCES crm_contacts(id) ON DELETE CASCADE,
+      type TEXT NOT NULL DEFAULT 'note',
+      content TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_crm_contacts_status ON crm_contacts(status);
+    CREATE INDEX IF NOT EXISTS idx_crm_contacts_municipality ON crm_contacts(municipality);
+    CREATE INDEX IF NOT EXISTS idx_crm_activities_contact ON crm_activities(contact_id, created_at DESC);
+
     -- Indexes for collection tables
     CREATE INDEX IF NOT EXISTS idx_regional_muni ON regional_indicators(municipality, indicator);
     CREATE INDEX IF NOT EXISTS idx_regional_indicator ON regional_indicators(indicator, period);

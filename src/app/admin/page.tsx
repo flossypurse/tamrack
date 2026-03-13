@@ -2,8 +2,9 @@ export const dynamic = "force-dynamic";
 
 import { getDb } from "@/lib/db";
 import { Card, CardHeader } from "@/components/card";
-import { Users, DollarSign, Key, Activity, TrendingUp, Clock } from "lucide-react";
+import { Users, DollarSign, Key, Activity, TrendingUp, Clock, UserPlus } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
+import Link from "next/link";
 
 interface SubRow {
   status: string;
@@ -92,6 +93,16 @@ export default async function AdminPage() {
         description="Revenue, users, and API usage"
         category="tools"
       />
+
+      {/* Admin Nav */}
+      <div className="flex gap-2">
+        <Link href="/admin/collection" className="px-3 py-1.5 bg-card border border-card-border rounded-lg text-xs text-muted hover:text-foreground transition-colors">
+          Data Collection
+        </Link>
+        <Link href="/admin/crm" className="flex items-center gap-1.5 px-3 py-1.5 bg-card border border-card-border rounded-lg text-xs text-muted hover:text-foreground transition-colors">
+          <UserPlus size={12} /> CRM
+        </Link>
+      </div>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
