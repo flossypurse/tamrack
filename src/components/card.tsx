@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { DataFreshness } from "./data-freshness";
 
 export function Card({
   children,
@@ -20,10 +21,12 @@ export function CardHeader({
   title,
   subtitle,
   badge,
+  freshness,
 }: {
   title: string;
   subtitle?: string;
   badge?: string;
+  freshness?: "realtime" | "hourly" | "daily";
 }) {
   return (
     <div className="flex items-start justify-between mb-4">
@@ -33,11 +36,14 @@ export function CardHeader({
           <p className="text-xs text-muted mt-0.5">{subtitle}</p>
         )}
       </div>
-      {badge && (
-        <span className="text-[10px] font-mono bg-accent/10 text-accent px-2 py-0.5 rounded-full">
-          {badge}
-        </span>
-      )}
+      <div className="flex items-center gap-2">
+        {freshness && <DataFreshness tier={freshness} />}
+        {badge && (
+          <span className="text-[10px] font-mono bg-accent/10 text-accent px-2 py-0.5 rounded-full">
+            {badge}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

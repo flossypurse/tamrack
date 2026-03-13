@@ -24,7 +24,7 @@ import {
   type TimeSeriesPoint,
 } from "@/lib/data-sources";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600; // ISR: refresh embed data hourly
 
 // ============================================================
 // Chart registry — maps chartId to data fetcher + renderer

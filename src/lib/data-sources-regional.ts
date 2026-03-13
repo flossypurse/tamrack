@@ -4,7 +4,10 @@
  *
  * Provides access to 50+ socioeconomic indicators for all Alberta municipalities.
  * Data is cached daily (revalidate: 86400).
+ * Falls back to PostgreSQL snapshots when the upstream API is unavailable.
  */
+
+import { fallbackRegionalIndicator } from "./data-fallback";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -185,15 +188,33 @@ export async function fetchRegionalIndicator(
   try {
     const res = await fetch(url, { next: { revalidate: 86400 } });
     if (!res.ok) {
-      console.error(`[regional] ${indicator}: HTTP ${res.status}`);
-      return [];
+      console.error(`[regional] ${indicator}: HTTP ${res.status} — trying DB fallback`);
+      return dbFallback(indicator);
     }
     const raw: RawRegionalRecord[] = await res.json();
-    return raw.map(parseRecord);
+    const parsed = raw.map(parseRecord);
+    if (parsed.length === 0) {
+      return dbFallback(indicator);
+    }
+    return parsed;
   } catch (err) {
-    console.error(`[regional] Failed to fetch ${indicator}:`, err);
-    return [];
+    console.error(`[regional] Failed to fetch ${indicator} — trying DB fallback:`, err);
+    return dbFallback(indicator);
   }
+}
+
+/** Convert DB fallback rows into RegionalDataPoint[] */
+async function dbFallback(indicator: string, municipality?: string): Promise<RegionalDataPoint[]> {
+  const rows = await fallbackRegionalIndicator(indicator, municipality);
+  return rows.map((r) => ({
+    csduid: "",
+    municipality: r.municipality,
+    period: r.period,
+    indicator,
+    dimensions: [],
+    value: r.value,
+    unit: r.unit,
+  }));
 }
 
 /**
@@ -221,7 +242,7 @@ export async function fetchAllRegionalDataForMunicipality(
     (name) => () => fetchRegionalIndicatorForMunicipality(name, municipalityName),
   );
 
-  const settled = await runWithConcurrency(tasks, 5);
+  const settled = await runWithConcurrency(tasks, 10);
 
   const result: Record<string, RegionalDataPoint[]> = {};
   for (let i = 0; i < indicatorNames.length; i++) {

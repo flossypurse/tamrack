@@ -354,23 +354,14 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Beaumont",
     region: "edmonton-metro",
     population: 22000,
-    status: "planned",
-    endpoints: {
-      parcels: { url: "https://services1.arcgis.com/vSJSJBCERhofQMUY/arcgis/rest/services/Beaumont_Property_Assessments/FeatureServer/0", type: "FeatureServer" },
-    },
-    fields: {
-      assessmentValue: "ASSESSED_VALUE",
-      address: "ADDRESS",
-      zoning: "ZONE",
-      neighbourhood: "NEIGHBOURHOOD",
-    },
-    capabilities: ["assessments"],
-    filters: {
-      assessmentWhere: "ASSESSED_VALUE > 0",
-    },
-    dataSource: "City of Beaumont ArcGIS",
-    description: "Property assessments for one of Alberta's fastest-growing bedroom communities south of Edmonton.",
+    status: "live",
+    endpoints: {},
+    fields: {},
+    capabilities: [],
+    dataSource: "Alberta Regional Dashboard",
+    description: "One of Alberta's fastest-growing bedroom communities south of Edmonton. Provincial indicators via Alberta Regional Dashboard.",
     color: "#8b5cf6",
+    notes: ["No public ArcGIS assessment endpoint — regional dashboard indicators only"],
   },
 
   {
@@ -378,23 +369,14 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Fort Saskatchewan",
     region: "edmonton-metro",
     population: 28000,
-    status: "planned",
-    endpoints: {
-      parcels: { url: "https://services1.arcgis.com/vSJSJBCERhofQMUY/arcgis/rest/services/FortSask_Property_Assessments/FeatureServer/0", type: "FeatureServer" },
-    },
-    fields: {
-      assessmentValue: "ASSESSED_VALUE",
-      address: "ADDRESS",
-      zoning: "ZONE",
-      neighbourhood: "NEIGHBOURHOOD",
-    },
-    capabilities: ["assessments"],
-    filters: {
-      assessmentWhere: "ASSESSED_VALUE > 0",
-    },
-    dataSource: "City of Fort Saskatchewan ArcGIS",
-    description: "Property assessments for the heart of Alberta's Industrial Heartland. Petrochemical corridor community.",
+    status: "live",
+    endpoints: {},
+    fields: {},
+    capabilities: [],
+    dataSource: "Alberta Regional Dashboard",
+    description: "Heart of Alberta's Industrial Heartland. Petrochemical corridor community. Provincial indicators via Alberta Regional Dashboard.",
     color: "#3b8fdb",
+    notes: ["No public ArcGIS assessment endpoint — regional dashboard indicators only"],
   },
 
   {
@@ -402,22 +384,14 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Morinville",
     region: "edmonton-metro",
     population: 10000,
-    status: "planned",
-    endpoints: {
-      parcels: { url: "https://services1.arcgis.com/vSJSJBCERhofQMUY/arcgis/rest/services/Morinville_Property_Assessments/FeatureServer/0", type: "FeatureServer" },
-    },
-    fields: {
-      assessmentValue: "ASSESSED_VALUE",
-      address: "ADDRESS",
-      zoning: "ZONE",
-    },
-    capabilities: ["assessments"],
-    filters: {
-      assessmentWhere: "ASSESSED_VALUE > 0",
-    },
-    dataSource: "Town of Morinville ArcGIS",
-    description: "Property assessments for Morinville, a growing community north of Edmonton on Highway 2.",
+    status: "live",
+    endpoints: {},
+    fields: {},
+    capabilities: [],
+    dataSource: "Alberta Regional Dashboard",
+    description: "Growing community north of Edmonton on Highway 2. Provincial indicators via Alberta Regional Dashboard.",
     color: "#f97316",
+    notes: ["No public ArcGIS assessment endpoint — regional dashboard indicators only"],
   },
 
   {
@@ -425,22 +399,14 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Devon",
     region: "edmonton-metro",
     population: 7000,
-    status: "planned",
-    endpoints: {
-      parcels: { url: "https://services1.arcgis.com/vSJSJBCERhofQMUY/arcgis/rest/services/Devon_Property_Assessments/FeatureServer/0", type: "FeatureServer" },
-    },
-    fields: {
-      assessmentValue: "ASSESSED_VALUE",
-      address: "ADDRESS",
-      zoning: "ZONE",
-    },
-    capabilities: ["assessments"],
-    filters: {
-      assessmentWhere: "ASSESSED_VALUE > 0",
-    },
-    dataSource: "Town of Devon ArcGIS",
-    description: "Property assessments for Devon, a riverside town southwest of Edmonton near the Nisku industrial corridor.",
+    status: "live",
+    endpoints: {},
+    fields: {},
+    capabilities: [],
+    dataSource: "Alberta Regional Dashboard",
+    description: "Riverside town southwest of Edmonton near the Nisku industrial corridor. Provincial indicators via Alberta Regional Dashboard.",
     color: "#84cc16",
+    notes: ["No public ArcGIS assessment endpoint — regional dashboard indicators only"],
   },
 
   {
@@ -570,22 +536,14 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Okotoks",
     region: "calgary-metro",
     population: 33000,
-    status: "planned",
-    endpoints: {
-      parcels: { url: "https://services.arcgis.com/xUhfOfxKjn65QCmh/arcgis/rest/services/Okotoks_Assessments/FeatureServer/0", type: "FeatureServer" },
-    },
-    fields: {
-      assessmentValue: "TOTAL_ASSESSMENT",
-      address: "ADDRESS",
-      neighbourhood: "NEIGHBOURHOOD",
-    },
-    capabilities: ["assessments"],
-    filters: {
-      assessmentWhere: "TOTAL_ASSESSMENT > 0",
-    },
-    dataSource: "Town of Okotoks ArcGIS",
-    description: "Community south of Calgary along the Sheep River. Property assessment data.",
+    status: "live",
+    endpoints: {},
+    fields: {},
+    capabilities: [],
+    dataSource: "Alberta Regional Dashboard",
+    description: "Community south of Calgary along the Sheep River. Provincial indicators via Alberta Regional Dashboard.",
     color: "#ec4899",
+    notes: ["No public ArcGIS assessment endpoint — regional dashboard indicators only"],
   },
 
   {
@@ -593,22 +551,14 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Chestermere",
     region: "calgary-metro",
     population: 24000,
-    status: "planned",
-    endpoints: {
-      parcels: { url: "https://services.arcgis.com/xUhfOfxKjn65QCmh/arcgis/rest/services/Chestermere_Assessments/FeatureServer/0", type: "FeatureServer" },
-    },
-    fields: {
-      assessmentValue: "ASSESSED_VALUE",
-      address: "ADDRESS",
-      neighbourhood: "NEIGHBOURHOOD",
-    },
-    capabilities: ["assessments"],
-    filters: {
-      assessmentWhere: "ASSESSED_VALUE > 0",
-    },
-    dataSource: "City of Chestermere ArcGIS",
-    description: "Lakeside community east of Calgary. Property assessments and neighbourhood data.",
+    status: "live",
+    endpoints: {},
+    fields: {},
+    capabilities: [],
+    dataSource: "Alberta Regional Dashboard",
+    description: "Lakeside community east of Calgary. Provincial indicators via Alberta Regional Dashboard.",
     color: "#2dd4bf",
+    notes: ["No public ArcGIS assessment endpoint — regional dashboard indicators only"],
   },
 
   {
@@ -687,24 +637,14 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Red Deer",
     region: "central",
     population: 105000,
-    status: "planned",
-    endpoints: {
-      parcels: { url: "https://services.arcgis.com/jTADFmGdo0XlHBdx/arcgis/rest/services/Property_Assessment/FeatureServer/0", type: "FeatureServer" },
-    },
-    fields: {
-      assessmentValue: "ASSESSED_VALUE",
-      address: "ADDRESS",
-      zoning: "ZONE",
-      neighbourhood: "NEIGHBOURHOOD",
-      propertyClass: "PROPERTY_CLASS",
-    },
-    capabilities: ["assessments", "zoning"],
-    filters: {
-      assessmentWhere: "ASSESSED_VALUE > 0",
-    },
-    dataSource: "City of Red Deer ArcGIS",
-    description: "Central Alberta's largest city — midpoint between Edmonton and Calgary. Property assessments with neighbourhood and zoning data.",
+    status: "live",
+    endpoints: {},
+    fields: {},
+    capabilities: [],
+    dataSource: "Alberta Regional Dashboard",
+    description: "Central Alberta's largest city — midpoint between Edmonton and Calgary. Provincial indicators via Alberta Regional Dashboard.",
     color: "#b91c1c",
+    notes: ["No public ArcGIS assessment endpoint — regional dashboard indicators only"],
   },
 
   {
@@ -873,22 +813,14 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     name: "Wood Buffalo (Fort McMurray)",
     region: "northeast",
     population: 75000,
-    status: "planned",
-    endpoints: {
-      parcels: { url: "https://services.arcgis.com/SmKQbwDrtQGamLAC/arcgis/rest/services/Property_Assessment/FeatureServer/0", type: "FeatureServer" },
-    },
-    fields: {
-      assessmentValue: "ASSESSED_VALUE",
-      address: "ADDRESS",
-      neighbourhood: "NEIGHBOURHOOD",
-    },
-    capabilities: ["assessments"],
-    filters: {
-      assessmentWhere: "ASSESSED_VALUE > 0",
-    },
-    dataSource: "Regional Municipality of Wood Buffalo ArcGIS",
-    description: "Heart of the oil sands — Fort McMurray and surrounding communities. Property assessment data.",
+    status: "live",
+    endpoints: {},
+    fields: {},
+    capabilities: [],
+    dataSource: "Alberta Regional Dashboard",
+    description: "Heart of the oil sands — Fort McMurray and surrounding communities. Provincial indicators via Alberta Regional Dashboard.",
     color: "#854d0e",
+    notes: ["No public ArcGIS assessment endpoint — regional dashboard indicators only"],
   },
 ];
 
