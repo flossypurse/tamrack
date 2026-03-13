@@ -331,9 +331,9 @@ export default function LandingPage() {
             <span className="text-lg font-bold">Alberta Pulse Check</span>
           </div>
           <h1 className="text-3xl sm:text-5xl font-bold leading-tight">
-            The data above is real.
+            Economic intelligence
             <br />
-            <span className="text-accent">Updated every hour.</span>
+            <span className="text-accent">built in Alberta, for Alberta</span>
           </h1>
           <p className="text-muted text-lg max-w-2xl mx-auto">
             {totalFeeds}+ live data feeds from {dataSources.length} government sources,
