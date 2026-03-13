@@ -33,7 +33,7 @@ async function sendVerificationRequest(params: {
     `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">
       <div style="text-align: center; margin-bottom: 32px;">
         <h1 style="font-size: 20px; font-weight: 600; color: #1a1a2e; margin: 0;">Alberta Pulse Check</h1>
-        <p style="color: #6b7280; font-size: 14px; margin-top: 4px;">Economic intelligence for Alberta</p>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 4px;">Community intelligence for Alberta</p>
       </div>
       <p style="color: #374151; font-size: 15px; line-height: 1.6;">Click the button below to sign in. This link expires in 24 hours.</p>
       <div style="text-align: center; margin: 32px 0;">

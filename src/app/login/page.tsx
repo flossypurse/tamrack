@@ -66,7 +66,7 @@ function LoginForm() {
       <div className="text-center space-y-2">
         <h1 className="text-2xl font-bold">Sign in to Alberta Pulse</h1>
         <p className="text-muted text-sm">
-          Economic intelligence for Alberta decision-makers
+          Community intelligence for Alberta decision-makers
         </p>
       </div>
 

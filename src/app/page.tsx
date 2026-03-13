@@ -331,7 +331,7 @@ export default function LandingPage() {
             <span className="text-lg font-bold">Alberta Pulse Check</span>
           </div>
           <h1 className="text-3xl sm:text-5xl font-bold leading-tight">
-            Economic intelligence
+            Community intelligence
             <br />
             <span className="text-accent">built in Alberta, for Alberta <img src="/mapleleaf.svg" alt="Canada" width={56} height={56} className="inline-block align-baseline opacity-50 ml-1" /></span>
           </h1>

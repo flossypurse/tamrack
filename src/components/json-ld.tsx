@@ -126,7 +126,7 @@ export function SoftwareApplicationJsonLd() {
     operatingSystem: "Web",
     url: "https://albertapulsecheck.ca",
     description:
-      "Economic intelligence dashboard for Alberta — real-time data on permits, assessments, energy, labour, migration, and more.",
+      "Community intelligence dashboard for Alberta — real-time data on permits, assessments, energy, labour, migration, and more.",
     offers: [
       {
         "@type": "Offer",
