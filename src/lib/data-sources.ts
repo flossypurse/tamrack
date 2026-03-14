@@ -121,6 +121,9 @@ export const STATSCAN_SERIES = {
   AB_FARM_CROP_RECEIPTS: { tableId: 32100045, coordinate: "10.2.0.0.0.0.0.0.0.0" }, // Total crop receipts
   AB_FARM_LIVESTOCK_RECEIPTS: { tableId: 32100045, coordinate: "10.41.0.0.0.0.0.0.0.0" }, // Total livestock receipts
 
+  // Cannabis retail sales — Table 20-10-0056: Alberta(16).CannabisRetailers(30).TotalSales(1).Unadjusted(1)
+  AB_CANNABIS_RETAIL_SALES: { tableId: 20100056, coordinate: "16.30.1.1.0.0.0.0.0.0" },
+
   // Average weekly earnings — Table 14-10-0223: Alberta(10), incl overtime(2), excl unclassified(2)
   AB_WEEKLY_EARNINGS: { tableId: 14100223, coordinate: "10.2.2.0.0.0.0.0.0.0" },
 

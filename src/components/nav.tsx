@@ -14,6 +14,7 @@ import {
   Users,
   Plane,
   Wheat,
+  Cannabis,
   Home,
   Target,
   MapPin,
@@ -134,6 +135,7 @@ const coreSections: NavSection[] = [
       { href: "/economy/labour", label: "Labour", icon: Users },
       { href: "/economy/migration", label: "Migration", icon: Plane },
       { href: "/economy/agriculture", label: "Agriculture", icon: Wheat },
+      { href: "/economy/cannabis", label: "Cannabis", icon: Cannabis },
     ],
   },
   {
