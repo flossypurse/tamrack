@@ -53,6 +53,9 @@ import {
   Briefcase,
   PanelLeftClose,
   PanelLeftOpen,
+  ShoppingCart,
+  Factory,
+  HardHat,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
@@ -124,6 +127,20 @@ const coreSections: NavSection[] = [
     ],
   },
   {
+    label: "Learn",
+    icon: GraduationCap,
+    items: [
+      { href: "/learn", label: "Overview", icon: GraduationCap },
+      { href: "/learn/housing-machine", label: "The Housing Machine", icon: Home },
+      { href: "/learn/energy-economy", label: "Energy Engine", icon: Flame },
+      { href: "/learn/reading-the-signals", label: "Reading Signals", icon: TrendingUp },
+      { href: "/learn/your-tax-dollars", label: "Your Tax Dollars", icon: Landmark },
+      { href: "/learn/people-and-growth", label: "People & Growth", icon: Users },
+      { href: "/learn/safety-and-prosperity", label: "Safety & Prosperity", icon: Shield },
+      { href: "/learn/community-levers", label: "Community Levers", icon: Wrench },
+    ],
+  },
+  {
     label: "Economy",
     icon: PieChart,
     items: [
@@ -134,8 +151,11 @@ const coreSections: NavSection[] = [
       { href: "/economy/diversification", label: "Diversification", icon: PieChart },
       { href: "/economy/labour", label: "Labour", icon: Users },
       { href: "/economy/migration", label: "Migration", icon: Plane },
+      { href: "/economy/retail", label: "Retail Trade", icon: ShoppingCart },
+      { href: "/economy/businesses", label: "Business Dynamics", icon: Building2 },
       { href: "/economy/agriculture", label: "Agriculture", icon: Wheat },
       { href: "/economy/cannabis", label: "Cannabis", icon: Cannabis },
+      { href: "/economy/employers", label: "Employers", icon: HardHat },
     ],
   },
   {
@@ -173,6 +193,7 @@ const coreSections: NavSection[] = [
       { href: "/environment/air-quality", label: "Air Quality", icon: Wind },
       { href: "/environment/water", label: "Water & Rivers", icon: Waves },
       { href: "/environment/wildfire", label: "Wildfire", icon: TreePine },
+      { href: "/environment/emissions", label: "Emissions", icon: Factory },
     ],
   },
   {
@@ -312,7 +333,7 @@ export function Nav() {
     if (href === "/dashboard") return pathname === "/dashboard";
     if (href === "/municipalities") return pathname === "/municipalities";
     // Category overview pages need exact match
-    if (href === "/economy" || href === "/real-estate" || href === "/intelligence" || href === "/environment" || href === "/health" || href === "/safety" || href === "/tools") return pathname === href;
+    if (href === "/economy" || href === "/real-estate" || href === "/intelligence" || href === "/environment" || href === "/health" || href === "/safety" || href === "/tools" || href === "/learn") return pathname === href;
     return pathname.startsWith(href);
   };
 

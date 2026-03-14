@@ -86,8 +86,28 @@ export const STATSCAN_SERIES = {
   AB_GDP: { tableId: 36100402, coordinate: "9.2.1.0.0.0.0.0.0.0" },
 
   // Alberta Retail Sales — Table 20-10-0056 (replaced discontinued 20-10-0008)
-  // Coordinate: Alberta(16).RetailTrade(1).TotalSales(1).SeasonallyAdj(2)
-  AB_RETAIL_SALES: { tableId: 20100056, coordinate: "16.1.1.2.0.0.0.0.0.0" },
+  // Coordinate: Alberta(16).Industry(N).TotalSales(1).SeasonallyAdj(2) or Unadjusted(1)
+  AB_RETAIL_SALES: { tableId: 20100056, coordinate: "16.1.1.2.0.0.0.0.0.0" }, // Total retail trade, SA
+  AB_RETAIL_SALES_UNADJ: { tableId: 20100056, coordinate: "16.1.1.1.0.0.0.0.0.0" }, // Total retail trade, unadjusted
+  // Retail subsectors (all Alberta, SA)
+  AB_RETAIL_MOTOR_VEHICLE: { tableId: 20100056, coordinate: "16.3.1.2.0.0.0.0.0.0" }, // Motor vehicle & parts dealers
+  AB_RETAIL_FURNITURE: { tableId: 20100056, coordinate: "16.9.1.2.0.0.0.0.0.0" }, // Furniture & home furnishings
+  AB_RETAIL_ELECTRONICS: { tableId: 20100056, coordinate: "16.12.1.2.0.0.0.0.0.0" }, // Electronics & appliances
+  AB_RETAIL_BUILDING_MATERIALS: { tableId: 20100056, coordinate: "16.14.1.2.0.0.0.0.0.0" }, // Building materials & garden
+  AB_RETAIL_FOOD_BEVERAGE: { tableId: 20100056, coordinate: "16.16.1.2.0.0.0.0.0.0" }, // Food & beverage stores
+  AB_RETAIL_HEALTH: { tableId: 20100056, coordinate: "16.22.1.2.0.0.0.0.0.0" }, // Health & personal care
+  AB_RETAIL_GASOLINE: { tableId: 20100056, coordinate: "16.24.1.2.0.0.0.0.0.0" }, // Gasoline stations
+  AB_RETAIL_CLOTHING: { tableId: 20100056, coordinate: "16.25.1.2.0.0.0.0.0.0" }, // Clothing & accessories
+  AB_RETAIL_SPORTING: { tableId: 20100056, coordinate: "16.28.1.2.0.0.0.0.0.0" }, // Sporting goods, hobby, book, music
+  AB_RETAIL_GENERAL_MERCH: { tableId: 20100056, coordinate: "16.29.1.2.0.0.0.0.0.0" }, // General merchandise
+  AB_RETAIL_ECOMMERCE: { tableId: 20100056, coordinate: "16.1.2.2.0.0.0.0.0.0" }, // E-commerce sales (total retail), SA
+
+  // Food services — Table 21-10-0019
+  // Coordinate: Alberta(16).Industry(N)
+  AB_FOOD_SERVICES_TOTAL: { tableId: 21100019, coordinate: "16.1.0.0.0.0.0.0.0.0" }, // Total food services & drinking places
+  AB_FOOD_SERVICES_FULL: { tableId: 21100019, coordinate: "16.2.0.0.0.0.0.0.0.0" }, // Full-service restaurants
+  AB_FOOD_SERVICES_LIMITED: { tableId: 21100019, coordinate: "16.3.0.0.0.0.0.0.0.0" }, // Limited-service (fast food)
+  AB_FOOD_SERVICES_DRINKING: { tableId: 21100019, coordinate: "16.5.0.0.0.0.0.0.0.0" }, // Drinking places
 
   // GDP by Industry (Table 36-10-0402) — Alberta(9).Chained2017$(2).Industry(N)
   AB_GDP_MINING_OIL_GAS: { tableId: 36100402, coordinate: "9.2.22.0.0.0.0.0.0.0" }, // Mining, quarrying, oil & gas extraction
@@ -128,7 +148,16 @@ export const STATSCAN_SERIES = {
   AB_WEEKLY_EARNINGS: { tableId: 14100223, coordinate: "10.2.2.0.0.0.0.0.0.0" },
 
   // Business counts — Table 33-10-0270: Experimental business openings/closures, Alberta(38)
-  AB_BUSINESS_COUNT: { tableId: 33100270, coordinate: "38.1.1.0.0.0.0.0.0.0" }, // Active businesses
+  // Coordinate: Alberta(38).Metric(N).NAICS(N)
+  AB_BUSINESS_COUNT: { tableId: 33100270, coordinate: "38.1.1.0.0.0.0.0.0.0" }, // Active businesses, all industries
+  AB_BUSINESS_OPENINGS: { tableId: 33100270, coordinate: "38.2.1.0.0.0.0.0.0.0" }, // Openings, all industries
+  AB_BUSINESS_CLOSURES: { tableId: 33100270, coordinate: "38.3.1.0.0.0.0.0.0.0" }, // Closures, all industries
+  AB_BUSINESS_COUNT_RETAIL: { tableId: 33100270, coordinate: "38.1.7.0.0.0.0.0.0.0" }, // Active retail trade (NAICS 44-45)
+  AB_BUSINESS_OPENINGS_RETAIL: { tableId: 33100270, coordinate: "38.2.7.0.0.0.0.0.0.0" }, // Retail openings
+  AB_BUSINESS_CLOSURES_RETAIL: { tableId: 33100270, coordinate: "38.3.7.0.0.0.0.0.0.0" }, // Retail closures
+  AB_BUSINESS_COUNT_FOOD: { tableId: 33100270, coordinate: "38.1.10.0.0.0.0.0.0.0" }, // Active accommodation & food services
+  AB_BUSINESS_OPENINGS_FOOD: { tableId: 33100270, coordinate: "38.2.10.0.0.0.0.0.0.0" }, // Food services openings
+  AB_BUSINESS_CLOSURES_FOOD: { tableId: 33100270, coordinate: "38.3.10.0.0.0.0.0.0.0" }, // Food services closures
 
   // CMHC housing data via StatsCan — Table 34-10-0154
   // "Housing starts, under construction and completions in selected CMAs"
