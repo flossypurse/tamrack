@@ -104,6 +104,18 @@ export async function GET(request: Request) {
       source: "Infrastructure Canada",
       url: "https://www.infrastructure.gc.ca/alt-format/opendata/icp-pic-en.json",
     },
+    {
+      source: "Represent API (Politics)",
+      url: "https://represent.opennorth.ca/representatives/alberta-legislature/?format=json&limit=1",
+    },
+    {
+      source: "OpenParliament",
+      url: "https://api.openparliament.ca/votes/?format=json&limit=1",
+    },
+    {
+      source: "Alberta CKAN (Fiscal)",
+      url: "https://open.alberta.ca/api/3/action/package_show?id=grant-disclosure",
+    },
     ...(aesoKey
       ? [
           {
