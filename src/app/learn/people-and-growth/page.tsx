@@ -595,7 +595,7 @@ export default function PeopleAndGrowthPage() {
       <PageHeader
         title="People & Growth"
         description="Immigration, migration, demographics — and whether Alberta's communities are building fast enough to keep up."
-        category="tools"
+        category="learn"
         icon={<Users size={20} />}
       />
 

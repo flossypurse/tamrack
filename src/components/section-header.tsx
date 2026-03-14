@@ -11,6 +11,7 @@ const categoryColors: Record<Category, string> = {
   municipalities: "var(--cat-municipalities)",
   tools: "var(--cat-tools)",
   health: "var(--cat-health)",
+  learn: "var(--cat-learn)",
 };
 
 /**

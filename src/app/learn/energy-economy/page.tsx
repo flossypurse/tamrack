@@ -893,7 +893,7 @@ export default function EnergyEconomyLesson() {
       <PageHeader
         title="Alberta's Energy Engine"
         description="How energy prices ripple through every corner of the province — jobs, migration, housing, and government revenue. Traced with live data."
-        category="tools"
+        category="learn"
         icon={<Flame size={20} />}
       />
 

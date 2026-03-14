@@ -596,7 +596,7 @@ export default function YourTaxDollarsPage() {
       <PageHeader
         title="Your Tax Dollars at Work"
         description="How property assessments become municipal budgets become community services — with live data for real Alberta municipalities."
-        category="tools"
+        category="learn"
         icon={<Landmark size={20} />}
       />
 

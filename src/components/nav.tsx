@@ -239,7 +239,6 @@ const toolsSection: NavSection = {
   icon: Wrench,
   items: [
     { href: "/tools", label: "Overview", icon: Wrench },
-    { href: "/tools/learn", label: "Learn", icon: GraduationCap },
     { href: "/tools/docs", label: "API Docs", icon: BookOpen },
     { href: "/tools/sources", label: "Data Sources", icon: Database },
   ],

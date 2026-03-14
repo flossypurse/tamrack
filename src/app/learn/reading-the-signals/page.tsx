@@ -642,7 +642,7 @@ export default function ReadingTheSignalsPage() {
       <PageHeader
         title="Reading the Signals"
         description="The difference between leading and lagging indicators — and how to use them to see what's coming before it arrives."
-        category="tools"
+        category="learn"
         icon={<TrendingUp size={20} />}
       />
 

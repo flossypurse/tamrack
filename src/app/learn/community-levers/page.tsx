@@ -382,7 +382,7 @@ export default function CommunityLeversLesson() {
       <PageHeader
         title="The Community Levers"
         description="What can you actually change? Every pattern from the Learn series, mapped to the levers that shift it \u2014 federal, municipal, and community."
-        category="tools"
+        category="learn"
         icon={<Wrench size={20} />}
       />
 

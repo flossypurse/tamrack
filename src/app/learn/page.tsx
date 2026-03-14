@@ -539,7 +539,7 @@ export default function LearnHub() {
       <PageHeader
         title="Learn"
         description="Understand the patterns that shape your community. Not theory — live data from Alberta, explained in plain English, with the levers you can actually pull."
-        category="tools"
+        category="learn"
         icon={<GraduationCap size={20} />}
       />
 
@@ -563,7 +563,7 @@ export default function LearnHub() {
         <SectionHeader
           title="Guided Explorations"
           icon={<BookOpen size={16} />}
-          category="tools"
+          category="learn"
         />
         <p className="text-xs text-muted mb-4">
           Each lesson opens with a question you&apos;ve probably asked, walks
@@ -582,7 +582,7 @@ export default function LearnHub() {
         <SectionHeader
           title="Reference Tools"
           icon={<Brain size={16} />}
-          category="tools"
+          category="learn"
         />
         <p className="text-xs text-muted mb-4">
           Quick-reference tools from the original Learn page — quiz yourself,

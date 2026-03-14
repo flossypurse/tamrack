@@ -859,7 +859,7 @@ export default function SafetyAndProsperityLesson() {
       <PageHeader
         title="Safety & Prosperity"
         description="How crime, health, and economic conditions move together with predictable time lags. Traced with live data from StatsCan, Alberta Regional Dashboard, and Bank of Canada."
-        category="tools"
+        category="learn"
         icon={<Shield size={20} />}
       />
 

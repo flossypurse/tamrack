@@ -624,7 +624,7 @@ export default function HousingMachinePage() {
       <PageHeader
         title="The Housing Machine"
         description="How a Bank of Canada rate decision flows through mortgage rates, building permits, construction, vacancy — all the way to your rent cheque."
-        category="tools"
+        category="learn"
         icon={<Home size={20} />}
       />
 
