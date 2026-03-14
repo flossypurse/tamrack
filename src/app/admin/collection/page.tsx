@@ -9,6 +9,7 @@ import {
 } from "@/lib/db";
 import { Card, CardHeader } from "@/components/card";
 import { PageHeader } from "@/components/page-header";
+import { AdminNav } from "../admin-nav";
 import {
   Database,
   Clock,
@@ -67,6 +68,8 @@ export default async function CollectionPage() {
         description="Monitor and trigger data collection across all sources"
         category="tools"
       />
+
+      <AdminNav />
 
       {/* Key Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

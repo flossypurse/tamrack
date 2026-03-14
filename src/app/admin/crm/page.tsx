@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardHeader } from "@/components/card";
 import { PageHeader } from "@/components/page-header";
+import { AdminNav } from "../admin-nav";
 import {
   UserPlus,
   Search,
@@ -205,6 +206,8 @@ export default function CRMPage() {
         description="Track outreach to potential users and partners"
         category="tools"
       />
+
+      <AdminNav />
 
       {/* Pipeline Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
