@@ -80,6 +80,13 @@ function latestPeriod(data: RegionalDataPoint[]): string {
   return sorted.at(-1)?.period ?? "";
 }
 
+/** Filter regional data to a specific dimension value (e.g. "Grand Total") */
+function filterByDimension(data: RegionalDataPoint[], dimensionValue: string): RegionalDataPoint[] {
+  return data.filter((pt) =>
+    pt.dimensions.some((d) => d.value === dimensionValue)
+  );
+}
+
 /** Format a large number with commas and optional prefix/suffix */
 function fmt(n: number, opts?: { prefix?: string; suffix?: string; decimals?: number }): string {
   const { prefix = "", suffix = "", decimals } = opts ?? {};
@@ -116,9 +123,14 @@ async function fetchForAll(
 // ============================================================
 
 async function AssessmentSection() {
-  const assessmentMap = await fetchForAll(
-    REGIONAL_INDICATORS["Assessment Base"]
+  const rawMap = await fetchForAll(
+    REGIONAL_INDICATORS["Total Equalized Assessment"]
   );
+  // Filter to "Grand Total" dimension (the API returns rows per property type)
+  const assessmentMap = new Map<string, RegionalDataPoint[]>();
+  for (const [muni, data] of rawMap) {
+    assessmentMap.set(muni, filterByDimension(data, "Grand Total"));
+  }
 
   return (
     <LessonSection title="It Starts With Your Assessment">
@@ -481,11 +493,16 @@ async function SpendingSection() {
 // ============================================================
 
 async function ComparisonSection() {
-  const [populationMap, assessmentMap, taxRateMap] = await Promise.all([
+  const [populationMap, rawAssessmentMap, taxRateMap] = await Promise.all([
     fetchForAll(REGIONAL_INDICATORS["Population"]),
-    fetchForAll(REGIONAL_INDICATORS["Assessment Base"]),
+    fetchForAll(REGIONAL_INDICATORS["Total Equalized Assessment"]),
     fetchForAll(REGIONAL_INDICATORS["Municipal Tax Rates"]),
   ]);
+  // Filter to "Grand Total" dimension
+  const assessmentMap = new Map<string, RegionalDataPoint[]>();
+  for (const [muni, data] of rawAssessmentMap) {
+    assessmentMap.set(muni, filterByDimension(data, "Grand Total"));
+  }
 
   // Build comparison rows
   const rows = MUNICIPALITIES.map((muni) => {
