@@ -206,6 +206,20 @@ const coreSections: NavSection[] = [
     ],
   },
   {
+    label: "Politics",
+    icon: Landmark,
+    items: [
+      { href: "/politics", label: "Overview", icon: Landmark },
+      { href: "/politics/legislature", label: "Legislature", icon: Building2 },
+      { href: "/politics/federal", label: "Federal", icon: Building },
+      { href: "/politics/elections", label: "Elections", icon: Shield },
+      { href: "/politics/campaign-finance", label: "Campaign Finance", icon: CreditCard },
+      { href: "/politics/spending", label: "Gov Spending", icon: Scale },
+      { href: "/politics/transfers", label: "Transfers", icon: GitCompare },
+      { href: "/politics/legislation", label: "Legislation", icon: BookOpen },
+    ],
+  },
+  {
     label: "Public Safety",
     icon: Siren,
     items: [
@@ -215,7 +229,6 @@ const coreSections: NavSection[] = [
       { href: "/safety/traffic", label: "Traffic & Roads", icon: Car },
       { href: "/safety/seismic", label: "Seismic", icon: Activity },
       { href: "/safety/emergencies", label: "Emergencies", icon: Siren },
-      { href: "/safety/elections", label: "Politics", icon: Landmark },
     ],
   },
 ];

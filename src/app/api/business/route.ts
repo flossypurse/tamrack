@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateApiRequest } from "@/lib/api-auth";
 import {
-  fetchEdmontonBusinessLicenceDetails,
+  fetchEdmontonBusinessLicenceRecordDetails,
   fetchEdmontonBusinessDetailedCategories,
   fetchEdmontonBusinessCount,
   fetchCalgaryBusinessByType,
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
   try {
     if (type === "edmonton-licences") {
-      const data = await fetchEdmontonBusinessLicenceDetails(Math.min(limit, 2000));
+      const data = await fetchEdmontonBusinessLicenceRecordDetails(Math.min(limit, 2000));
       return NextResponse.json({ type, records: data.length, data });
     }
 

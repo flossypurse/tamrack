@@ -6,7 +6,6 @@ import {
   Siren,
   Car,
   Activity,
-  Landmark,
   Shield,
   Flame,
   ArrowRight,
@@ -15,7 +14,7 @@ import {
 export const metadata: Metadata = {
   title: "Alberta Public Safety — Crime, Fire Response, Traffic, Seismic & More",
   description:
-    "Alberta public safety data — crime severity index, fire and emergency response, highway conditions, seismic activity, emergency alerts, and political landscape. Real-time data from provincial and federal monitoring systems.",
+    "Alberta public safety data — crime severity index, fire and emergency response, highway conditions, seismic activity, and emergency alerts. Real-time data from provincial and federal monitoring systems.",
 };
 
 const pages = [
@@ -59,14 +58,6 @@ const pages = [
       "Real-time emergency and severe weather alerts from Canada's Alert Ready system, plus traffic alerts. Alert Ready is the national public alerting system — it pushes warnings for tornadoes, extreme cold, AMBER alerts, wildfire evacuations, and other life-safety events. This page shows what's active right now and recent alert history.",
     sources: "Alert Ready, traffic alert systems",
   },
-  {
-    href: "/safety/elections",
-    icon: Landmark,
-    title: "Politics",
-    description:
-      "Alberta's elected officials, electoral district boundaries, and political landscape at the provincial and municipal level. Who represents each area, party affiliations, and the current composition of the legislature. Useful context for understanding local policy priorities — zoning decisions, infrastructure spending, and economic development incentives are all political outcomes.",
-    sources: "Alberta government data",
-  },
 ];
 
 export default function SafetyPage() {
@@ -76,7 +67,7 @@ export default function SafetyPage() {
         title="Public Safety"
         category="safety"
         icon={<Siren size={22} />}
-        description="Crime data, fire and emergency response, road conditions, seismic monitoring, alerts, and political landscape."
+        description="Crime data, fire and emergency response, road conditions, seismic monitoring, and alerts."
       />
 
       {/* Explainer */}
@@ -84,9 +75,8 @@ export default function SafetyPage() {
         <div className="prose-sm space-y-3 text-sm text-muted">
           <p>
             This section covers data that affects <strong className="text-foreground">physical safety and
-            operational risk</strong> in Alberta. It might seem like a grab bag — traffic, earthquakes, emergencies,
-            politics — but these are the non-economic factors that can materially affect property values,
-            insurance costs, and business operations.
+            operational risk</strong> in Alberta. Traffic, earthquakes, emergencies — the non-economic factors
+            that can materially affect property values, insurance costs, and business operations.
           </p>
           <p>
             <strong className="text-foreground">Traffic & Roads</strong> is the most operationally useful — it's
@@ -94,12 +84,6 @@ export default function SafetyPage() {
             <strong className="text-foreground">Emergencies</strong> shows you what's happening right now.{" "}
             <strong className="text-foreground">Seismic</strong> is more of a long-term context layer — understanding
             induced seismicity patterns is relevant if you're evaluating property near active well sites.
-          </p>
-          <p>
-            <strong className="text-foreground">Politics</strong> is included here because political decisions —
-            zoning changes, infrastructure investments, tax policy — are upstream of many economic outcomes.
-            Knowing who represents a given area and what their priorities are can be the difference between
-            a development that gets approved and one that doesn't.
           </p>
         </div>
       </Card>
