@@ -2589,68 +2589,9 @@ export async function fetchAlbertaEmergencyAlerts(): Promise<EmergencyAlert[]> {
 }
 
 // ============================================================
-// REPRESENT API (Elections — represent.opennorth.ca)
+// REPRESENT API — Moved to data-sources-politics.ts
+// Import from @/lib/data-sources-politics instead.
 // ============================================================
-
-const REPRESENT_BASE = "https://represent.opennorth.ca";
-
-export interface ElectedOfficial {
-  name: string;
-  party: string;
-  district: string;
-  email: string;
-  url: string;
-  photoUrl: string;
-  office: string;
-}
-
-export async function fetchAlbertaMLAs(): Promise<ElectedOfficial[]> {
-  try {
-    const res = await fetch(
-      `${REPRESENT_BASE}/representatives/alberta-legislature/?format=json&limit=100`,
-      { next: { revalidate: 86400 } }
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    const objects = data?.objects || [];
-    return objects.map((o: Record<string, unknown>) => ({
-      name: String(o.name || ""),
-      party: String(o.party_name || ""),
-      district: String(o.district_name || ""),
-      email: String(o.email || ""),
-      url: String(o.url || o.personal_url || ""),
-      photoUrl: String(o.photo_url || ""),
-      office: String(o.elected_office || "MLA"),
-    }));
-  } catch {
-    return [];
-  }
-}
-
-export interface ElectoralDistrict {
-  name: string;
-  id: string;
-  boundaryUrl: string;
-}
-
-export async function fetchAlbertaElectoralDistricts(): Promise<ElectoralDistrict[]> {
-  try {
-    const res = await fetch(
-      `${REPRESENT_BASE}/boundaries/alberta-electoral-districts-2017/?format=json&limit=100`,
-      { next: { revalidate: 86400 } }
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    const objects = data?.objects || [];
-    return objects.map((o: Record<string, unknown>) => ({
-      name: String(o.name || ""),
-      id: String(o.external_id || o.slug || ""),
-      boundaryUrl: String(o.url || ""),
-    }));
-  } catch {
-    return [];
-  }
-}
 
 // Edmonton traffic disruptions (Socrata)
 export async function fetchEdmontonTrafficDisruptions(): Promise<{ description: string; location: string; startDate: string; endDate: string; type: string }[]> {

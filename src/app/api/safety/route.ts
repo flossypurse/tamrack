@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateApiRequest } from "@/lib/api-auth";
+import { fetchAlbertaEmergencyAlerts } from "@/lib/data-sources";
 import {
-  fetchAlbertaEmergencyAlerts,
   fetchAlbertaMLAs,
   fetchAlbertaElectoralDistricts,
-} from "@/lib/data-sources";
+} from "@/lib/data-sources-politics";
 
 // GET /api/safety?type=alerts|mlas|districts
 export async function GET(request: NextRequest) {

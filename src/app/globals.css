@@ -26,6 +26,7 @@
   --cat-intelligence: #7c3aed;
   --cat-environment: #0d9488;
   --cat-safety: #b45309;
+  --cat-politics: #6366f1;
   --cat-municipalities: #c06a2b;
   --cat-tools: #64748b;
   --cat-health: #dc2626;
@@ -57,6 +58,7 @@
   --cat-intelligence: #a78bfa;
   --cat-environment: #2dd4bf;
   --cat-safety: #f59e0b;
+  --cat-politics: #818cf8;
   --cat-municipalities: #d4863a;
   --cat-tools: #94a3b8;
   --cat-health: #ef4444;
@@ -81,6 +83,7 @@
   --color-cat-intelligence: var(--cat-intelligence);
   --color-cat-environment: var(--cat-environment);
   --color-cat-safety: var(--cat-safety);
+  --color-cat-politics: var(--cat-politics);
   --color-cat-municipalities: var(--cat-municipalities);
   --color-cat-tools: var(--cat-tools);
   --color-cat-health: var(--cat-health);

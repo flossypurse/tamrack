@@ -11,6 +11,7 @@ export type Category =
   | "intelligence"
   | "environment"
   | "safety"
+  | "politics"
   | "municipalities"
   | "tools"
   | "health";
@@ -22,6 +23,7 @@ const categoryColors: Record<Category, string> = {
   intelligence: "var(--cat-intelligence)",
   environment: "var(--cat-environment)",
   safety: "var(--cat-safety)",
+  politics: "var(--cat-politics)",
   municipalities: "var(--cat-municipalities)",
   tools: "var(--cat-tools)",
   health: "var(--cat-health)",
@@ -34,6 +36,7 @@ const categoryLabels: Record<Category, string> = {
   intelligence: "Intelligence",
   environment: "Environment",
   safety: "Public Safety",
+  politics: "Politics",
   municipalities: "Municipalities",
   tools: "Tools",
   health: "Health",

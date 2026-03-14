@@ -1,6 +1,8 @@
 // IRCC (Immigration, Refugees and Citizenship Canada) data sources
 // All direct CSV downloads, no authentication required
 
+import { fetchCSV } from "./csv-utils";
+
 export const IRCC_ENDPOINTS = {
   PR_BY_PROVINCE_CATEGORY: "https://www.ircc.canada.ca/opendata-donneesouvertes/data/ODP-PR-PT_IMMCAT.csv",
   PR_BY_PROVINCE_CMA: "https://www.ircc.canada.ca/opendata-donneesouvertes/data/ODP-PR-PT_CMA.csv",
@@ -33,73 +35,6 @@ export interface OccupationRecord {
 export interface TimeSeriesPoint {
   year: number;
   value: number;
-}
-
-// ============================================================
-// Generic CSV fetcher
-// ============================================================
-
-async function fetchCSV(url: string): Promise<Record<string, string>[]> {
-  try {
-    const res = await fetch(url, {
-      next: { revalidate: 86400 },
-    });
-    if (!res.ok) {
-      console.error(`IRCC CSV fetch failed: ${res.status} ${res.statusText} for ${url}`);
-      return [];
-    }
-    const text = await res.text();
-    const lines = text.split("\n").filter((l) => l.trim().length > 0);
-    if (lines.length < 2) return [];
-
-    const headers = parseCSVLine(lines[0]);
-    const rows: Record<string, string>[] = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const values = parseCSVLine(lines[i]);
-      const row: Record<string, string> = {};
-      for (let j = 0; j < headers.length; j++) {
-        row[headers[j].trim()] = (values[j] ?? "").trim();
-      }
-      rows.push(row);
-    }
-    return rows;
-  } catch (err) {
-    console.error(`IRCC CSV fetch error for ${url}:`, err);
-    return [];
-  }
-}
-
-/** Parse a single CSV line, handling quoted fields with commas */
-function parseCSVLine(line: string): string[] {
-  const fields: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQuotes) {
-      if (ch === '"' && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else if (ch === '"') {
-        inQuotes = false;
-      } else {
-        current += ch;
-      }
-    } else {
-      if (ch === '"') {
-        inQuotes = true;
-      } else if (ch === ",") {
-        fields.push(current);
-        current = "";
-      } else {
-        current += ch;
-      }
-    }
-  }
-  fields.push(current);
-  return fields;
 }
 
 // ============================================================
