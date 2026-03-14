@@ -132,28 +132,42 @@ export const STATSCAN_SERIES = {
 
   // CMHC housing data via StatsCan — Table 34-10-0154
   // "Housing starts, under construction and completions in selected CMAs"
-  // Edmonton CMA(4), metric dimension: starts(1)/underConstruction(2)/completions(3), totalUnits(1)
+  // metric dimension: starts(1)/underConstruction(2)/completions(3), totalUnits(1)
+  // Edmonton CMA = member 4, Calgary CMA = member 2
   EDMONTON_HOUSING_STARTS: { tableId: 34100154, coordinate: "4.1.1.0.0.0.0.0.0.0" },
   EDMONTON_HOUSING_COMPLETIONS: { tableId: 34100154, coordinate: "4.3.1.0.0.0.0.0.0.0" },
   EDMONTON_UNDER_CONSTRUCTION: { tableId: 34100154, coordinate: "4.2.1.0.0.0.0.0.0.0" },
+  CALGARY_HOUSING_STARTS: { tableId: 34100154, coordinate: "2.1.1.0.0.0.0.0.0.0" },
+  CALGARY_HOUSING_COMPLETIONS: { tableId: 34100154, coordinate: "2.3.1.0.0.0.0.0.0.0" },
+  CALGARY_UNDER_CONSTRUCTION: { tableId: 34100154, coordinate: "2.2.1.0.0.0.0.0.0.0" },
 
   // CMHC Rental vacancy rate — Table 34-10-0127
   // Apartment structures of six units+, privately initiated. Annual (October survey).
-  // Edmonton CMA = member 4
+  // Edmonton CMA = member 4, Calgary CMA = member 2
   EDMONTON_VACANCY_RATE: { tableId: 34100127, coordinate: "4.0.0.0.0.0.0.0.0.0" },
+  CALGARY_VACANCY_RATE: { tableId: 34100127, coordinate: "2.0.0.0.0.0.0.0.0.0" },
 
   // CMHC Average rents — Table 34-10-0133
-  // Edmonton CMA = member 148, structure type: apartment 3+ = 1, unit type: bachelor=1/1bed=2/2bed=3/3bed=4
+  // structure type: apartment 3+ = 1, unit type: bachelor=1/1bed=2/2bed=3/3bed=4
+  // Edmonton CMA = member 148, Calgary CMA = member 146
   EDMONTON_RENT_BACHELOR: { tableId: 34100133, coordinate: "148.1.1.0.0.0.0.0.0.0" },
   EDMONTON_RENT_1BED: { tableId: 34100133, coordinate: "148.1.2.0.0.0.0.0.0.0" },
   EDMONTON_RENT_2BED: { tableId: 34100133, coordinate: "148.1.3.0.0.0.0.0.0.0" },
   EDMONTON_RENT_3BED: { tableId: 34100133, coordinate: "148.1.4.0.0.0.0.0.0.0" },
+  CALGARY_RENT_BACHELOR: { tableId: 34100133, coordinate: "146.1.1.0.0.0.0.0.0.0" },
+  CALGARY_RENT_1BED: { tableId: 34100133, coordinate: "146.1.2.0.0.0.0.0.0.0" },
+  CALGARY_RENT_2BED: { tableId: 34100133, coordinate: "146.1.3.0.0.0.0.0.0.0" },
+  CALGARY_RENT_3BED: { tableId: 34100133, coordinate: "146.1.4.0.0.0.0.0.0.0" },
 
   // CMHC Absorption rates — Table 34-10-0153
-  // "Canada Mortgage and Housing Corporation, absorptions and unabsorbed inventory, newly completed dwellings"
-  // Edmonton CMA(4), absorbed(1), totalUnits(1)
-  EDMONTON_ABSORPTION_RATE: { tableId: 34100153, coordinate: "4.1.1.0.0.0.0.0.0.0" },
-  EDMONTON_UNABSORBED: { tableId: 34100153, coordinate: "4.2.1.0.0.0.0.0.0.0" },
+  // Province-level only (NOT CMA). Alberta = member 15.
+  // absorbed(1)/unabsorbed(2), totalUnits(1)
+  AB_ABSORPTION_RATE: { tableId: 34100153, coordinate: "15.1.1.0.0.0.0.0.0.0" },
+  AB_UNABSORBED: { tableId: 34100153, coordinate: "15.2.1.0.0.0.0.0.0.0" },
+
+  // CMHC Conventional mortgage rate — Table 34-10-0145
+  // 5-year term, national (monthly since 1951). Canada = member 1.
+  MORTGAGE_RATE_5Y_CONVENTIONAL: { tableId: 34100145, coordinate: "1.0.0.0.0.0.0.0.0.0" },
 } as const;
 
 // ============================================================

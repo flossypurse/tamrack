@@ -10,6 +10,7 @@ import {
   Users,
   Plane,
   Wheat,
+  Cannabis,
   ArrowRight,
 } from "lucide-react";
 
@@ -75,6 +76,14 @@ const pages = [
     description:
       "Farm cash receipts, crop vs. livestock revenue split, commodity price indexes, and agriculture's share of provincial GDP. Agriculture is Alberta's second-largest primary industry after energy — it's less volatile but still commodity-dependent and deeply tied to weather, trade policy, and global grain markets.",
     sources: "Statistics Canada, Bank of Canada",
+  },
+  {
+    href: "/economy/cannabis",
+    icon: Cannabis,
+    title: "Cannabis Industry",
+    description:
+      "Alberta's cannabis retail market — monthly sales, year-over-year growth, market share of total retail, and product type breakdowns. Alberta was the first province to allow fully private cannabis retail and now has the most competitive market in Canada with 900+ licensed stores generating $1B+/year.",
+    sources: "Statistics Canada, Health Canada, AGLC",
   },
 ];
 

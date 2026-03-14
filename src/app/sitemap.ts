@@ -22,7 +22,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "overview/signals",
     // Economy
     "economy/energy", "economy/drilling", "economy/cycle", "economy/diversification",
-    "economy/labour", "economy/migration", "economy/agriculture",
+    "economy/labour", "economy/migration", "economy/agriculture", "economy/cannabis",
     // Real Estate
     "real-estate/prospects", "real-estate/market", "real-estate/neighbourhoods",
     "real-estate/pipeline", "real-estate/rental", "real-estate/commercial",

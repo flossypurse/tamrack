@@ -17,12 +17,17 @@ import {
   BarChart3,
   DollarSign,
   Store,
+  Package,
 } from "lucide-react";
 import {
   fetchStatCanTimeSeries,
   STATSCAN_SERIES,
   type TimeSeriesPoint,
 } from "@/lib/data-sources";
+import {
+  fetchCannabisProductQuarterly,
+  fetchAglcRetailerCount,
+} from "@/lib/data-sources-cannabis";
 
 export const metadata: Metadata = {
   title: "Alberta Cannabis Industry — Retail Sales & Market Data",
@@ -35,7 +40,7 @@ export const metadata: Metadata = {
 // ============================================================
 
 async function getCannabisMetrics() {
-  const [cannabisSales, totalRetail] = await Promise.all([
+  const [cannabisSales, totalRetail, aglcCount] = await Promise.all([
     fetchStatCanTimeSeries(
       STATSCAN_SERIES.AB_CANNABIS_RETAIL_SALES.tableId,
       STATSCAN_SERIES.AB_CANNABIS_RETAIL_SALES.coordinate,
@@ -46,6 +51,7 @@ async function getCannabisMetrics() {
       STATSCAN_SERIES.AB_RETAIL_SALES.coordinate,
       14
     ).catch(() => []),
+    fetchAglcRetailerCount().catch(() => 0),
   ]);
 
   const latest = cannabisSales.at(-1);
@@ -85,6 +91,7 @@ async function getCannabisMetrics() {
       ? `${parseFloat(yoyChange) >= 0 ? "+" : ""}${yoyChange}%`
       : undefined,
     retailShare: retailShare ? `${retailShare}%` : "—",
+    retailerCount: aglcCount > 0 ? `${aglcCount.toLocaleString()}` : "944+",
   };
 }
 
@@ -117,7 +124,7 @@ async function CannabisMetrics() {
       />
       <MetricCard
         title="AGLC Retailers"
-        value="944+"
+        value={m.retailerCount}
         changeLabel="licensed cannabis stores"
         source="AGLC Licensee Registry"
       />
@@ -226,6 +233,47 @@ async function CannabisVsRetailChart() {
         <p className="text-[10px] text-muted/60 mt-2">
           Cannabis has grown from 0% to a consistent ~1% of Alberta&apos;s total retail trade
           within a few years of legalization — a new billion-dollar sector created from scratch.
+        </p>
+      </Card>
+    </ChartCard>
+  );
+}
+
+async function ProductTypeChart() {
+  const data = await fetchCannabisProductQuarterly();
+  if (data.length === 0) {
+    return (
+      <Card>
+        <CardHeader
+          title="Sales by Product Type — Canada"
+          subtitle="Health Canada data unavailable"
+        />
+        <p className="text-xs text-muted">Unable to load Health Canada cannabis market data.</p>
+      </Card>
+    );
+  }
+  const series = [
+    { key: "driedFlower", label: "Dried Flower", color: "#22c55e" },
+    { key: "edibles", label: "Edibles", color: "#f59e0b" },
+    { key: "extracts", label: "Extracts", color: "#8b5cf6" },
+    { key: "topicals", label: "Topicals", color: "#ec4899" },
+  ];
+  return (
+    <ChartCard
+      chartId="economy-cannabis-product-type"
+      title="Cannabis Sales by Product Type — Canada"
+      source="Health Canada Open Data"
+    >
+      <Card>
+        <CardHeader
+          title="Sales by Product Type — Canada"
+          subtitle="Quarterly non-medical sales by category (millions of units, national)"
+          badge="LIVE"
+        />
+        <MultiSeriesLineChart data={data} series={series} height={280} />
+        <p className="text-[10px] text-muted/60 mt-2">
+          National data from Health Canada. Dried flower dominates but edibles and extracts
+          have grown steadily since their legal introduction in late 2019.
         </p>
       </Card>
     </ChartCard>
@@ -354,6 +402,18 @@ export default function CannabisPage() {
         </div>
       </section>
 
+      {/* Product Type Breakdown */}
+      <section>
+        <SectionHeader
+          title="Sales by Product Type"
+          icon={<Package size={16} />}
+          category="economy"
+        />
+        <Suspense fallback={<LoadingCard />}>
+          <ProductTypeChart />
+        </Suspense>
+      </section>
+
       {/* Context */}
       <section>
         <CannabisContext />
@@ -363,7 +423,7 @@ export default function CannabisPage() {
       <section>
         <Card>
           <h3 className="text-sm font-medium mb-2">Coming Soon</h3>
-          <div className="grid sm:grid-cols-2 gap-3 text-xs text-muted">
+          <div className="text-xs text-muted">
             <div className="flex items-start gap-2">
               <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 shrink-0 mt-0.5">
                 PLANNED
@@ -373,20 +433,6 @@ export default function CannabisPage() {
                 <p>
                   AGLC licensee data mapped by municipality — see which areas are
                   oversaturated and where gaps remain.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 shrink-0 mt-0.5">
-                PLANNED
-              </span>
-              <div>
-                <p className="font-medium text-foreground">
-                  Health Canada Sales by Product
-                </p>
-                <p>
-                  National breakdown of dried flower, edibles, extracts, and topicals
-                  — quarterly data from Health Canada Open Government.
                 </p>
               </div>
             </div>
