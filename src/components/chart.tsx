@@ -14,6 +14,12 @@ import {
   ResponsiveContainer,
   CartesianGrid,
   Legend,
+  RadarChart as RechartsRadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  ReferenceArea,
 } from "recharts";
 import {
   TimeSeriesPoint,
@@ -539,6 +545,212 @@ export function NeighbourhoodBarChart({
         />
         <Bar dataKey={dataKey} fill={color} radius={[0, 4, 4, 0]} />
       </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+// Radar chart for cycle fingerprint overlay
+export interface RadarDataPoint {
+  indicator: string;
+  current: number;
+  historical: number;
+}
+
+export function CycleRadarChart({
+  data,
+  currentLabel = "Current",
+  historicalLabel = "Best Match",
+  currentColor = "#3b82f6",
+  historicalColor = "#f97316",
+  height = 350,
+}: {
+  data: RadarDataPoint[];
+  currentLabel?: string;
+  historicalLabel?: string;
+  currentColor?: string;
+  historicalColor?: string;
+  height?: number;
+}) {
+  const t = useChartTheme();
+
+  if (!data.length) {
+    return (
+      <div
+        className="flex items-center justify-center text-muted text-xs"
+        style={{ height }}
+      >
+        No data available
+      </div>
+    );
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <RechartsRadarChart data={data} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
+        <PolarGrid stroke={t.grid} />
+        <PolarAngleAxis
+          dataKey="indicator"
+          tick={{ fontSize: 10, fill: t.axis }}
+        />
+        <PolarRadiusAxis
+          tick={{ fontSize: 9, fill: t.axis }}
+          axisLine={false}
+          domain={[-3, 3]}
+          tickCount={4}
+        />
+        <Radar
+          name={historicalLabel}
+          dataKey="historical"
+          stroke={historicalColor}
+          fill={historicalColor}
+          fillOpacity={0.15}
+          strokeWidth={2}
+        />
+        <Radar
+          name={currentLabel}
+          dataKey="current"
+          stroke={currentColor}
+          fill={currentColor}
+          fillOpacity={0.2}
+          strokeWidth={2}
+        />
+        <Legend wrapperStyle={{ fontSize: "11px", color: t.axis }} />
+        <Tooltip
+          contentStyle={tooltipStyle(t)}
+          formatter={(value: unknown, name: unknown) => [
+            `${Number(value).toFixed(2)}σ`,
+            String(name),
+          ]}
+        />
+      </RechartsRadarChart>
+    </ResponsiveContainer>
+  );
+}
+
+// Timeline chart with shaded historical period regions
+export interface CyclePeriodRegion {
+  id: string;
+  startDate: string;
+  endDate: string;
+  color: string;
+  label: string;
+}
+
+export function CycleTimelineChart({
+  data,
+  series,
+  periods,
+  height = 300,
+  dualAxis = false,
+}: {
+  data: MultiSeriesPoint[];
+  series: SeriesConfig[];
+  periods: CyclePeriodRegion[];
+  height?: number;
+  dualAxis?: boolean;
+}) {
+  const t = useChartTheme();
+
+  if (!data.length) {
+    return (
+      <div
+        className="flex items-center justify-center text-muted text-xs"
+        style={{ height }}
+      >
+        No data available
+      </div>
+    );
+  }
+
+  const leftSeries = series.filter((s) => s.yAxisId !== "right");
+  const rightSeries = series.filter((s) => s.yAxisId === "right");
+
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <LineChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={t.grid} />
+
+        {/* Shaded period regions */}
+        {periods.map((p) => (
+          <ReferenceArea
+            key={p.id}
+            x1={p.startDate}
+            x2={p.endDate}
+            fill={p.color}
+            fillOpacity={0.08}
+            stroke={p.color}
+            strokeOpacity={0.2}
+            yAxisId="left"
+          />
+        ))}
+
+        <XAxis
+          dataKey="date"
+          tickFormatter={formatDate}
+          stroke={t.axis}
+          fontSize={10}
+          tickLine={false}
+          axisLine={false}
+        />
+        <YAxis
+          yAxisId="left"
+          stroke={t.axis}
+          fontSize={10}
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={(v) => {
+            const s = leftSeries[0];
+            return `${s?.prefix || ""}${formatValue(v, true)}${s?.suffix || ""}`;
+          }}
+          width={40}
+        />
+        {dualAxis && rightSeries.length > 0 && (
+          <YAxis
+            yAxisId="right"
+            orientation="right"
+            stroke={t.axis}
+            fontSize={10}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(v) => {
+              const s = rightSeries[0];
+              return `${s?.prefix || ""}${formatValue(v, true)}${s?.suffix || ""}`;
+            }}
+            width={40}
+          />
+        )}
+        <Tooltip
+          contentStyle={tooltipStyle(t)}
+          labelFormatter={formatDate}
+          formatter={(value: unknown, name: unknown) => {
+            const n = String(name);
+            const s = series.find((s) => s.key === n);
+            return [
+              `${s?.prefix || ""}${formatValue(Number(value), false)}${s?.suffix || ""}`,
+              s?.label || n,
+            ];
+          }}
+        />
+        <Legend
+          wrapperStyle={{ fontSize: "11px", color: t.axis }}
+          formatter={(value) => {
+            const s = series.find((s) => s.key === value);
+            return s?.label || String(value);
+          }}
+        />
+        {series.map((s) => (
+          <Line
+            key={s.key}
+            type="monotone"
+            dataKey={s.key}
+            stroke={s.color}
+            strokeWidth={2}
+            dot={false}
+            yAxisId={dualAxis && s.yAxisId === "right" ? "right" : "left"}
+            connectNulls
+          />
+        ))}
+      </LineChart>
     </ResponsiveContainer>
   );
 }

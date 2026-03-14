@@ -180,6 +180,7 @@ const coreSections: NavSection[] = [
       { href: "/intelligence/benchmarks", label: "Benchmarks", icon: Scale },
       { href: "/intelligence/corridors", label: "Growth Corridors", icon: Rocket },
       { href: "/intelligence/risk", label: "Market Risk", icon: ShieldAlert },
+      { href: "/intelligence/cycle", label: "Cycle Position", icon: RefreshCw },
       { href: "/intelligence/invest", label: "Investment Thesis", icon: TrendingUp },
       { href: "/intelligence/compare", label: "Compare", icon: GitCompare },
     ],

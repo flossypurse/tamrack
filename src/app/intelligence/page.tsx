@@ -9,6 +9,7 @@ import {
   TrendingUp,
   GitCompare,
   ArrowRight,
+  Clock,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -41,6 +42,14 @@ const pages = [
     description:
       "Composite risk scoring for each municipality based on employment concentration (how dependent is the local economy on one employer or sector?), vacancy rates, supply pipeline pressure, interest rate sensitivity, and insolvency trends. Higher risk doesn't mean \"avoid\" — it means price accordingly.",
     sources: "Statistics Canada, Bank of Canada",
+  },
+  {
+    href: "/intelligence/cycle",
+    icon: Clock,
+    title: "Cycle Positioning",
+    description:
+      "A 10-dimension fingerprint of Alberta's economy compared against five historical periods (2005 boom, 2008 crash, 2014 oil crash, COVID, 2022 recovery). Shows which era today most resembles and what happened next — using 20 years of BoC and StatsCan data.",
+    sources: "Bank of Canada, Statistics Canada — 20yr monthly history",
   },
   {
     href: "/intelligence/invest",
@@ -84,6 +93,7 @@ export default function IntelligencePage() {
             <strong className="text-foreground">Compare</strong> help you evaluate municipalities relative to each other.{" "}
             <strong className="text-foreground">Growth Corridors</strong> ranks them by momentum.{" "}
             <strong className="text-foreground">Market Risk</strong> scores them by downside exposure.{" "}
+            <strong className="text-foreground">Cycle Positioning</strong> tells you which historical era today most resembles.{" "}
             <strong className="text-foreground">Investment Thesis</strong> pulls it all together into a macro view.
           </p>
           <p>
