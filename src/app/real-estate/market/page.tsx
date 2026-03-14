@@ -6,8 +6,16 @@ import { computeTimeRange } from "@/lib/time-range";
 import {
   TimeSeriesAreaChart,
   TimeSeriesBarChart,
+  MultiSeriesLineChart,
+  type MultiSeriesPoint,
   NeighbourhoodBarChart,
 } from "@/components/chart";
+import {
+  fetchHousingStarts,
+  fetchHousingCompletions,
+  fetchUnderConstruction,
+  fetchMortgageRate,
+} from "@/lib/data-sources-cmhc";
 import {
   fetchHotNeighbourhoods,
   fetchRecentResidentialDevPermits,
@@ -55,7 +63,7 @@ import { SectionHeader } from "@/components/section-header";
 // ============================================================
 
 async function getRealEstateMetrics() {
-  const [hotNeighbourhoods, mortgageData, variableData, cmaUnits, housingStarts] =
+  const [hotNeighbourhoods, mortgageData, variableData, cmaUnits, housingStarts, cmhcStarts] =
     await Promise.all([
       fetchHotNeighbourhoods(15).catch(() => []),
       fetchBoCObservations(BOC_SERIES.MORTGAGE_5Y_FIXED, 1).catch(() => null),
@@ -72,6 +80,7 @@ async function getRealEstateMetrics() {
         STATSCAN_SERIES.EDMONTON_HOUSING_STARTS.coordinate,
         2
       ).catch(() => []),
+      fetchHousingStarts(2).catch(() => []),
     ]);
 
   const totalUnits = hotNeighbourhoods.reduce((sum, n) => sum + n.units, 0);
@@ -86,6 +95,7 @@ async function getRealEstateMetrics() {
     variableData?.observations?.[0]?.[BOC_SERIES.MORTGAGE_5Y_VARIABLE]?.v;
   const latestCmaUnits = cmaUnits.at(-1);
   const latestStarts = housingStarts.at(-1);
+  const latestCmhcStarts = cmhcStarts.at(-1) as { date: string; edmonton: number; calgary: number } | undefined;
 
   return {
     totalUnits: totalUnits.toLocaleString(),
@@ -105,6 +115,12 @@ async function getRealEstateMetrics() {
       : "—",
     housingStartsDate: latestStarts?.date
       ? latestStarts.date.slice(0, 7)
+      : "",
+    calgaryStarts: latestCmhcStarts
+      ? latestCmhcStarts.calgary.toLocaleString()
+      : "—",
+    calgaryStartsDate: latestCmhcStarts?.date
+      ? latestCmhcStarts.date.slice(0, 7)
       : "",
   };
 }
@@ -154,6 +170,12 @@ async function KeyMetrics() {
         title="Housing Starts"
         value={m.housingStarts}
         change={m.housingStartsDate ? `as of ${m.housingStartsDate}` : undefined}
+        source="CMHC via StatsCan 34-10-0143"
+      />
+      <MetricCard
+        title="Calgary Housing Starts"
+        value={m.calgaryStarts}
+        change={m.calgaryStartsDate ? `as of ${m.calgaryStartsDate}` : undefined}
         source="CMHC via StatsCan 34-10-0143"
       />
     </div>
@@ -1038,54 +1060,108 @@ async function StAlbertDevPermitsTable() {
 // -- CMHC Housing charts (StatsCan) --
 
 async function HousingStartsChart() {
-  const { tableId, coordinate } = STATSCAN_SERIES.EDMONTON_HOUSING_STARTS;
-  const data = await fetchStatCanTimeSeries(tableId, coordinate, 36);
-  const timeRange = computeTimeRange(data);
+  const data = await fetchHousingStarts(36);
+  const merged: MultiSeriesPoint[] = data.map((d) => ({
+    date: d.date,
+    edmonton: d.edmonton,
+    calgary: d.calgary,
+  }));
+  const timeRange = computeTimeRange(merged);
   return (
-    <ChartCard chartId="re-cmhc-housing-starts" title="Edmonton CMA — Housing Starts" timeRange={timeRange} source="CMHC">
+    <ChartCard chartId="re-cmhc-housing-starts" title="Housing Starts — Edmonton vs Calgary" timeRange={timeRange} source="CMHC">
       <Card>
         <CardHeader
-          title="Edmonton CMA — Housing Starts"
+          title="Housing Starts — Edmonton vs Calgary"
           subtitle="Monthly, all dwelling types (CMHC via StatsCan 34-10-0143)"
           badge="LIVE"
+          freshness="daily"
         />
-        <TimeSeriesBarChart data={data} color="#3b82f6" />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "edmonton", label: "Edmonton", color: "#3b82f6" },
+            { key: "calgary", label: "Calgary", color: "#ef4444" },
+          ]}
+          height={280}
+        />
       </Card>
     </ChartCard>
   );
 }
 
 async function HousingCompletionsChart() {
-  const { tableId, coordinate } = STATSCAN_SERIES.EDMONTON_HOUSING_COMPLETIONS;
-  const data = await fetchStatCanTimeSeries(tableId, coordinate, 36);
-  const timeRange = computeTimeRange(data);
+  const data = await fetchHousingCompletions(36);
+  const merged: MultiSeriesPoint[] = data.map((d) => ({
+    date: d.date,
+    edmonton: d.edmonton,
+    calgary: d.calgary,
+  }));
+  const timeRange = computeTimeRange(merged);
   return (
-    <ChartCard chartId="re-cmhc-completions" title="Edmonton CMA — Housing Completions" timeRange={timeRange} source="CMHC">
+    <ChartCard chartId="re-cmhc-completions" title="Housing Completions — Edmonton vs Calgary" timeRange={timeRange} source="CMHC">
       <Card>
         <CardHeader
-          title="Edmonton CMA — Housing Completions"
+          title="Housing Completions — Edmonton vs Calgary"
           subtitle="Monthly completions (CMHC via StatsCan 34-10-0145)"
           badge="LIVE"
+          freshness="daily"
         />
-        <TimeSeriesBarChart data={data} color="#10b981" />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "edmonton", label: "Edmonton", color: "#10b981" },
+            { key: "calgary", label: "Calgary", color: "#f59e0b" },
+          ]}
+          height={280}
+        />
       </Card>
     </ChartCard>
   );
 }
 
 async function UnderConstructionChart() {
-  const { tableId, coordinate } = STATSCAN_SERIES.EDMONTON_UNDER_CONSTRUCTION;
-  const data = await fetchStatCanTimeSeries(tableId, coordinate, 36);
-  const timeRange = computeTimeRange(data);
+  const data = await fetchUnderConstruction(36);
+  const merged: MultiSeriesPoint[] = data.map((d) => ({
+    date: d.date,
+    edmonton: d.edmonton,
+    calgary: d.calgary,
+  }));
+  const timeRange = computeTimeRange(merged);
   return (
-    <ChartCard chartId="re-cmhc-under-construction" title="Edmonton CMA — Under Construction" timeRange={timeRange} source="CMHC">
+    <ChartCard chartId="re-cmhc-under-construction" title="Under Construction — Edmonton vs Calgary" timeRange={timeRange} source="CMHC">
       <Card>
         <CardHeader
-          title="Edmonton CMA — Under Construction"
+          title="Under Construction — Edmonton vs Calgary"
           subtitle="Units under construction (CMHC via StatsCan 34-10-0147)"
           badge="LIVE"
+          freshness="daily"
         />
-        <TimeSeriesAreaChart data={data} color="#f59e0b" />
+        <MultiSeriesLineChart
+          data={merged}
+          series={[
+            { key: "edmonton", label: "Edmonton", color: "#f59e0b" },
+            { key: "calgary", label: "Calgary", color: "#8b5cf6" },
+          ]}
+          height={280}
+        />
+      </Card>
+    </ChartCard>
+  );
+}
+
+async function MortgageRateChart() {
+  const data = await fetchMortgageRate(60);
+  const timeRange = computeTimeRange(data);
+  return (
+    <ChartCard chartId="re-cmhc-mortgage-rate" title="5-Year Conventional Mortgage Rate" timeRange={timeRange} source="CMHC">
+      <Card>
+        <CardHeader
+          title="5-Year Conventional Mortgage Rate"
+          subtitle="National average, monthly (CMHC via StatsCan 34-10-0145)"
+          badge="LIVE"
+          freshness="daily"
+        />
+        <TimeSeriesAreaChart data={data} color="#ec4899" valueSuffix="%" />
       </Card>
     </ChartCard>
   );
@@ -1254,9 +1330,9 @@ export default function RealEstatePage() {
       <section>
         <SectionHeader title="Housing Market (CMHC via StatsCan)" icon={<Home size={16} />} category="realestate" />
         <p className="text-xs text-muted mb-3">
-          Housing starts, completions, and units under construction for the Edmonton CMA. Sourced from CMHC surveys published through Statistics Canada.
+          Housing starts, completions, and units under construction for Edmonton and Calgary CMAs, plus national mortgage rates.
         </p>
-        <div className="grid lg:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Suspense fallback={<LoadingCard />}>
             <HousingStartsChart />
           </Suspense>
@@ -1265,6 +1341,9 @@ export default function RealEstatePage() {
           </Suspense>
           <Suspense fallback={<LoadingCard />}>
             <UnderConstructionChart />
+          </Suspense>
+          <Suspense fallback={<LoadingCard />}>
+            <MortgageRateChart />
           </Suspense>
         </div>
       </section>

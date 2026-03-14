@@ -22,7 +22,12 @@ import {
   type ConstructionProject,
 } from "@/lib/municipality-data";
 import { fetchAllRegionalData, type RegionalDashboardRecord } from "@/lib/data-sources";
-import { Building2, Home, Store, HardHat, MapPin, FileText, BarChart3 } from "lucide-react";
+import { countPlaceTypes } from "@/lib/data-sources-google";
+import {
+  Building2, Home, Store, HardHat, MapPin, FileText, BarChart3,
+  UtensilsCrossed, GraduationCap, Hospital, Pill, ShoppingCart,
+  Fuel, Landmark, Dumbbell, Trees, BookOpen,
+} from "lucide-react";
 
 // Generate static paths for all live municipalities
 export function generateStaticParams() {
@@ -650,6 +655,73 @@ async function RegionalDataSection({ slug }: { slug: string }) {
 }
 
 // ============================================================
+// Local Amenities (Google Maps Places)
+// ============================================================
+
+const AMENITY_ICONS: Record<string, React.ReactNode> = {
+  restaurant: <UtensilsCrossed size={14} />,
+  school: <GraduationCap size={14} />,
+  hospital: <Hospital size={14} />,
+  pharmacy: <Pill size={14} />,
+  supermarket: <ShoppingCart size={14} />,
+  gas_station: <Fuel size={14} />,
+  bank: <Landmark size={14} />,
+  gym: <Dumbbell size={14} />,
+  park: <Trees size={14} />,
+  library: <BookOpen size={14} />,
+};
+
+const AMENITY_LABELS: Record<string, string> = {
+  restaurant: "Restaurants",
+  school: "Schools",
+  hospital: "Hospitals",
+  pharmacy: "Pharmacies",
+  supermarket: "Supermarkets",
+  gas_station: "Gas Stations",
+  bank: "Banks",
+  gym: "Gyms",
+  park: "Parks",
+  library: "Libraries",
+};
+
+async function AmenitiesSection({ slug }: { slug: string }) {
+  if (!process.env.GOOGLE_MAPS_API_KEY) return null;
+
+  const config = getMunicipality(slug)!;
+  const { counts } = await countPlaceTypes(config.name);
+
+  // If no counts came back (e.g. geocode failed), skip
+  if (Object.keys(counts).length === 0) return null;
+
+  return (
+    <section>
+      <SectionHeader title="Local Amenities" icon={<MapPin size={16} />} category="municipalities" />
+      <Card>
+        <CardHeader
+          title="Local Amenities"
+          subtitle="Within 5km radius"
+          freshness="daily"
+        />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {Object.entries(counts).map(([type, count]) => (
+            <div
+              key={type}
+              className="flex items-center gap-2.5 rounded-lg bg-card-border/30 px-3 py-2.5"
+            >
+              <span className="text-muted shrink-0">{AMENITY_ICONS[type]}</span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold leading-tight">{count}</p>
+                <p className="text-[10px] text-muted truncate">{AMENITY_LABELS[type] || type}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </section>
+  );
+}
+
+// ============================================================
 // Loading fallbacks
 // ============================================================
 
@@ -756,6 +828,11 @@ export default async function MunicipalityPage({ params }: { params: Promise<{ s
       {/* Regional Dashboard Data */}
       <Suspense fallback={<LoadingCard />}>
         <RegionalDataSection slug={slug} />
+      </Suspense>
+
+      {/* Local Amenities (Google Maps) */}
+      <Suspense fallback={<LoadingCard />}>
+        <AmenitiesSection slug={slug} />
       </Suspense>
 
       {/* Data Sources */}

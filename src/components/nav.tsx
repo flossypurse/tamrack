@@ -148,6 +148,7 @@ const coreSections: NavSection[] = [
       { href: "/real-estate/neighbourhoods", label: "Neighbourhoods", icon: MapPin },
       { href: "/real-estate/pipeline", label: "Dev Pipeline", icon: Building },
       { href: "/real-estate/rental", label: "Rental Intel", icon: Home },
+      { href: "/real-estate/assessments", label: "Assessments", icon: Building2 },
       { href: "/real-estate/commercial", label: "Commercial", icon: Store },
     ],
   },
