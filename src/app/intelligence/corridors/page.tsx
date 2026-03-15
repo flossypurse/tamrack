@@ -302,7 +302,13 @@ export default function CorridorsPage() {
             </ul>
             <p className="text-muted/60">
               Signals: Surge (75+), Growing (55-74), Stable (35-54), Emerging (&lt;35).
-              Scores will improve as more data sources are added (permits, traffic, development stages).
+            </p>
+            <p className="text-accent-amber/80">
+              <strong>Data availability bias:</strong> Municipalities that publish more data via public APIs score higher
+              because they have more factors contributing to their score. For example, Edmonton and Calgary score well
+              partly because they expose business licence data that 28 other municipalities don&apos;t publish.
+              Six &ldquo;regional-only&rdquo; municipalities (Red Deer, Wood Buffalo, Beaumont, etc.) are excluded entirely
+              because they have no parcel-level data. Scores will become more equitable as more data sources are wired.
             </p>
           </div>
         </Card>

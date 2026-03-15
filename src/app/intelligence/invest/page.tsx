@@ -156,8 +156,9 @@ async function PolicyRateChart() {
       <Card>
         <CardHeader
           title="BoC Policy Rate Trend"
-          subtitle="The cost of capital — rate cuts signal easing, rate hikes signal tightening"
+          subtitle="The cost of capital — rate cuts signal easing, rate hikes signal tightening. Sourced from BoC Valet API (series V39079), updated daily."
           badge="LIVE"
+          freshness="hourly"
         />
         <TimeSeriesAreaChart data={data} color="#3b82f6" height={280} />
       </Card>
@@ -173,8 +174,9 @@ async function EnergyIndexChart() {
       <Card>
         <CardHeader
           title="BoC Energy Commodity Price Index"
-          subtitle="The master signal for Alberta — tracks crude, natural gas, coal"
+          subtitle="The master signal for Alberta — tracks crude, natural gas, coal. This is the Bank of Canada's BCPI energy sub-index (2002=100). When this rises, Alberta's GDP, employment, and migration follow within 6-12 months."
           badge="LIVE"
+          freshness="hourly"
         />
         <TimeSeriesAreaChart data={data} color="#f97316" height={280} />
       </Card>
@@ -208,8 +210,9 @@ async function EnergyVsCadChart() {
       <Card>
         <CardHeader
           title="Energy Price vs CAD/USD"
-          subtitle="The petro-dollar correlation — energy drives the loonie"
+          subtitle="The petro-dollar correlation — energy drives the loonie. Alberta's economy is energy-weighted, so oil price changes flow through to CAD/USD within weeks. Both series from BoC Valet API."
           badge="LIVE"
+          freshness="hourly"
         />
         <MultiSeriesLineChart
           data={merged}
@@ -245,8 +248,9 @@ async function EmploymentChart() {
       <Card>
         <CardHeader
           title="Alberta Employment"
-          subtitle="Total employment, seasonally adjusted — the jobs signal"
+          subtitle="Total employment, seasonally adjusted — the jobs signal. From StatsCan Labour Force Survey (table 14-10-0287). Employment is a lagging indicator — it confirms what energy prices already signaled."
           badge="LIVE"
+          freshness="daily"
         />
         <TimeSeriesAreaChart data={data} color="#10b981" height={280} compact />
       </Card>
@@ -263,8 +267,9 @@ async function MigrationChart() {
       <Card>
         <CardHeader
           title="Net Interprovincial Migration"
-          subtitle="People voting with their feet — positive = Alberta is attracting Canadians"
+          subtitle="People voting with their feet — positive = Alberta is attracting Canadians. From StatsCan quarterly demographic estimates. Migration drives housing demand with a 6-12 month lag."
           badge="LIVE"
+          freshness="daily"
         />
         <TimeSeriesBarChart data={data} color="#3b82f6" height={280} />
       </Card>
@@ -281,8 +286,9 @@ async function HousingStartsChart() {
       <Card>
         <CardHeader
           title="Edmonton CMA Housing Starts"
-          subtitle="New construction activity — leading indicator of supply pipeline"
+          subtitle="New construction activity — a leading indicator of supply pipeline. From CMHC via StatsCan. Covers the Edmonton Census Metropolitan Area including surrounding municipalities."
           badge="LIVE"
+          freshness="daily"
         />
         <TimeSeriesBarChart data={data} color="#8b5cf6" height={280} />
       </Card>
@@ -300,8 +306,9 @@ async function PermitValueChart() {
       <Card>
         <CardHeader
           title="Edmonton CMA Residential Permit Value"
-          subtitle="Dollar value of residential building permits — developer confidence"
+          subtitle="Dollar value of residential building permits — a proxy for developer confidence and scale of investment. From StatsCan building permits survey. Higher values = larger projects being approved."
           badge="LIVE"
+          freshness="daily"
         />
         <TimeSeriesAreaChart data={data} color="#f59e0b" height={280} compact />
       </Card>

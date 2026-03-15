@@ -278,8 +278,9 @@ async function UnemploymentTrendChart() {
       <Card>
         <CardHeader
           title="Alberta Unemployment Rate"
-          subtitle="The lagging indicator of economic health. Rising unemployment = rising default risk."
+          subtitle="The lagging indicator of economic health. Rising unemployment = rising default risk. Sourced from StatsCan Labour Force Survey (table 14-10-0287), seasonally adjusted, released monthly."
           badge="LIVE"
+          freshness="daily"
         />
         <TimeSeriesAreaChart data={data} color="#ef4444" height={250} valueSuffix="%" />
       </Card>
@@ -319,8 +320,9 @@ async function RateVsStartsChart() {
       <Card>
         <CardHeader
           title="Policy Rate vs Housing Starts"
-          subtitle="When rates rise, starts fall 6-12 months later. The mortgage stress transmission channel."
+          subtitle="When rates rise, starts fall 6-12 months later. The mortgage stress transmission channel. BoC rate from Valet API (daily), housing starts from StatsCan/CMHC (monthly)."
           badge="LIVE"
+          freshness="daily"
         />
         <MultiSeriesLineChart
           data={merged}
@@ -368,8 +370,9 @@ async function EnergyVsUnemploymentChart() {
       <Card>
         <CardHeader
           title="Energy Index vs Unemployment"
-          subtitle="Alberta's fundamental risk: energy drops → jobs drop → real estate follows. The lag is 6-18 months."
+          subtitle="Alberta's fundamental risk: energy drops → jobs drop → real estate follows. The lag is 6-18 months. Energy index from BoC BCPI (daily), unemployment from StatsCan LFS (monthly)."
           badge="LIVE"
+          freshness="daily"
         />
         <MultiSeriesLineChart
           data={merged}

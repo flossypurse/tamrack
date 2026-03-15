@@ -385,6 +385,28 @@ export default function ComparePage() {
         </section>
       )}
 
+      {/* Data context */}
+      <section>
+        <Card>
+          <div className="text-xs text-muted space-y-1.5">
+            <p className="text-foreground font-medium">Understanding data availability</p>
+            <p>
+              Each municipality in Alberta independently decides what data to publish via ArcGIS or Socrata APIs.
+              A <X size={10} className="inline text-muted/30" /> in the comparison table means that municipality
+              doesn&apos;t publish that data type — not that the underlying information doesn&apos;t exist.
+              Edmonton and Calgary have the most comprehensive open data portals (assessments, permits, businesses, dev permits).
+              Smaller municipalities often publish only zoning or parcel boundary data.
+              Six municipalities provide only provincial-level indicators from the Alberta Regional Dashboard.
+            </p>
+            <p>
+              All data is fetched live from government APIs. Provincial indicators (population, income, permits, rents)
+              come from the Alberta Regional Dashboard and are available for <em>all</em> municipalities regardless
+              of their ArcGIS availability — see individual municipality pages for those metrics.
+            </p>
+          </div>
+        </Card>
+      </section>
+
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
         Alberta Pulse Check &mdash; Compare &mdash; All data from free public APIs
       </footer>

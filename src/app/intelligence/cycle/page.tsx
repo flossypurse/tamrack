@@ -131,8 +131,9 @@ async function RadarOverlay() {
     <Card>
       <CardHeader
         title="Economic Fingerprint"
-        subtitle={`Current Alberta economy (blue) overlaid with ${best.period.shortLabel} average (orange). Each axis is a z-score: 0 = historical mean, ±2 = two standard deviations.`}
+        subtitle={`Current Alberta economy (blue) overlaid with ${best.period.shortLabel} average (orange). Each axis is a z-score: 0 = historical mean, ±2 = two standard deviations. Built from 10 BoC and StatsCan indicators with 20 years of monthly history.`}
         badge="LIVE"
+        freshness="daily"
       />
       <CycleRadarChart
         data={radarData}

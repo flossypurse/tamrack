@@ -81,8 +81,9 @@ async function BenchmarkOverview() {
     <Card>
       <CardHeader
         title={`${benchmarks.length} Municipalities Benchmarked`}
-        subtitle="Live data from municipal ArcGIS endpoints — parcels, assessments, businesses, vacant lots"
+        subtitle="Live data from municipal ArcGIS and Socrata endpoints — parcels, assessments, businesses, vacant lots. Municipalities showing '—' for a metric don't publish that data via a public API."
         badge="LIVE"
+        freshness="daily"
       />
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
@@ -137,8 +138,9 @@ async function AssessmentComparison() {
       <Card>
         <CardHeader
           title="Average Assessment by Municipality"
-          subtitle="Higher average = more expensive properties. Compare to find value opportunities."
+          subtitle="Higher average = more expensive properties. Only municipalities that publish parcel-level assessment data via ArcGIS or Socrata appear here — 6 regional-only municipalities (Red Deer, Wood Buffalo, Beaumont, etc.) are excluded because they don't expose property-level APIs."
           badge="LIVE"
+          freshness="daily"
         />
         <NeighbourhoodBarChart
           data={data}
@@ -166,8 +168,9 @@ async function ParcelCountComparison() {
       <Card>
         <CardHeader
           title="Total Parcels by Municipality"
-          subtitle="A proxy for development density — more parcels = more built-out."
+          subtitle="A proxy for development density — more parcels = more built-out. Parcel counts come from municipal ArcGIS queries. Edmonton and Calgary dominate because they expose 400K+ and 600K+ parcel records respectively via Socrata."
           badge="LIVE"
+          freshness="daily"
         />
         <NeighbourhoodBarChart
           data={data}
@@ -196,8 +199,9 @@ async function VacantLotComparison() {
       <Card>
         <CardHeader
           title="Vacant Lots by Municipality"
-          subtitle="Where is buildable land still available? Developers and land bankers watch this."
+          subtitle="Where is buildable land still available? Currently only Stony Plain publishes a dedicated vacant lot ArcGIS layer — this chart will expand as more municipalities expose this data."
           badge="LIVE"
+          freshness="daily"
         />
         <NeighbourhoodBarChart
           data={data}
@@ -226,8 +230,9 @@ async function BusinessCountComparison() {
       <Card>
         <CardHeader
           title="Active Businesses by Municipality"
-          subtitle="Business density signals commercial maturity. More businesses per capita = stronger local economy."
+          subtitle="Business density signals commercial maturity. Edmonton and Calgary publish via Socrata, Grande Prairie via ArcGIS — 27 other municipalities don't expose business licence data publicly."
           badge="LIVE"
+          freshness="daily"
         />
         <NeighbourhoodBarChart
           data={data}
@@ -327,6 +332,26 @@ export default function BenchmarksPage() {
         <Suspense fallback={<LoadingCard />}>
           <MacroContext />
         </Suspense>
+      </section>
+
+      {/* Data coverage note */}
+      <section>
+        <Card>
+          <div className="text-xs text-muted space-y-1.5">
+            <p className="text-foreground font-medium">About this data</p>
+            <p>
+              Benchmarks are pulled live from each municipality&apos;s own ArcGIS or Socrata endpoint.
+              Not all municipalities publish the same data — a &ldquo;—&rdquo; in the table means that municipality
+              doesn&apos;t expose that metric via a public API, <em>not</em> that the data doesn&apos;t exist.
+            </p>
+            <p>
+              <strong className="text-foreground">Full data (6):</strong> Edmonton, Calgary, Stony Plain, Strathcona County, St. Albert, Grande Prairie.{" "}
+              <strong className="text-foreground">Assessments + partial (7):</strong> Parkland County, Leduc, Lethbridge, Fort Saskatchewan, Camrose, Strathmore, Medicine Hat.{" "}
+              <strong className="text-foreground">Zoning only (11):</strong> Spruce Grove, Airdrie, Cochrane, and others.{" "}
+              <strong className="text-foreground">Regional dashboard only (6):</strong> Red Deer, Wood Buffalo, Beaumont, Morinville, Devon, and others — these don&apos;t appear in benchmark charts because they lack parcel-level data.
+            </p>
+          </div>
+        </Card>
       </section>
 
       {/* Full comparison table */}

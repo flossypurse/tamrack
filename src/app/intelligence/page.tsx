@@ -102,6 +102,14 @@ export default function IntelligencePage() {
             We show you the inputs and the weighting. Nothing is a black box.
             Reasonable people can disagree on the weights — the value is in the consistent framework, not the specific number.
           </p>
+          <p>
+            <strong className="text-foreground">Data coverage note:</strong> Not all municipalities publish the same data.
+            Edmonton and Calgary have comprehensive open data portals (assessments, permits, businesses via Socrata).
+            Smaller municipalities expose varying levels through ArcGIS — some have parcel assessments, others only zoning boundaries.
+            Six municipalities currently provide only provincial-level indicators from the Alberta Regional Dashboard.
+            This means intelligence pages that rely on municipal ArcGIS data (Benchmarks, Growth Corridors) may under-represent
+            municipalities that don&apos;t publish that data publicly.
+          </p>
         </div>
       </Card>
 

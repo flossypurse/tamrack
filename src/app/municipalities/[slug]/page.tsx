@@ -26,7 +26,7 @@ import { countPlaceTypes } from "@/lib/data-sources-google";
 import {
   Building2, Home, Store, HardHat, MapPin, FileText, BarChart3,
   UtensilsCrossed, GraduationCap, Hospital, Pill, ShoppingCart,
-  Fuel, Landmark, Dumbbell, Trees, BookOpen,
+  Fuel, Landmark, Dumbbell, Trees, BookOpen, Info, Database,
 } from "lucide-react";
 
 // Generate static paths for all live municipalities
@@ -66,6 +66,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 async function KeyMetrics({ slug }: { slug: string }) {
   const config = getMunicipality(slug)!;
+  const isRegionalOnly = config.capabilities.length === 0;
+
+  // For regional-only municipalities, pull key metrics from the provincial dashboard
+  if (isRegionalOnly) {
+    return <RegionalKeyMetrics slug={slug} />;
+  }
+
   const metrics = await fetchMunicipalityMetrics(config);
 
   return (
@@ -114,6 +121,141 @@ async function KeyMetrics({ slug }: { slug: string }) {
 }
 
 // ============================================================
+// Regional Key Metrics — for municipalities without direct ArcGIS
+// endpoints. Pulls from the Alberta Regional Dashboard
+// (regionaldashboard.alberta.ca) which covers 54 indicators
+// for all ~340 Alberta municipalities.
+// ============================================================
+
+async function RegionalKeyMetrics({ slug }: { slug: string }) {
+  const config = getMunicipality(slug)!;
+  const lookupName = config.name
+    .replace(" (Fort McMurray)", "")
+    .replace("Sturgeon County", "Sturgeon")
+    .replace("Leduc County", "Leduc County");
+
+  const regional = await fetchAllRegionalData(lookupName);
+
+  const latestVal = (records: RegionalDashboardRecord[], category?: string) => {
+    const latest = new Map<string, { value: number; year: string }>();
+    for (const r of records) {
+      const cat = String(r.Category || "Total");
+      const year = String(r.Period || "");
+      const val = Number(r.OriginalValue) || 0;
+      const existing = latest.get(cat);
+      if (!existing || year > existing.year) {
+        latest.set(cat, { value: val, year });
+      }
+    }
+    const target = category || "Total";
+    return latest.get(target) || null;
+  };
+
+  const population = config.population;
+  const totalAssessment = latestVal(regional.assessments, "Total");
+  const totalPermits = latestVal(regional.buildingPermits, "Total") || latestVal(regional.buildingPermits, "Residential");
+  const rent2br = latestVal(regional.averageRent, "2 Bedroom");
+  const vacancy = latestVal(regional.vacancyRates, "Total") || latestVal(regional.vacancyRates, "Overall");
+  const totalStarts = latestVal(regional.housingStarts, "Total");
+  const income = latestVal(regional.medianIncome);
+  const taxRate = latestVal(regional.taxRates);
+
+  return (
+    <>
+      {/* Data availability notice */}
+      <Card className="border-accent-amber/30 bg-accent-amber/[0.03]">
+        <div className="flex items-start gap-3">
+          <Info size={16} className="text-accent-amber shrink-0 mt-0.5" />
+          <div className="text-xs text-muted space-y-1">
+            <p className="text-foreground font-medium">Regional dashboard data only</p>
+            <p>
+              {config.name} does not publish a public ArcGIS or open data API for property assessments,
+              permits, or business licences. The metrics below come from the{" "}
+              <span className="text-foreground">Alberta Regional Dashboard</span> — a province-wide dataset
+              maintained by the Government of Alberta covering 54 socioeconomic indicators for all ~340 municipalities.
+            </p>
+            <p>
+              This means you get aggregate figures (total assessment base, building permit counts, median income)
+              but not parcel-level detail like individual property values, zoning breakdowns, or business registries.
+              For parcel-level data, see municipalities with direct API endpoints like{" "}
+              <a href="/m/edmonton" className="text-accent hover:underline">Edmonton</a>,{" "}
+              <a href="/m/calgary" className="text-accent hover:underline">Calgary</a>, or{" "}
+              <a href="/m/stony-plain" className="text-accent hover:underline">Stony Plain</a>.
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {population && (
+          <MetricCard
+            title="Population"
+            value={`~${population.toLocaleString()}`}
+            source="Census / municipal estimate"
+          />
+        )}
+        {totalAssessment && (
+          <MetricCard
+            title="Equalized Assessment"
+            value={`$${(totalAssessment.value / 1_000_000).toFixed(0)}M`}
+            change={totalAssessment.year}
+            source="AB Regional Dashboard"
+          />
+        )}
+        {totalPermits && (
+          <MetricCard
+            title="Building Permits"
+            value={totalPermits.value.toLocaleString()}
+            change={totalPermits.year}
+            source="AB Regional Dashboard"
+          />
+        )}
+        {rent2br && (
+          <MetricCard
+            title="Avg Rent (2BR)"
+            value={`$${rent2br.value.toLocaleString()}`}
+            change={rent2br.year}
+            source="AB Regional Dashboard"
+          />
+        )}
+        {vacancy && (
+          <MetricCard
+            title="Vacancy Rate"
+            value={`${vacancy.value.toFixed(1)}%`}
+            change={vacancy.year}
+            source="AB Regional Dashboard"
+          />
+        )}
+        {totalStarts && (
+          <MetricCard
+            title="Housing Starts"
+            value={totalStarts.value.toLocaleString()}
+            change={totalStarts.year}
+            source="AB Regional Dashboard"
+          />
+        )}
+        {income && (
+          <MetricCard
+            title="Median Income"
+            value={`$${income.value.toLocaleString()}`}
+            change={income.year}
+            source="AB Regional Dashboard"
+          />
+        )}
+        {taxRate && (
+          <MetricCard
+            title="Mill Rate"
+            value={taxRate.value.toFixed(4)}
+            change={taxRate.year}
+            source="AB Regional Dashboard"
+          />
+        )}
+      </div>
+    </>
+  );
+}
+
+// ============================================================
 // Assessment Charts
 // ============================================================
 
@@ -132,8 +274,9 @@ async function AssessmentsByZoningChart({ slug }: { slug: string }) {
       <Card>
         <CardHeader
           title="Avg Assessment by Zone"
-          subtitle={`Average property value per zoning district`}
+          subtitle={`Average property value per zoning district — zoning codes are set by ${config.name}'s land use bylaw and determine what can be built on each parcel`}
           badge="LIVE"
+          freshness="daily"
         />
         <NeighbourhoodBarChart
           data={chartData}
@@ -163,8 +306,9 @@ async function AssessmentCountChart({ slug }: { slug: string }) {
       <Card>
         <CardHeader
           title="Properties by Zone"
-          subtitle="Number of assessed parcels per zoning district"
+          subtitle="Number of assessed parcels per zoning district — shows where development is concentrated and which zones have the most parcels"
           badge="LIVE"
+          freshness="daily"
         />
         <NeighbourhoodBarChart
           data={chartData}
@@ -201,8 +345,9 @@ async function AssessmentsByNeighbourhood({ slug }: { slug: string }) {
       <Card>
         <CardHeader
           title={`Avg Assessment by ${label}`}
-          subtitle={`Top 15 ${label.toLowerCase()}s by average property value`}
+          subtitle={`Top 15 ${label.toLowerCase()}s by average property value — higher values indicate more desirable or more developed areas`}
           badge="LIVE"
+          freshness="daily"
         />
         <NeighbourhoodBarChart
           data={chartData}
@@ -240,8 +385,9 @@ async function BusinessSection({ slug }: { slug: string }) {
         <Card>
           <CardHeader
             title="Businesses by Category"
-            subtitle={`Registered businesses in ${config.name}`}
+            subtitle={`Active business licences registered in ${config.name}. Only Edmonton and Calgary publish business licence data via open APIs — this data comes from the municipal Socrata portal.`}
             badge="LIVE"
+            freshness="daily"
           />
           <NeighbourhoodBarChart
             data={chartData}
@@ -275,8 +421,9 @@ async function VacantSection({ slug }: { slug: string }) {
         <Card>
           <CardHeader
             title="Vacant Lots by Zone"
-            subtitle="Development-ready parcels by zoning type"
+            subtitle="Parcels classified as vacant land by zoning type — these represent development-ready sites. Only Stony Plain currently publishes a dedicated vacant lot layer via its ArcGIS endpoint."
             badge="LIVE"
+            freshness="daily"
           />
           <NeighbourhoodBarChart
             data={chartData}
@@ -304,8 +451,9 @@ async function ConstructionSection({ slug }: { slug: string }) {
       <Card>
         <CardHeader
           title="Active Construction"
-          subtitle="Municipal infrastructure projects"
+          subtitle="Municipal infrastructure and capital projects — sourced directly from the municipality's ArcGIS project tracker. Not all municipalities publish this data."
           badge="LIVE"
+          freshness="daily"
         />
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -357,8 +505,9 @@ async function PermitSection({ slug }: { slug: string }) {
         <Card>
           <CardHeader
             title="Permits by Area"
-            subtitle="Development permit activity"
+            subtitle="Development permit activity — these are approvals for new construction, renovations, and land use changes. Permit volume is a leading indicator of future construction activity."
             badge="LIVE"
+            freshness="daily"
           />
           <NeighbourhoodBarChart
             data={chartData}
@@ -388,8 +537,9 @@ async function TopPropertiesTable({ slug }: { slug: string }) {
       <Card>
         <CardHeader
           title="Top Assessed Properties"
-          subtitle={`Highest assessed values in ${config.name}`}
+          subtitle={`Highest assessed values in ${config.name} — assessments are set annually by the municipality and reflect market value as of July 1 of the prior year. Used for property tax calculations.`}
           badge="LIVE"
+          freshness="daily"
         />
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -520,6 +670,21 @@ async function RegionalDataSection({ slug }: { slug: string }) {
   return (
     <section>
       <SectionHeader title="Provincial Indicators" icon={<BarChart3 size={16} />} category="municipalities" />
+
+      {/* Context for provincial indicators */}
+      <Card className="mb-4">
+        <div className="flex items-start gap-3">
+          <Database size={14} className="text-muted shrink-0 mt-0.5" />
+          <p className="text-xs text-muted leading-relaxed">
+            The data below comes from the <span className="text-foreground font-medium">Alberta Regional Dashboard</span>{" "}
+            (regionaldashboard.alberta.ca) — a Government of Alberta dataset that provides 54 socioeconomic indicators
+            for all ~340 municipalities in the province. Data is updated daily and covers equalized assessments,
+            building permits, housing starts, rental markets, income, tax rates, business counts, well activity, and more.
+            These are aggregate figures reported at the municipal level, not individual property or business records.
+          </p>
+        </div>
+      </Card>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {totalAssessment && (
           <MetricCard
@@ -593,8 +758,9 @@ async function RegionalDataSection({ slug }: { slug: string }) {
           <Card>
             <CardHeader
               title="Equalized Assessment by Type"
-              subtitle={`Property assessment breakdown (${latestAssessments[0]?.year})`}
+              subtitle={`Property assessment breakdown (${latestAssessments[0]?.year}) — equalized assessments are adjusted by the province to ensure comparability across municipalities for grant allocation and benchmarking`}
               badge="PROVINCIAL"
+              freshness="daily"
             />
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
@@ -626,8 +792,9 @@ async function RegionalDataSection({ slug }: { slug: string }) {
           <Card>
             <CardHeader
               title="Building Permits by Type"
-              subtitle={`Permit activity breakdown (${latestPermits[0]?.year})`}
+              subtitle={`Permit activity breakdown (${latestPermits[0]?.year}) — building permits are a leading indicator of future construction; residential permits signal housing demand, commercial permits signal business investment`}
               badge="PROVINCIAL"
+              freshness="daily"
             />
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
@@ -835,16 +1002,44 @@ export default async function MunicipalityPage({ params }: { params: Promise<{ s
         <AmenitiesSection slug={slug} />
       </Suspense>
 
-      {/* Data Sources */}
+      {/* Data Sources & Methodology */}
       <Card>
-        <h3 className="text-xs font-medium text-muted mb-2">Data Sources</h3>
-        <div className="text-[10px] text-muted space-y-1">
+        <h3 className="text-xs font-medium text-foreground mb-3">Data Sources & Methodology</h3>
+        <div className="text-[10px] text-muted space-y-2">
           <p>
-            <span className="text-foreground font-medium">Source</span> — {config.dataSource}
+            <span className="text-foreground font-medium">Primary source</span> — {config.dataSource}
+          </p>
+          {config.capabilities.length > 0 ? (
+            <p>
+              <span className="text-foreground font-medium">Available data</span> — {config.capabilities.join(", ").replace(/_/g, " ")}
+            </p>
+          ) : (
+            <p>
+              <span className="text-foreground font-medium">Available data</span> — Provincial indicators only (no direct municipal API)
+            </p>
+          )}
+          <p>
+            <span className="text-foreground font-medium">Provincial overlay</span> — Alberta Regional Dashboard (regionaldashboard.alberta.ca) provides
+            54 socioeconomic indicators for all ~340 Alberta municipalities. Updated daily, cached 24 hours.
           </p>
           <p>
-            <span className="text-foreground font-medium">Capabilities</span> — {config.capabilities.join(", ").replace(/_/g, " ")}
+            <span className="text-foreground font-medium">How data is collected</span> — Municipal ArcGIS/Socrata endpoints are queried directly via REST APIs.
+            Each municipality uses different field names for the same concepts (e.g. assessed value might be called{" "}
+            <span className="font-mono">TASS</span>, <span className="font-mono">assessed_value</span>,{" "}
+            <span className="font-mono">ASSESSED_VALUE</span>, or <span className="font-mono">Total_Assessed_Value</span>).
+            We normalize these into a consistent schema. Regional dashboard data is fetched from the Government of Alberta&apos;s
+            open data API and falls back to PostgreSQL snapshots during upstream outages.
           </p>
+          {config.capabilities.length > 0 && (
+            <p>
+              <span className="text-foreground font-medium">What&apos;s not available</span> —{" "}
+              {!config.capabilities.includes("businesses") && "Business licences (only Edmonton & Calgary publish these via API). "}
+              {!config.capabilities.includes("permits") && !config.capabilities.includes("dev_permits") && "Building/development permits. "}
+              {!config.capabilities.includes("vacant_lots") && "Vacant lot tracking (only Stony Plain has a dedicated layer). "}
+              {!config.capabilities.includes("construction") && "Infrastructure project tracking. "}
+              These data gaps exist because each municipality decides independently what to publish via their GIS systems.
+            </p>
+          )}
           {config.notes?.map((note, i) => (
             <p key={i} className="text-accent-amber/80">Note: {note}</p>
           ))}
