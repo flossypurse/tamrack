@@ -2,10 +2,10 @@
 
 /* ── Light mode (default) ── */
 :root {
-  --background: #f8f9fa;
+  --background: #faf8f5;
   --foreground: #1a1a2e;
   --card: #ffffff;
-  --card-border: #e2e4e9;
+  --card-border: #e8e5df;
   --accent: #c06a2b;
   --accent-hover: #a5591f;
   --accent-gold: #c8942a;
