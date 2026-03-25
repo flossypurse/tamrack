@@ -111,22 +111,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const { rows: userRows } = await pool.query(`SELECT role FROM users WHERE id = $1`, [userId]);
           const dbUser = userRows[0] as { role: string } | undefined;
           const { rows: subRows } = await pool.query(
-            `SELECT status, trial_end, current_period_end, cancel_at_period_end FROM subscriptions WHERE user_id = $1`,
+            `SELECT status, plan, trial_end, current_period_end, cancel_at_period_end, municipality_id, operating_area FROM subscriptions WHERE user_id = $1`,
             [userId]
           );
           const sub = subRows[0] as {
             status: string;
+            plan: string | null;
             trial_end: string | null;
             current_period_end: string | null;
             cancel_at_period_end: number;
+            municipality_id: string | null;
+            operating_area: string | null;
           } | undefined;
 
-          console.log(`[auth] jwt: role=${dbUser?.role}, subStatus=${sub?.status}, trialEnd=${sub?.trial_end}`);
+          console.log(`[auth] jwt: role=${dbUser?.role}, subStatus=${sub?.status}, plan=${sub?.plan}, trialEnd=${sub?.trial_end}`);
           token.role = dbUser?.role ?? "user";
           token.subscriptionStatus = sub?.status ?? "none";
+          token.plan = sub?.plan ?? "pro";
           token.trialEnd = sub?.trial_end ?? null;
           token.currentPeriodEnd = sub?.current_period_end ?? null;
           token.cancelAtPeriodEnd = sub?.cancel_at_period_end === 1;
+          token.municipalityId = sub?.municipality_id ?? null;
+          // Realtor: parse operating area JSON array
+          try {
+            token.operatingArea = sub?.operating_area ? JSON.parse(sub.operating_area) : null;
+          } catch {
+            token.operatingArea = null;
+          }
         }
       } catch (err) {
         console.error(`[auth] jwt callback ERROR:`, err);
@@ -139,9 +150,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session.user.id = token.sub as string;
       session.user.role = token.role as string;
       session.user.subscriptionStatus = token.subscriptionStatus as string;
+      session.user.plan = token.plan as string;
       session.user.trialEnd = token.trialEnd as string | null;
       session.user.currentPeriodEnd = token.currentPeriodEnd as string | null;
       session.user.cancelAtPeriodEnd = token.cancelAtPeriodEnd as boolean;
+      session.user.municipalityId = token.municipalityId as string | null;
+      session.user.operatingArea = token.operatingArea as string[] | null;
       return session;
     },
   },
@@ -157,9 +171,12 @@ declare module "next-auth" {
       image?: string | null;
       role: string;
       subscriptionStatus: string;
+      plan: string;
       trialEnd: string | null;
       currentPeriodEnd: string | null;
       cancelAtPeriodEnd: boolean;
+      municipalityId: string | null;
+      operatingArea: string[] | null;
     };
   }
 }
@@ -168,8 +185,11 @@ declare module "next-auth" {
   interface JWT {
     role?: string;
     subscriptionStatus?: string;
+    plan?: string;
     trialEnd?: string | null;
     currentPeriodEnd?: string | null;
     cancelAtPeriodEnd?: boolean;
+    municipalityId?: string | null;
+    operatingArea?: string[] | null;
   }
 }

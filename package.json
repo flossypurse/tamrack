@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "prebuild": "rm -rf .next",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "snapshot": "npx tsx scripts/snapshot.ts",
@@ -19,6 +20,7 @@
     "worker": "npx tsx worker.ts"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^4.3.2",
     "@resonatehq/sdk": "^0.9.6",
     "@types/pg": "^8.18.0",
     "better-sqlite3": "^12.6.2",

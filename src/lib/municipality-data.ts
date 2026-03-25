@@ -96,6 +96,15 @@ export interface PermitSummary {
   totalValue: number;
 }
 
+export interface RecentPermit {
+  type: string;
+  address: string;
+  date: string;
+  value: number;
+  description: string;
+  municipality: string;
+}
+
 export interface MunicipalityMetrics {
   totalParcels: number;
   totalAssessed: number;
@@ -415,6 +424,75 @@ export async function fetchPermitsByGroup(
       .map(([group, stats]) => ({ group, count: stats.count, totalValue: stats.totalValue }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 25);
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchRecentPermits(
+  config: MunicipalityConfig,
+  limit: number = 50
+): Promise<RecentPermit[]> {
+  const endpoint = config.endpoints.devPermits || config.endpoints.permits;
+  if (!endpoint) return [];
+
+  const typeField = config.fields.permitType || "";
+  const addressField = config.fields.permitAddress || config.fields.address || "";
+  const dateField = config.fields.permitDate || "";
+  const valueField = config.fields.permitValue || "";
+  const descField = config.fields.permitDescription || "";
+
+  const outFields = [typeField, addressField, dateField, valueField, descField]
+    .filter(Boolean)
+    .join(",");
+
+  if (!outFields) return [];
+
+  try {
+    let data: Record<string, unknown>[];
+
+    if (isSocrataEndpoint(endpoint.url)) {
+      const params: Record<string, string> = {
+        $select: outFields,
+        $limit: String(limit),
+      };
+      if (dateField) {
+        params.$order = `${dateField} DESC`;
+      }
+      data = await fetchSocrata(endpoint.url, params);
+    } else {
+      data = await fetchArcGIS(endpoint.url, {
+        where: config.filters?.residentialFilter || "1=1",
+        outFields,
+        returnGeometry: "false",
+        resultRecordCount: String(limit),
+        ...(dateField ? { orderByFields: `${dateField} DESC` } : {}),
+      });
+    }
+
+    return (data || []).map((row) => {
+      let date = "";
+      if (dateField && row[dateField]) {
+        const raw = row[dateField];
+        if (typeof raw === "number" && raw > 1_000_000_000) {
+          // Epoch milliseconds
+          date = new Date(raw).toISOString().slice(0, 10);
+        } else {
+          const str = String(raw);
+          const parsed = new Date(str);
+          date = isNaN(parsed.getTime()) ? str.slice(0, 10) : parsed.toISOString().slice(0, 10);
+        }
+      }
+
+      return {
+        type: typeField ? String(row[typeField] || "").trim() : "",
+        address: addressField ? String(row[addressField] || "").trim() : "",
+        date,
+        value: valueField ? Number(row[valueField] || 0) : 0,
+        description: descField ? String(row[descField] || "").trim() : "",
+        municipality: config.name,
+      };
+    }).filter((p) => p.type || p.address || p.description);
   } catch {
     return [];
   }

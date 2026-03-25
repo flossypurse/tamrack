@@ -14,7 +14,7 @@ function LoginForm() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const callbackUrl = searchParams.get("callbackUrl") || "/home/dashboard";
   const authError = searchParams.get("error");
 
   async function handleEmail(e: React.FormEvent) {

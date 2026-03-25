@@ -8,10 +8,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { action } = await req.json();
+  const { action, plan } = await req.json();
 
   if (action === "checkout") {
-    const checkout = await createCheckoutSession(session.user.id, session.user.email!);
+    const checkout = await createCheckoutSession(session.user.id, session.user.email!, plan || "pro");
     return NextResponse.json({ url: checkout.url });
   }
 

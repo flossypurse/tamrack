@@ -134,8 +134,15 @@ const MIGRATION_SQL = `
 
     CREATE INDEX IF NOT EXISTS idx_api_usage_key ON api_usage(api_key_id, timestamp);
     CREATE INDEX IF NOT EXISTS idx_api_usage_user ON api_usage(user_id, timestamp);
+    -- EDO: municipality binding (slug from municipality-registry)
+    ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS municipality_id TEXT;
+    -- Realtor: operating area (JSON array of municipality slugs)
+    ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS operating_area TEXT;
+
     CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id);
     CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe ON subscriptions(stripe_customer_id);
+    CREATE INDEX IF NOT EXISTS idx_subscriptions_plan ON subscriptions(plan);
+    CREATE INDEX IF NOT EXISTS idx_subscriptions_municipality ON subscriptions(municipality_id);
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
     -- ============================================================

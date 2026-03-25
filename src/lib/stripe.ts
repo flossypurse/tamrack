@@ -5,8 +5,16 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-02-25.clover",
 });
 
-export async function createCheckoutSession(userId: string, email: string) {
+// Plan-specific Stripe price IDs
+const PLAN_PRICE_IDS: Record<string, string | undefined> = {
+  pro: process.env.STRIPE_PRICE_ID,
+  edo: process.env.STRIPE_EDO_PRICE_ID,
+  realtor: process.env.STRIPE_REALTOR_PRICE_ID,
+};
+
+export async function createCheckoutSession(userId: string, email: string, plan: string = "pro") {
   const pool = await getDb();
+  const priceId = PLAN_PRICE_IDS[plan] || process.env.STRIPE_PRICE_ID!;
 
   const { rows } = await pool.query(
     `SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1`,
@@ -23,13 +31,25 @@ export async function createCheckoutSession(userId: string, email: string) {
     );
   }
 
+  // Update subscription plan type
+  await pool.query(
+    `UPDATE subscriptions SET plan = $1, updated_at = NOW() WHERE user_id = $2`,
+    [plan, userId]
+  );
+
+  const successUrl = plan === "edo"
+    ? `${process.env.NEXT_PUBLIC_APP_URL}/edo/onboarding?success=1`
+    : plan === "realtor"
+    ? `${process.env.NEXT_PUBLIC_APP_URL}/realtor/onboarding?success=1`
+    : `${process.env.NEXT_PUBLIC_APP_URL}/billing?success=1`;
+
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
-    line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing?success=1`,
+    line_items: [{ price: priceId, quantity: 1 }],
+    success_url: successUrl,
     cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing?canceled=1`,
-    metadata: { userId },
+    metadata: { userId, plan },
   });
 
   return session;
@@ -61,14 +81,15 @@ export async function createPortalSession(userId: string) {
 export async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const pool = await getDb();
   const userId = session.metadata?.userId;
+  const plan = session.metadata?.plan || "pro";
   const subscriptionId = session.subscription as string;
   const customerId = session.customer as string;
 
   if (!userId) return;
 
   await pool.query(
-    `UPDATE subscriptions SET id = $1, stripe_customer_id = $2, status = 'active', updated_at = NOW() WHERE user_id = $3`,
-    [subscriptionId, customerId, userId]
+    `UPDATE subscriptions SET id = $1, stripe_customer_id = $2, status = 'active', plan = $3, updated_at = NOW() WHERE user_id = $4`,
+    [subscriptionId, customerId, plan, userId]
   );
 }
 

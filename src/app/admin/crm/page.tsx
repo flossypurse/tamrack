@@ -17,6 +17,8 @@ import {
   ChevronUp,
   Send,
   X,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 
 // ============================================================
@@ -78,6 +80,14 @@ const EMPTY_FORM = {
   notes: "",
 };
 
+interface EmailDraft {
+  contactId: number;
+  to: string;
+  name: string;
+  subject: string;
+  body: string;
+}
+
 // ============================================================
 // Page
 // ============================================================
@@ -95,6 +105,10 @@ export default function CRMPage() {
   const [newActivity, setNewActivity] = useState("");
   const [newActivityType, setNewActivityType] = useState<string>("note");
   const [loading, setLoading] = useState(true);
+  const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [generatingEmail, setGeneratingEmail] = useState(false);
 
   const fetchContacts = useCallback(async () => {
     const params = new URLSearchParams();
@@ -195,6 +209,81 @@ export default function CRMPage() {
     setNewActivityType("note");
     await fetchActivities(contactId);
     await fetchContacts();
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailDraft || !emailDraft.subject.trim() || !emailDraft.body.trim()) return;
+    setSendingEmail(true);
+    setEmailStatus(null);
+    try {
+      const res = await fetch("/api/admin/crm/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contact_id: emailDraft.contactId,
+          to: emailDraft.to,
+          subject: emailDraft.subject,
+          body: emailDraft.body,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setEmailStatus({ type: "success", message: `Sent to ${emailDraft.to}` });
+      // Auto-update status to "contacted" if currently "lead"
+      const contact = contacts.find((c) => c.id === emailDraft.contactId);
+      if (contact?.status === "lead") {
+        await handleStatusChange(contact.id, "contacted");
+      }
+      if (expandedId === emailDraft.contactId) {
+        await fetchActivities(emailDraft.contactId);
+      }
+      await fetchContacts();
+      setTimeout(() => {
+        setEmailDraft(null);
+        setEmailStatus(null);
+      }, 1500);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to send";
+      setEmailStatus({ type: "error", message: msg });
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const openEmailCompose = (c: Contact) => {
+    setEmailDraft({
+      contactId: c.id,
+      to: c.email,
+      name: c.name,
+      subject: "",
+      body: "",
+    });
+    setEmailStatus(null);
+  };
+
+  const handleGenerateEmail = async () => {
+    if (!emailDraft) return;
+    setGeneratingEmail(true);
+    setEmailStatus(null);
+    try {
+      const res = await fetch("/api/admin/crm/generate-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contact_id: emailDraft.contactId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setEmailDraft({
+        ...emailDraft,
+        subject: data.subject,
+        body: data.body,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to generate";
+      setEmailStatus({ type: "error", message: msg });
+    } finally {
+      setGeneratingEmail(false);
+    }
   };
 
   const totalContacts = pipeline.reduce((s, p) => s + p.count, 0);
@@ -435,6 +524,15 @@ export default function CRMPage() {
                   ))}
                 </select>
 
+                {c.email && (
+                  <button
+                    onClick={() => openEmailCompose(c)}
+                    className="text-muted hover:text-blue-400 transition-colors"
+                    title="Send email"
+                  >
+                    <Send size={13} />
+                  </button>
+                )}
                 <button
                   onClick={() => handleEdit(c)}
                   className="text-[11px] text-muted hover:text-foreground px-2 py-1 rounded transition-colors"
@@ -519,6 +617,84 @@ export default function CRMPage() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Email Compose Modal */}
+      {emailDraft && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-card border border-card-border rounded-xl w-full max-w-lg shadow-2xl">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-card-border">
+              <div className="flex items-center gap-2">
+                <Mail size={14} className="text-blue-400" />
+                <span className="text-sm font-medium">Email {emailDraft.name}</span>
+              </div>
+              <button
+                onClick={() => { setEmailDraft(null); setEmailStatus(null); }}
+                className="text-muted hover:text-foreground transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div className="text-xs text-muted">
+                From: <span className="text-foreground">cullywakelin@gmail.com</span>
+              </div>
+              <div className="text-xs text-muted">
+                To: <span className="text-foreground">{emailDraft.to}</span>
+              </div>
+              <button
+                onClick={handleGenerateEmail}
+                disabled={generatingEmail}
+                className="flex items-center gap-2 px-3 py-2 bg-purple-600/10 text-purple-400 border border-purple-500/20 rounded-lg text-xs font-medium hover:bg-purple-600/20 transition-colors disabled:opacity-50 w-full justify-center"
+              >
+                {generatingEmail ? (
+                  <><Loader2 size={12} className="animate-spin" /> Generating...</>
+                ) : (
+                  <><Sparkles size={12} /> Generate Message</>
+                )}
+              </button>
+              <input
+                placeholder="Subject"
+                value={emailDraft.subject}
+                onChange={(e) => setEmailDraft({ ...emailDraft, subject: e.target.value })}
+                className="w-full px-3 py-2 bg-background border border-card-border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent/50"
+                autoFocus
+              />
+              <textarea
+                placeholder="Write your message..."
+                value={emailDraft.body}
+                onChange={(e) => setEmailDraft({ ...emailDraft, body: e.target.value })}
+                rows={8}
+                className="w-full px-3 py-2 bg-background border border-card-border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-accent/50 resize-none"
+              />
+              {emailStatus && (
+                <div className={`text-xs px-3 py-2 rounded-lg ${
+                  emailStatus.type === "success"
+                    ? "bg-emerald-500/10 text-emerald-400"
+                    : "bg-red-500/10 text-red-400"
+                }`}>
+                  {emailStatus.message}
+                </div>
+              )}
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => { setEmailDraft(null); setEmailStatus(null); }}
+                  className="px-4 py-2 text-muted hover:text-foreground rounded-lg text-sm transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendEmail}
+                  disabled={sendingEmail || !emailDraft.subject.trim() || !emailDraft.body.trim()}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-500 transition-colors disabled:opacity-40"
+                >
+                  <Send size={12} />
+                  {sendingEmail ? "Sending..." : "Send Email"}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </main>

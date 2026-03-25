@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { CreditCard, Key, Loader2, Copy, Check, Trash2, Plus, ExternalLink } from "lucide-react";
+import { CreditCard, Key, Loader2, Copy, Check, Trash2, Plus, ExternalLink, Building2, Home, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { trackEvent } from "@/components/analytics";
 import { PageHeader } from "@/components/page-header";
 
@@ -26,6 +27,8 @@ export default function BillingPage() {
   const sub = session?.user;
   const isActive = sub?.subscriptionStatus === "active";
   const isTrialing = sub?.subscriptionStatus === "trialing";
+  const isEdo = sub?.plan === "edo";
+  const isRealtor = sub?.plan === "realtor";
   const trialEnd = sub?.trialEnd ? new Date(sub.trialEnd) : null;
   const daysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
 
@@ -136,13 +139,29 @@ export default function BillingPage() {
         </div>
 
         <p className="text-sm text-muted">
-          Alberta Pulse Pro — <span className="text-foreground font-medium">$29/mo CAD</span>
-          <br />
-          Full access to all dashboards, municipality data, and API.
+          {isEdo ? (
+            <>
+              Pulse EDO — <span className="text-foreground font-medium">$299/mo CAD</span> per municipality
+              <br />
+              Community profiles, peer comparison, alerts, and council reports.
+            </>
+          ) : isRealtor ? (
+            <>
+              Pulse Realtor — <span className="text-foreground font-medium">$49/mo CAD</span> per seat
+              <br />
+              Market intelligence, prospect tracking, and listing presentation tools.
+            </>
+          ) : (
+            <>
+              Alberta Pulse Pro — <span className="text-foreground font-medium">$29/mo CAD</span>
+              <br />
+              Full access to all dashboards, municipality data, and API.
+            </>
+          )}
         </p>
 
-        <div className="flex gap-3">
-          {!isActive && (
+        <div className="flex flex-wrap gap-3">
+          {!isActive && !isEdo && (
             <button
               onClick={handleCheckout}
               disabled={!!loading}
@@ -162,8 +181,74 @@ export default function BillingPage() {
               Manage billing
             </button>
           )}
+          {isEdo && isActive && (
+            <Link
+              href="/edo"
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors"
+            >
+              <Building2 size={14} />
+              Go to EDO Dashboard
+            </Link>
+          )}
+          {isRealtor && isActive && (
+            <Link
+              href="/realtor/market"
+              className="flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg font-medium hover:bg-teal-600 transition-colors"
+            >
+              <Home size={14} />
+              Go to Realtor Dashboard
+            </Link>
+          )}
         </div>
       </div>
+
+      {/* EDO Upsell — only show for non-EDO users */}
+      {!isEdo && (
+        <div className="bg-card border border-indigo-500/30 rounded-xl p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Building2 size={18} className="text-indigo-400" />
+            <h2 className="font-semibold">Pulse EDO</h2>
+            <span className="text-[10px] font-mono px-2 py-0.5 bg-indigo-500/10 text-indigo-400 rounded-full">
+              $299/mo
+            </span>
+          </div>
+          <p className="text-sm text-muted">
+            Purpose-built for economic development officers. Get automated community profiles,
+            peer comparison, trend alerts, and council-ready reports for your municipality.
+          </p>
+          <Link
+            href="/pricing?plan=edo"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors text-sm"
+          >
+            Learn more
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+      )}
+
+      {/* Realtor Upsell — only show for non-realtor users */}
+      {!isRealtor && (
+        <div className="bg-card border border-teal-500/30 rounded-xl p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Home size={18} className="text-teal-400" />
+            <h2 className="font-semibold">Pulse Realtor</h2>
+            <span className="text-[10px] font-mono px-2 py-0.5 bg-teal-500/10 text-teal-400 rounded-full">
+              $49/mo
+            </span>
+          </div>
+          <p className="text-sm text-muted">
+            Purpose-built for Alberta realtors. Get market intelligence, development permit
+            tracking, neighbourhood reports, and listing presentation tools.
+          </p>
+          <Link
+            href="/pricing?plan=realtor"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg font-medium hover:bg-teal-600 transition-colors text-sm"
+          >
+            Learn more
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+      )}
 
       {/* API Keys */}
       <div className="bg-card border border-card-border rounded-xl p-6 space-y-4">
