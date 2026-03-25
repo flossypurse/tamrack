@@ -8,14 +8,11 @@ import {
   Building2,
   Database,
   Flame,
-  Globe,
-  HardHat,
+  GraduationCap,
   Heart,
-  Landmark,
+  Home,
   Leaf,
   MapPin,
-  Newspaper,
-  PiggyBank,
   Shield,
   ShieldAlert,
   TrendingUp,
@@ -31,19 +28,21 @@ import {
   STATSCAN_SERIES,
 } from "@/lib/data-sources";
 import { MUNICIPALITY_REGISTRY } from "@/lib/municipality-registry";
+import { CHART_REGISTRY, CATEGORY_LABELS, CATEGORY_COLORS, type ChartCategory } from "@/lib/chart-registry";
 import { Sparkline } from "@/components/sparkline";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { HeroVisualization } from "@/components/hero-viz";
 
+// 1.3.9 — Updated metadata and OG tags
 export const metadata: Metadata = {
-  title: "Alberta Pulse Check — Real-Time Economic Intelligence for Alberta",
+  title: "Alberta Pulse — Alberta's Data Platform",
   description:
-    "Live economic data from 18+ government sources across 30 Alberta municipalities. Economy, real estate, energy, health, safety, environment, and more — updated hourly.",
+    "Alberta's data platform: free charts, EDO intelligence tools, realtor market reports, and an Alberta economics learning hub. Live data from 18+ government sources across 30 municipalities.",
   alternates: { canonical: "https://albertapulsecheck.ca" },
   openGraph: {
     images: [
       {
-        url: "/api/og?title=Alberta+Pulse+Check&subtitle=Real-Time+Economic+Intelligence+for+Alberta",
+        url: "/api/og?title=Alberta+Pulse&subtitle=Alberta%27s+Data+Platform",
         width: 1200,
         height: 630,
       },
@@ -152,17 +151,6 @@ const regions: { key: string; label: string; color: string }[] = [
   { key: "south", label: "South", color: "bg-accent-green" },
   { key: "north", label: "North", color: "bg-[#8b5cf6]" },
   { key: "northeast", label: "Northeast", color: "bg-accent-amber" },
-];
-
-const roleCards = [
-  { icon: Building2, label: "Realtor", href: "/overview/briefing/realtor", desc: "Market positioning, inventory signals, price trends" },
-  { icon: HardHat, label: "Developer", href: "/overview/briefing/developer", desc: "Permit pipeline, land supply, construction costs" },
-  { icon: PiggyBank, label: "Investor", href: "/overview/briefing/investor", desc: "Yield analysis, growth corridors, risk scoring" },
-  { icon: Landmark, label: "Lender", href: "/overview/briefing/lender", desc: "Rate impact, delinquency signals, market health" },
-  { icon: Globe, label: "EDO", href: "/overview/briefing/edo", desc: "Business formation, labour supply, infrastructure" },
-  { icon: Newspaper, label: "Journalist", href: "/overview/briefing/journalist", desc: "Trend detection, cross-indicator stories, data access" },
-  { icon: Flame, label: "Energy", href: "/overview/briefing/energy", desc: "Commodity prices, drilling activity, pipeline data" },
-  { icon: MapPin, label: "Site Selection", href: "/overview/briefing/site-selection", desc: "Demographics, zoning, infrastructure, cost of land" },
 ];
 
 const dataSources = [
@@ -313,12 +301,127 @@ function PulseBarFallback() {
 }
 
 // ============================================================
+// 1.3.2 — Products showcase data
+// ============================================================
+
+const products = [
+  {
+    icon: BarChart3,
+    name: "Pulse Charts",
+    price: "Free",
+    priceColor: "text-accent-green",
+    borderColor: "border-accent/30",
+    desc: "Browse, share, and embed live Alberta data charts. No account required.",
+    audience: "Public, media, researchers",
+    status: "available" as const,
+    href: "/charts",
+    cta: "Browse charts",
+  },
+  {
+    icon: Building2,
+    name: "Pulse EDO",
+    price: "$299/mo",
+    priceColor: "text-indigo-400",
+    borderColor: "border-indigo-500/30",
+    desc: "Community profiles, peer comparison, trend alerts, and council-ready reports.",
+    audience: "Economic development officers",
+    status: "coming" as const,
+    href: "/pricing",
+    cta: "Learn more",
+  },
+  {
+    icon: Home,
+    name: "Pulse Realtor",
+    price: "$49/mo",
+    priceColor: "text-accent",
+    borderColor: "border-accent/30",
+    desc: "Market intelligence, prospect tracking, and listing presentation tools.",
+    audience: "Realtors & brokerages",
+    status: "coming" as const,
+    href: "/pricing",
+    cta: "Learn more",
+  },
+  {
+    icon: GraduationCap,
+    name: "Pulse Learn",
+    price: "Free",
+    priceColor: "text-accent-green",
+    borderColor: "border-accent-green/30",
+    desc: "Gamified Alberta economics course with live data and a certificate of completion.",
+    audience: "Students & newcomers",
+    status: "coming" as const,
+    href: "/home/learn",
+    cta: "Learn more",
+  },
+];
+
+// 1.3.5 — Product-audience mapping cards
+const productAudienceCards = [
+  {
+    icon: Building2,
+    product: "Pulse EDO",
+    audience: "EDOs and municipal staff",
+    desc: "Automated community profiles, peer benchmarks, and council-ready reports — purpose-built for economic development.",
+    price: "$299/mo",
+    priceColor: "text-indigo-400",
+    href: "/pricing",
+  },
+  {
+    icon: Home,
+    product: "Pulse Realtor",
+    audience: "Realtors and brokerages",
+    desc: "Market intelligence, development permit tracking, and neighbourhood snapshots for listing presentations.",
+    price: "$49/mo",
+    priceColor: "text-accent",
+    href: "/pricing",
+  },
+  {
+    icon: BarChart3,
+    product: "Pulse Charts",
+    audience: "Researchers, media, and the public",
+    desc: "Browse, embed, and share live Alberta data charts. Free forever, no account required.",
+    price: "Free",
+    priceColor: "text-accent-green",
+    href: "/charts",
+  },
+  {
+    icon: GraduationCap,
+    product: "Pulse Learn",
+    audience: "Students and newcomers",
+    desc: "Learn Alberta economics through interactive modules, live data, and quizzes. Earn a certificate.",
+    price: "Free",
+    priceColor: "text-accent-green",
+    href: "/home/learn",
+  },
+];
+
+// 1.3.6 — Capability cards with product badges
+const capabilityCards = [
+  { icon: BarChart3, title: "Macro Dashboard", desc: "BoC rates, GDP, CPI, unemployment, retail — all live", href: "/home/dashboard", count: "8 indicators", product: "Charts" },
+  { icon: Building2, title: "Real Estate Intel", desc: "Permits, assessments, housing starts, rental vacancy, prospects", href: "/real-estate", count: "7 pages", product: "Realtor" },
+  { icon: Flame, title: "Energy & Drilling", desc: "Pipeline throughput, well licences, commodity prices, AESO grid", href: "/economy/energy", count: "16 CER feeds", product: "Charts" },
+  { icon: Users, title: "Labour & Migration", desc: "Employment, participation, earnings, interprovincial flows, IRCC data", href: "/community/labour", count: "5 IRCC feeds", product: "EDO" },
+  { icon: TrendingUp, title: "Intelligence", desc: "Benchmarks, corridors, risk scoring, investment thesis, compare", href: "/economy/benchmarks", count: "6 analysis tools", product: "EDO" },
+  { icon: Zap, title: "Leading Signals", desc: "Cross-indicator analysis separating leading from lagging", href: "/home/signals", count: "Multi-source", product: "Charts" },
+  { icon: Leaf, title: "Environment", desc: "Weather, air quality, water levels, wildfire tracking with historical trends", href: "/environment", count: "5 pages", product: "Charts" },
+  { icon: Heart, title: "Health & Demographics", desc: "Life expectancy, mortality, births & deaths, demographic trends", href: "/community/health", count: "3 pages", product: "Learn" },
+  { icon: ShieldAlert, title: "Public Safety", desc: "Crime stats, fire response, traffic alerts, seismic, emergencies", href: "/community", count: "7 pages", product: "Charts" },
+  { icon: Wrench, title: "Tools & API", desc: "REST API access, embeddable charts, data source directory, learn hub", href: "/tools", count: "4 pages", product: "Charts" },
+];
+
+const productBadgeColors: Record<string, string> = {
+  Charts: "bg-accent/10 text-accent border-accent/20",
+  EDO: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+  Realtor: "bg-accent/10 text-accent border-accent/20",
+  Learn: "bg-accent-green/10 text-accent-green border-accent-green/20",
+};
+
+// ============================================================
 // Page
 // ============================================================
 
 export default function LandingPage() {
   const liveMunicipalities = MUNICIPALITY_REGISTRY.filter((m) => m.status === "live");
-  const totalCapabilities = MUNICIPALITY_REGISTRY.reduce((sum, m) => sum + m.capabilities.length, 0);
 
   return (
     <main className="min-h-screen relative">
@@ -330,7 +433,7 @@ export default function LandingPage() {
         <LivePulseBar />
       </Suspense>
 
-      {/* Hero */}
+      {/* 1.3.1 — Hero (rewritten) */}
       <section className="relative overflow-hidden">
         <div className="relative max-w-5xl mx-auto px-4 py-12 sm:py-16 lg:py-32 text-center space-y-5">
           {/* Theme toggle — top right */}
@@ -343,36 +446,39 @@ export default function LandingPage() {
             <span className="text-lg font-bold">Alberta Pulse Check</span>
           </div>
           <h1 className="text-3xl sm:text-5xl font-bold leading-tight">
-            Community intelligence
+            Alberta{"'"}s data platform
             <br />
-            <span className="text-accent">built in Alberta, for Alberta <img src="/mapleleaf.svg" alt="Canada" width={56} height={56} className="inline-block align-baseline opacity-50 ml-1" /></span>
+            <span className="text-accent">Charts. Intelligence. Reports. <img src="/mapleleaf.svg" alt="Canada" width={56} height={56} className="inline-block align-baseline opacity-50 ml-1" /></span>
           </h1>
           <p className="text-muted text-lg max-w-2xl mx-auto">
-            {totalFeeds}+ live data feeds from {dataSources.length} government sources,
-            covering {liveMunicipalities.length} municipalities across Alberta.
-            Cross-analyzed and delivered to your dashboard — no stale reports, no guesswork.
+            {totalFeeds}+ live data feeds powering free charts, municipal intelligence tools,
+            realtor market reports, and an Alberta economics learning hub.
           </p>
 
-          <div className="flex items-center justify-center gap-4 pt-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
             <Link
-              href="/login"
+              href="/charts"
               className="flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-lg font-semibold hover:bg-accent-hover transition-colors"
             >
-              Try it free for 14 days
+              Browse free charts
               <ArrowRight size={16} />
             </Link>
             <Link
-              href="/dashboard"
+              href="#products"
               className="px-6 py-3 border border-card-border rounded-lg text-foreground hover:bg-card transition-colors"
             >
-              Explore the dashboard
+              See products
             </Link>
           </div>
-          <p className="text-xs text-muted/50">No credit card required</p>
+          <p className="text-xs text-muted/50">
+            <Link href="/login" className="hover:text-foreground transition-colors underline underline-offset-2">
+              Sign in
+            </Link>
+          </p>
         </div>
       </section>
 
-      {/* Scale stats */}
+      {/* 1.3.3 — Scale stats (platform stats) */}
       <section className="relative border-y border-card-border bg-card/80 backdrop-blur-sm">
         <div className="max-w-5xl mx-auto px-4 py-6 lg:py-10 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
           <div>
@@ -384,8 +490,8 @@ export default function LandingPage() {
             <p className="text-xs text-muted mt-1">Municipalities tracked</p>
           </div>
           <div>
-            <p className="text-2xl sm:text-3xl font-bold">54</p>
-            <p className="text-xs text-muted mt-1">Regional indicators</p>
+            <p className="text-2xl sm:text-3xl font-bold">{CHART_REGISTRY.length}+</p>
+            <p className="text-xs text-muted mt-1">Live charts</p>
           </div>
           <div>
             <p className="text-2xl sm:text-3xl font-bold">{dataSources.length}</p>
@@ -394,8 +500,116 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Municipality coverage */}
+      {/* 1.3.2 — Products showcase */}
+      <section id="products" className="relative max-w-full px-4 py-10 lg:py-28">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-xl sm:text-2xl font-bold">Four products, one data foundation</h2>
+            <p className="text-sm text-muted mt-2 max-w-xl mx-auto">
+              Every product is built on the same {totalFeeds}+ live government data feeds
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {products.map((p) => (
+              <Link
+                key={p.name}
+                href={p.href}
+                className={`group bg-card border ${p.borderColor} rounded-xl p-5 hover:border-accent transition-colors space-y-3`}
+              >
+                <div className="flex items-center justify-between">
+                  <p.icon size={22} className="text-accent" />
+                  {p.status === "available" ? (
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent-green/10 text-accent-green border border-accent-green/20">
+                      Available now
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted/10 text-muted border border-card-border">
+                      Coming soon
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm">{p.name}</h3>
+                  <span className={`text-xs font-medium ${p.priceColor}`}>{p.price}</span>
+                </div>
+                <p className="text-xs text-muted leading-relaxed">{p.desc}</p>
+                <p className="text-[10px] text-muted/60">{p.audience}</p>
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-accent group-hover:underline">
+                  {p.cta}
+                  <ArrowRight size={12} />
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 1.3.4 — Chart Catalogue CTA (branded as Pulse Charts) */}
       <section className="relative max-w-full px-4 py-10 lg:py-28">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-8">
+            <span className="inline-block text-[10px] font-medium px-2.5 py-1 rounded-full bg-accent/10 text-accent border border-accent/20 mb-3">
+              Pulse Charts
+            </span>
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <BarChart3 size={20} className="text-accent" />
+              <h2 className="text-xl sm:text-2xl font-bold">Browse the Chart Catalogue</h2>
+            </div>
+            <p className="text-sm text-muted mt-2 max-w-xl mx-auto">
+              {CHART_REGISTRY.length} live, embeddable charts — free to explore, share, and embed on your website
+            </p>
+            <p className="text-xs text-accent-green mt-1">Free forever. No account required.</p>
+          </div>
+
+          {/* Featured chart cards — one per category */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+            {(["economy", "real-estate", "community", "environment"] as ChartCategory[]).map((cat) => {
+              const charts = CHART_REGISTRY.filter((c) => c.category === cat);
+              const featured = charts.slice(0, 2);
+              return (
+                <div key={cat} className="bg-card border border-card-border rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${CATEGORY_COLORS[cat]}`}>
+                      {CATEGORY_LABELS[cat]}
+                    </span>
+                    <span className="text-[10px] text-muted font-mono">{charts.length} charts</span>
+                  </div>
+                  <div className="space-y-2">
+                    {featured.map((c) => (
+                      <Link
+                        key={c.id}
+                        href={`/charts/${c.id}`}
+                        className="block text-xs text-muted hover:text-accent transition-colors truncate"
+                      >
+                        {c.title}
+                      </Link>
+                    ))}
+                    {charts.length > 2 && (
+                      <span className="text-[10px] text-muted/40">
+                        +{charts.length - 2} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="text-center">
+            <Link
+              href="/charts"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-lg font-semibold hover:bg-accent-hover transition-colors"
+            >
+              Explore all {CHART_REGISTRY.length} charts
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Municipality coverage */}
+      <section className="relative border-t border-card-border max-w-full px-4 py-10 lg:py-28">
         <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
           <h2 className="text-xl sm:text-2xl font-bold">Province-wide coverage</h2>
@@ -440,55 +654,50 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Role-based entry */}
+      {/* 1.3.5 — Product-audience mapping */}
       <section className="relative border-y border-card-border bg-card/80 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto px-4 py-10 lg:py-28">
           <div className="text-center mb-8">
-            <h2 className="text-xl sm:text-2xl font-bold">Built for your role</h2>
+            <h2 className="text-xl sm:text-2xl font-bold">Built for how you work</h2>
             <p className="text-sm text-muted mt-2">
-              Get a briefing tailored to what you actually need to know
+              Each product is tailored to a specific audience and workflow
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {roleCards.map((role) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {productAudienceCards.map((card) => (
               <Link
-                key={role.label}
-                href={role.href}
-                className="group bg-card border border-card-border rounded-xl p-4 hover:border-accent transition-colors space-y-2"
+                key={card.product}
+                href={card.href}
+                className="group bg-card border border-card-border rounded-xl p-5 hover:border-accent transition-colors space-y-3"
               >
-                <role.icon size={20} className="text-accent group-hover:scale-110 transition-transform" />
-                <h3 className="font-semibold text-sm">{role.label}</h3>
-                <p className="text-[11px] text-muted leading-relaxed">{role.desc}</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <card.icon size={20} className="text-accent" />
+                    <h3 className="font-semibold text-sm">{card.product}</h3>
+                  </div>
+                  <span className={`text-xs font-medium ${card.priceColor}`}>{card.price}</span>
+                </div>
+                <p className="text-xs text-muted/60 uppercase tracking-wider">{card.audience}</p>
+                <p className="text-xs text-muted leading-relaxed">{card.desc}</p>
               </Link>
             ))}
           </div>
         </div>
       </section>
 
-      {/* What's inside — page sections */}
+      {/* 1.3.6 — Platform capabilities (with product badges) */}
       <section className="relative max-w-full px-4 py-10 lg:py-28">
         <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
-          <h2 className="text-xl sm:text-2xl font-bold">The full picture</h2>
+          <h2 className="text-xl sm:text-2xl font-bold">One data foundation, four products</h2>
           <p className="text-sm text-muted mt-2">
             Every page is built on real government data — not scraped, not estimated, not stale
           </p>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {[
-            { icon: BarChart3, title: "Macro Dashboard", desc: "BoC rates, GDP, CPI, unemployment, retail — all live", href: "/dashboard", count: "8 indicators" },
-            { icon: Building2, title: "Real Estate Intel", desc: "Permits, assessments, housing starts, rental vacancy, prospects", href: "/real-estate", count: "7 pages" },
-            { icon: Flame, title: "Energy & Drilling", desc: "Pipeline throughput, well licences, commodity prices, AESO grid", href: "/economy/energy", count: "16 CER feeds" },
-            { icon: Users, title: "Labour & Migration", desc: "Employment, participation, earnings, interprovincial flows, IRCC data", href: "/economy/labour", count: "5 IRCC feeds" },
-            { icon: TrendingUp, title: "Intelligence", desc: "Benchmarks, corridors, risk scoring, investment thesis, compare", href: "/intelligence", count: "6 analysis tools" },
-            { icon: Zap, title: "Leading Signals", desc: "Cross-indicator analysis separating leading from lagging", href: "/overview/signals", count: "Multi-source" },
-            { icon: Leaf, title: "Environment", desc: "Weather, air quality, water levels, wildfire tracking with historical trends", href: "/environment", count: "5 pages" },
-            { icon: Heart, title: "Health & Demographics", desc: "Life expectancy, mortality, births & deaths, demographic trends", href: "/health", count: "3 pages" },
-            { icon: ShieldAlert, title: "Public Safety", desc: "Crime stats, fire response, traffic alerts, seismic, emergencies", href: "/safety", count: "7 pages" },
-            { icon: Wrench, title: "Tools & API", desc: "REST API access, embeddable charts, data source directory, learn hub", href: "/tools", count: "4 pages" },
-          ].map((section) => (
+          {capabilityCards.map((section) => (
             <Link
               key={section.title}
               href={section.href}
@@ -496,7 +705,12 @@ export default function LandingPage() {
             >
               <div className="flex items-start justify-between mb-2">
                 <section.icon size={20} className="text-accent" />
-                <span className="text-[10px] font-mono text-muted">{section.count}</span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full border ${productBadgeColors[section.product]}`}>
+                    {section.product}
+                  </span>
+                  <span className="text-[10px] font-mono text-muted">{section.count}</span>
+                </div>
               </div>
               <h3 className="font-semibold text-sm mb-1">{section.title}</h3>
               <p className="text-xs text-muted leading-relaxed">{section.desc}</p>
@@ -553,32 +767,33 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA */}
+      {/* 1.3.7 — Bottom CTA (rewritten) */}
       <section className="relative py-10 lg:py-28">
         <div className="max-w-lg mx-auto text-center space-y-4">
-          <h2 className="text-xl font-bold">Start making data-driven decisions</h2>
+          <h2 className="text-xl font-bold">Start with free charts. Upgrade when you{"'"}re ready.</h2>
           <p className="text-sm text-muted">
-            14-day free trial. Plans start at $29/month CAD.
+            {CHART_REGISTRY.length}+ live Alberta data charts, free forever.
+            Purpose-built products for EDOs and realtors coming soon.
           </p>
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
-              href="/login"
+              href="/charts"
               className="flex items-center gap-2 px-6 py-3 bg-accent text-white rounded-lg font-semibold hover:bg-accent-hover transition-colors"
             >
-              Start free trial
+              Browse the chart catalogue
               <ArrowRight size={16} />
             </Link>
             <Link
               href="/pricing"
               className="px-6 py-3 border border-card-border rounded-lg text-foreground hover:bg-card transition-colors text-sm"
             >
-              See pricing
+              See all products
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
+      {/* 1.3.10 — Footer (with /charts link) */}
       <footer className="relative border-t border-card-border bg-card/80 backdrop-blur-sm">
         <div className="max-w-5xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted/50">
           <div className="flex items-center gap-2">
@@ -589,6 +804,7 @@ export default function LandingPage() {
             <img src="/mapleleaf.svg" alt="" width={12} height={12} className="opacity-30" />
           </div>
           <div className="flex items-center gap-4">
+            <Link href="/charts" className="hover:text-foreground transition-colors">Charts</Link>
             <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
             <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>

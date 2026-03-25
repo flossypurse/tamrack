@@ -1,9 +1,20 @@
 import type { NextConfig } from "next";
 
+// Build uses --webpack flag (see package.json) because Turbopack production
+// builds in Next.js 16.1.x have a chunk-loading race condition that causes
+// ChunkLoadError / ENOENT on SSR chunks during static page generation.
+// Dev still uses Turbopack (Next.js 16 default). The prebuild script cleans
+// .next to prevent Turbopack dev cache from conflicting with Webpack builds.
 const nextConfig: NextConfig = {
   typescript: {
     // TODO: fix type errors in traffic/benchmarks pages, then remove this
     ignoreBuildErrors: true,
+  },
+  experimental: {
+    // Limit static generation workers to reduce filesystem race conditions
+    // that cause ENOENT / "Cannot find module" errors during build.
+    // Default (os.cpus) spawns 10 workers which overwhelms the build pipeline.
+    cpus: 2,
   },
   async redirects() {
     return [

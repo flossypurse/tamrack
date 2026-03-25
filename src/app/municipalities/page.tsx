@@ -121,7 +121,7 @@ export default function MunicipalitiesPage() {
       </div>
 
       {/* Edmonton callout */}
-      <Link href="/dashboard" className="block group">
+      <Link href="/home/dashboard" className="block group">
         <Card className="hover:border-accent/30 transition-colors bg-gradient-to-r from-card to-accent/[0.03]">
           <div className="flex items-center justify-between">
             <div>

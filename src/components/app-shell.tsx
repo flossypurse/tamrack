@@ -3,43 +3,44 @@
 import { usePathname } from "next/navigation";
 import { Nav } from "./nav";
 import { Breadcrumbs } from "./breadcrumbs";
-import { useSidebar } from "./sidebar-context";
+import { shouldShowSectionSidebar } from "./section-sidebar";
 
 const publicRoutes = ["/", "/login", "/terms", "/privacy", "/pricing"];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { expanded } = useSidebar();
-  const isPublic = publicRoutes.includes(pathname) || pathname.startsWith("/embed/");
+  const isPublic =
+    publicRoutes.includes(pathname) || pathname.startsWith("/embed/");
 
-  if (isPublic) {
+  // EDO, Realtor, and Learn products have their own layouts — skip charts nav
+  const isEdoRoute = pathname.startsWith("/edo");
+  const isRealtorRoute = pathname.startsWith("/realtor");
+  const isLearnRoute = pathname.startsWith("/learn");
+
+  if (isPublic || isEdoRoute || isRealtorRoute || isLearnRoute) {
     return <>{children}</>;
   }
+
+  const hasSidebar = shouldShowSectionSidebar(pathname);
 
   return (
     <>
       <Nav />
-      {/* Mobile top bar spacer */}
+      {/* Desktop: top bar spacer */}
+      <div className="hidden lg:block h-12" />
+      {/* Mobile: top bar spacer */}
       <div className="lg:hidden h-[52px]" />
-      {/* Content offset for desktop rail — transitions with sidebar */}
-      <div
-        className="overflow-x-hidden transition-[padding-left] duration-200"
-        style={{ paddingLeft: undefined }}
-      >
-        <div className={`hidden lg:block ${expanded ? "pl-52" : "pl-14"} transition-[padding-left] duration-200`}>
-          <div className="px-4 pt-3 sm:px-6 sm:pt-4">
-            <Breadcrumbs />
-          </div>
+
+      {/* Content area */}
+      <div className={`${hasSidebar ? "lg:pl-56" : ""} transition-[padding-left] duration-200`}>
+        <div className="px-4 pt-3 sm:px-6 sm:pt-4">
+          <Breadcrumbs />
         </div>
-        <div className={`lg:hidden`}>
-          <div className="px-4 pt-3 sm:px-6 sm:pt-4">
-            <Breadcrumbs />
-          </div>
-        </div>
-        <div className={`${expanded ? "lg:pl-52" : "lg:pl-14"} transition-[padding-left] duration-200`}>
-          {children}
-        </div>
+        {children}
       </div>
+
+      {/* Mobile: bottom tab bar spacer */}
+      <div className="lg:hidden h-14" />
     </>
   );
 }

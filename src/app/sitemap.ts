@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getLiveMunicipalities } from "@/lib/municipality-registry";
+import { CHART_REGISTRY } from "@/lib/chart-registry";
 
 const BASE_URL = "https://albertapulsecheck.ca";
 
@@ -9,7 +10,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Core public pages
   const publicPages: MetadataRoute.Sitemap = [
     { url: BASE_URL, lastModified: now, changeFrequency: "weekly", priority: 1.0 },
-    { url: `${BASE_URL}/dashboard`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
+    { url: `${BASE_URL}/home/dashboard`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
+    { url: `${BASE_URL}/charts`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
     { url: `${BASE_URL}/municipalities`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${BASE_URL}/municipalities/coverage`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE_URL}/terms`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
@@ -18,22 +20,26 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   // Category pages (high SEO value — Alberta-wide data)
   const categoryPages = [
-    // Overview
-    "overview/signals",
+    // Home
+    "home/signals",
     // Economy
-    "economy/energy", "economy/drilling", "economy/cycle", "economy/diversification",
-    "economy/labour", "economy/migration", "economy/agriculture", "economy/cannabis",
+    "economy/energy", "economy/drilling", "economy/boom-bust", "economy/diversification",
+    "economy/agriculture", "economy/cannabis",
+    "economy/benchmarks", "economy/corridors", "economy/risk",
+    "economy/cycle-position", "economy/invest", "economy/compare",
     // Real Estate
     "real-estate/prospects", "real-estate/market", "real-estate/neighbourhoods",
     "real-estate/pipeline", "real-estate/rental", "real-estate/commercial",
-    // Intelligence
-    "intelligence/benchmarks", "intelligence/corridors", "intelligence/risk",
-    "intelligence/invest", "intelligence/compare",
+    // Community
+    "community/labour", "community/immigration",
+    "community/health", "community/demographics", "community/mortality",
+    "community/crime", "community/fire-response", "community/traffic",
+    "community/seismic", "community/emergencies",
     // Environment
-    "environment/weather", "environment/wildfire", "environment/air-quality",
-    "environment/water",
-    // Safety
-    "safety/traffic", "safety/seismic", "safety/elections", "safety/emergencies",
+    "environment/weather", "environment/air-quality",
+    "environment/water", "environment/wildfire", "environment/emissions",
+    // Governance
+    "governance/elections",
     // Tools
     "tools/learn", "tools/docs", "tools/sources",
   ];
@@ -53,5 +59,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  return [...publicPages, ...categoryEntries, ...municipalityEntries];
+  // Individual chart pages (SEO gold — each chart is a searchable data asset)
+  const chartEntries: MetadataRoute.Sitemap = CHART_REGISTRY.map((c) => ({
+    url: `${BASE_URL}/charts/${c.id}`,
+    lastModified: now,
+    changeFrequency: "daily" as const,
+    priority: 0.7,
+  }));
+
+  return [...publicPages, ...categoryEntries, ...municipalityEntries, ...chartEntries];
 }

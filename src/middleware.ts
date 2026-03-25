@@ -3,45 +3,54 @@ import { getToken } from "next-auth/jwt";
 
 // Routes that don't require auth
 // SEO strategy: macro pages are public to be indexed by Google.
-// Users see value → hit paywall on municipality deep-dives → sign up.
+// Users see value → hit paywall on deep-dives → sign up.
 const publicRoutes = [
   "/", "/login", "/terms", "/privacy", "/pricing",
-  "/dashboard", "/municipalities",
+  "/home/dashboard", "/municipalities",
   "/municipalities/coverage",
   // Category overview pages — rich SEO landing pages, no gated data
-  "/economy", "/real-estate", "/intelligence", "/environment", "/health", "/safety", "/tools",
+  "/economy", "/real-estate", "/community", "/environment", "/governance", "/tools",
+  // Chart catalogue — public SEO funnel
+  "/charts",
+  // Pulse Learn — free course
+  "/learn",
 ];
 const publicPrefixes = [
   "/api/auth", "/api/webhooks", "/api/health", "/api/og", "/embed/",
   // Category pages — all public for SEO (rank for "Alberta [topic]" queries)
-  "/economy/", "/environment/", "/health/", "/safety/",
-  "/overview/signals",
+  "/economy/", "/community/", "/environment/", "/governance/",
+  "/home/signals",
   // Tools
-  "/tools/learn", "/tools/sources",
+  "/tools/",
+  // Chart catalogue — all chart pages are public
+  "/charts/",
+  // Pulse Learn — free public course
+  "/learn/",
+  "/api/learn/",
 ];
 
 // Free pages — visible without subscription (part of the funnel)
 // Users still need to be logged in, but don't need an active subscription
 const freePages = [
-  "/dashboard",
+  "/home/dashboard",
   "/municipalities",
   // Category overview pages — always free
-  "/economy", "/real-estate", "/intelligence", "/environment", "/health", "/safety", "/tools",
+  "/economy", "/real-estate", "/community", "/environment", "/governance", "/tools",
   // Briefings hub only — individual briefings require subscription
-  "/overview/briefing",
-  "/tools/learn", "/tools/docs", "/tools/sources",
+  "/home/briefings",
+  "/tools/docs", "/tools/sources",
   // Phase 1 audience expansion — free funnel to show value
   "/real-estate/pipeline", "/real-estate/rental", "/real-estate/commercial",
   // Phase 2 — free funnel
-  "/economy/drilling", "/intelligence/compare",
+  "/economy/drilling", "/economy/compare",
 ];
 const freePrefixes = [
-  "/economy/", "/environment/", "/health/", "/safety/",
-  "/overview/signals",
+  "/economy/", "/community/", "/environment/", "/governance/",
+  "/home/signals", "/home/learn",
 ];
 
 // Pages where only exact match is free (sub-routes require subscription)
-const freePagesExactOnly = new Set(["/overview/briefing"]);
+const freePagesExactOnly = new Set(["/home/briefings"]);
 
 function isPublicRoute(pathname: string) {
   if (publicRoutes.includes(pathname)) return true;
@@ -54,6 +63,14 @@ function isApiRoute(pathname: string) {
 
 function isAdminRoute(pathname: string) {
   return pathname.startsWith("/admin");
+}
+
+function isEdoRoute(pathname: string) {
+  return pathname.startsWith("/edo");
+}
+
+function isRealtorRoute(pathname: string) {
+  return pathname.startsWith("/realtor");
 }
 
 function isActiveSubscription(status: string | undefined, trialEnd: string | null | undefined): boolean {
@@ -93,8 +110,6 @@ export async function middleware(req: NextRequest) {
   }
 
   // Get JWT token (works in Edge Runtime — no DB access needed)
-  // Must detect HTTPS so getToken looks for the correct cookie name:
-  // __Secure-authjs.session-token (HTTPS) vs authjs.session-token (HTTP)
   const secureCookie =
     req.headers.get("x-forwarded-proto") === "https" ||
     req.nextUrl.protocol === "https:";
@@ -117,8 +132,58 @@ export async function middleware(req: NextRequest) {
   // Admin routes — check role
   if (isAdminRoute(pathname)) {
     if (token.role !== "admin") {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
+      return NextResponse.redirect(new URL("/home/dashboard", req.url));
     }
+    return NextResponse.next();
+  }
+
+  // EDO routes — require EDO plan + active subscription (admins bypass)
+  if (isEdoRoute(pathname)) {
+    const plan = token.plan as string | undefined;
+    const status = token.subscriptionStatus as string | undefined;
+    const trialEnd = token.trialEnd as string | null | undefined;
+
+    if (token.role === "admin") return NextResponse.next();
+
+    if (plan !== "edo" || !isActiveSubscription(status, trialEnd)) {
+      // Allow onboarding page for EDO trialing users who haven't picked a municipality yet
+      if (pathname === "/edo/onboarding" && plan === "edo") {
+        return NextResponse.next();
+      }
+      return NextResponse.redirect(new URL("/pricing?plan=edo", req.url));
+    }
+
+    // EDO users without a municipality binding get redirected to onboarding
+    const municipalityId = token.municipalityId as string | null | undefined;
+    if (!municipalityId && pathname !== "/edo/onboarding" && pathname !== "/edo/settings") {
+      return NextResponse.redirect(new URL("/edo/onboarding", req.url));
+    }
+
+    return NextResponse.next();
+  }
+
+  // Realtor routes — require realtor plan + active subscription (admins bypass)
+  if (isRealtorRoute(pathname)) {
+    const plan = token.plan as string | undefined;
+    const status = token.subscriptionStatus as string | undefined;
+    const trialEnd = token.trialEnd as string | null | undefined;
+
+    if (token.role === "admin") return NextResponse.next();
+
+    if (plan !== "realtor" || !isActiveSubscription(status, trialEnd)) {
+      // Allow onboarding page for realtor users who haven't picked an area yet
+      if (pathname === "/realtor/onboarding" && plan === "realtor") {
+        return NextResponse.next();
+      }
+      return NextResponse.redirect(new URL("/pricing?plan=realtor", req.url));
+    }
+
+    // Realtor users without an operating area get redirected to onboarding
+    const operatingArea = token.operatingArea as string[] | null | undefined;
+    if ((!operatingArea || operatingArea.length === 0) && pathname !== "/realtor/onboarding" && pathname !== "/realtor/settings") {
+      return NextResponse.redirect(new URL("/realtor/onboarding", req.url));
+    }
+
     return NextResponse.next();
   }
 

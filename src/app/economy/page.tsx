@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { PageHeader } from "@/components/page-header";
-import { Card } from "@/components/card";
+import { Card, MetricCard } from "@/components/card";
+import { SectionHeader } from "@/components/section-header";
+import { HubCard, HubGrid, type HubCardItem } from "@/components/hub-card";
 import {
   PieChart,
   Flame,
@@ -11,8 +14,21 @@ import {
   Plane,
   Wheat,
   Cannabis,
-  ArrowRight,
+  ShoppingCart,
+  Building2,
+  HardHat,
+  Scale,
+  Rocket,
+  ShieldAlert,
+  TrendingUp,
+  GitCompare,
 } from "lucide-react";
+import {
+  fetchBoCObservations,
+  fetchStatCanTimeSeries,
+  BOC_SERIES,
+  STATSCAN_SERIES,
+} from "@/lib/data-sources";
 
 export const metadata: Metadata = {
   title: "Alberta Economy — Provincial Economic Data & Indicators",
@@ -20,70 +36,244 @@ export const metadata: Metadata = {
     "Track Alberta's economy in real time — energy prices, drilling activity, labour markets, migration, diversification, and agriculture. Live data from Statistics Canada, Bank of Canada, and Alberta government sources.",
 };
 
-const pages = [
+// ============================================================
+// Loading fallback
+// ============================================================
+
+function MetricsLoading() {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Card key={i}>
+          <div className="animate-pulse space-y-2">
+            <div className="h-3 bg-card-border rounded w-2/3" />
+            <div className="h-7 bg-card-border/50 rounded w-1/2" />
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================
+// Headline metrics
+// ============================================================
+
+async function EconomyMetrics() {
+  const [policyRateData, cadUsdData, unemploymentData, gdpData] =
+    await Promise.all([
+      fetchBoCObservations(BOC_SERIES.POLICY_RATE, 1).catch(() => null),
+      fetchBoCObservations(BOC_SERIES.CAD_USD, 2).catch(() => null),
+      fetchStatCanTimeSeries(
+        STATSCAN_SERIES.AB_UNEMPLOYMENT_RATE.tableId,
+        STATSCAN_SERIES.AB_UNEMPLOYMENT_RATE.coordinate,
+        2
+      ).catch(() => []),
+      fetchStatCanTimeSeries(
+        STATSCAN_SERIES.AB_GDP.tableId,
+        STATSCAN_SERIES.AB_GDP.coordinate,
+        2
+      ).catch(() => []),
+    ]);
+
+  const policyRate =
+    policyRateData?.observations?.[0]?.[BOC_SERIES.POLICY_RATE]?.v;
+  const cadUsdCurrent =
+    cadUsdData?.observations?.at(-1)?.[BOC_SERIES.CAD_USD]?.v;
+  const cadUsdPrev =
+    cadUsdData?.observations?.at(-2)?.[BOC_SERIES.CAD_USD]?.v;
+  const cadUsdChange =
+    cadUsdCurrent && cadUsdPrev
+      ? ((Number(cadUsdCurrent) - Number(cadUsdPrev)) * 100).toFixed(2)
+      : undefined;
+
+  const unemploymentCurrent = (unemploymentData as Array<{ value: number }>)?.at(-1)?.value;
+  const unemploymentPrev = (unemploymentData as Array<{ value: number }>)?.at(-2)?.value;
+  const unemploymentChange =
+    unemploymentCurrent && unemploymentPrev
+      ? (unemploymentCurrent - unemploymentPrev).toFixed(1)
+      : undefined;
+
+  const gdpCurrent = (gdpData as Array<{ value: number }>)?.at(-1)?.value;
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <MetricCard
+        title="BoC Policy Rate"
+        value={policyRate ? `${policyRate}%` : "—"}
+        source="Bank of Canada"
+      />
+      <MetricCard
+        title="CAD/USD"
+        value={cadUsdCurrent ? `$${Number(cadUsdCurrent).toFixed(4)}` : "—"}
+        change={cadUsdChange ? `${Number(cadUsdChange) >= 0 ? "+" : ""}${cadUsdChange}¢` : undefined}
+        source="Bank of Canada"
+      />
+      <MetricCard
+        title="AB Unemployment"
+        value={unemploymentCurrent ? `${unemploymentCurrent}%` : "—"}
+        change={
+          unemploymentChange
+            ? `${Number(unemploymentChange) >= 0 ? "+" : ""}${unemploymentChange}pp`
+            : undefined
+        }
+        source="Statistics Canada"
+      />
+      <MetricCard
+        title="AB GDP"
+        value={gdpCurrent ? `$${(gdpCurrent / 1000).toFixed(0)}B` : "—"}
+        source="Statistics Canada"
+      />
+    </div>
+  );
+}
+
+// ============================================================
+// Page cards
+// ============================================================
+
+const industryPages: HubCardItem[] = [
   {
     href: "/economy/energy",
     icon: Flame,
     title: "Energy",
     description:
-      "Oil and gas commodity prices, the Bank of Canada's energy price index (BCPI), CAD/USD exchange rate, and mining & oil/gas GDP. This is the heartbeat of Alberta's economy — when energy moves, everything else follows.",
-    sources: "Bank of Canada Valet, Statistics Canada",
+      "Oil & gas prices, BCPI energy index, CAD/USD, and mining GDP. The heartbeat of Alberta's economy.",
+    sources: "Bank of Canada, Statistics Canada",
   },
   {
     href: "/economy/drilling",
     icon: Pickaxe,
-    title: "Drilling & Well Activity",
+    title: "Drilling",
     description:
-      "AER (Alberta Energy Regulator) well licence data, drilling trends, and oilfield service activity. Well licences are a leading indicator — companies apply for licences before they spend money, so a spike here signals confidence in future prices.",
+      "AER well licences, drilling trends, and oilfield service activity. A leading indicator of capital confidence.",
     sources: "AER, Statistics Canada",
   },
   {
-    href: "/economy/cycle",
+    href: "/economy/boom-bust",
     icon: RefreshCw,
     title: "Boom-Bust Cycle",
     description:
-      "Where is Alberta in its economic cycle right now? This page cross-references oil prices, employment, migration, and construction against historical boom-bust patterns. Alberta has experienced roughly six major cycles since the 1970s — understanding the pattern helps you avoid buying at the top.",
-    sources: "Bank of Canada, Statistics Canada, Alberta Activity Index",
+      "Where is Alberta in its economic cycle? Cross-referencing oil, employment, migration, and construction.",
+    sources: "Bank of Canada, Statistics Canada",
   },
   {
     href: "/economy/diversification",
     icon: PieChart,
     title: "Diversification",
     description:
-      "Is Alberta actually diversifying beyond oil and gas? GDP breakdown by industry sector, tech employment growth, and non-energy economic indicators. The provincial government has been pushing diversification since the 1980s — this page shows you what's real and what's still aspirational.",
+      "GDP by industry sector, tech employment, and non-energy indicators. Is Alberta actually diversifying?",
     sources: "Statistics Canada, Edmonton Open Data",
-  },
-  {
-    href: "/economy/labour",
-    icon: Users,
-    title: "Labour Market",
-    description:
-      "Employment count, unemployment rate, participation rate, and average weekly earnings. These come from Statistics Canada's Labour Force Survey (LFS) — a monthly survey of ~100,000 Canadians. The unemployment rate gets the headlines, but participation rate often tells a more honest story.",
-    sources: "Statistics Canada LFS",
-  },
-  {
-    href: "/economy/migration",
-    icon: Plane,
-    title: "Migration & Population",
-    description:
-      "Who is moving to Alberta and where are they coming from? International immigration (IRCC permanent residents), interprovincial migration (people moving between provinces), and natural population growth. Alberta's population boom is the single biggest driver of housing demand.",
-    sources: "Statistics Canada, IRCC",
   },
   {
     href: "/economy/agriculture",
     icon: Wheat,
     title: "Agriculture",
     description:
-      "Farm cash receipts, crop vs. livestock revenue split, commodity price indexes, and agriculture's share of provincial GDP. Agriculture is Alberta's second-largest primary industry after energy — it's less volatile but still commodity-dependent and deeply tied to weather, trade policy, and global grain markets.",
+      "Farm cash receipts, crop vs. livestock revenue, and ag's share of provincial GDP.",
     sources: "Statistics Canada, Bank of Canada",
   },
   {
     href: "/economy/cannabis",
     icon: Cannabis,
-    title: "Cannabis Industry",
+    title: "Cannabis",
     description:
-      "Alberta's cannabis retail market — monthly sales, year-over-year growth, market share of total retail, and product type breakdowns. Alberta was the first province to allow fully private cannabis retail and now has the most competitive market in Canada with 900+ licensed stores generating $1B+/year.",
-    sources: "Statistics Canada, Health Canada, AGLC",
+      "Monthly retail sales, growth trends, and market share. Alberta leads with 900+ licensed stores.",
+    sources: "Statistics Canada, AGLC",
+  },
+  {
+    href: "/economy/retail",
+    icon: ShoppingCart,
+    title: "Retail Trade",
+    description:
+      "Retail sales by subsector, e-commerce trends, and food services revenue.",
+    sources: "Statistics Canada",
+  },
+  {
+    href: "/economy/businesses",
+    icon: Building2,
+    title: "Business Dynamics",
+    description:
+      "Business openings & closures by NAICS sector, licence trends in Edmonton and Calgary.",
+    sources: "Statistics Canada, Municipal Open Data",
+  },
+  {
+    href: "/economy/employers",
+    icon: HardHat,
+    title: "Employers",
+    description:
+      "WCB employer records, non-profits, corporate tax stats, and GHG facility emissions.",
+    sources: "WCB, CRA, ECCC",
+  },
+];
+
+const analysisPages: HubCardItem[] = [
+  {
+    href: "/economy/benchmarks",
+    icon: Scale,
+    title: "Benchmarks",
+    description:
+      "Alberta vs. national and provincial benchmarks across key economic indicators.",
+    sources: "Statistics Canada",
+  },
+  {
+    href: "/economy/corridors",
+    icon: Rocket,
+    title: "Growth Corridors",
+    description:
+      "Identify Alberta's fastest-growing regions by permits, population, and business activity.",
+    sources: "Statistics Canada, Municipal Data",
+  },
+  {
+    href: "/economy/risk",
+    icon: ShieldAlert,
+    title: "Market Risk",
+    description:
+      "Municipal risk scores factoring wildfire, flood, economic concentration, and volatility.",
+    sources: "Multiple sources",
+  },
+  {
+    href: "/economy/cycle-position",
+    icon: RefreshCw,
+    title: "Cycle Position",
+    description:
+      "Composite indicator tracking where Alberta sits in the macro cycle right now.",
+    sources: "Statistics Canada, Bank of Canada",
+  },
+  {
+    href: "/economy/invest",
+    icon: TrendingUp,
+    title: "Investment Thesis",
+    description:
+      "Synthesized view: is now a good time to invest, hire, or expand in Alberta?",
+    sources: "Multiple sources",
+  },
+  {
+    href: "/economy/compare",
+    icon: GitCompare,
+    title: "Compare",
+    description:
+      "Side-by-side comparison of municipalities across economic indicators.",
+    sources: "Regional Dashboard",
+  },
+];
+
+const crossLinks: HubCardItem[] = [
+  {
+    href: "/community/labour",
+    icon: Users,
+    title: "Labour Market",
+    description:
+      "Employment, unemployment, participation rate, and average earnings from the LFS.",
+    sources: "Statistics Canada",
+  },
+  {
+    href: "/community/immigration",
+    icon: Plane,
+    title: "Migration & Population",
+    description:
+      "Immigration, interprovincial migration, and population growth — Alberta's demand driver.",
+    sources: "Statistics Canada, IRCC",
   },
 ];
 
@@ -97,6 +287,11 @@ export default function EconomyPage() {
         description="Provincial economic indicators updated from live government data sources."
       />
 
+      {/* Headline metrics */}
+      <Suspense fallback={<MetricsLoading />}>
+        <EconomyMetrics />
+      </Suspense>
+
       {/* Explainer */}
       <Card>
         <div className="prose-sm space-y-3 text-sm text-muted">
@@ -106,57 +301,44 @@ export default function EconomyPage() {
             ripple through everything — government revenue, employment, migration, housing, and consumer spending.
           </p>
           <p>
-            The pages in this section give you a layered view: start with <strong className="text-foreground">Energy</strong> to
-            see where commodity prices are, check <strong className="text-foreground">Drilling</strong> for leading-edge capital
-            investment signals, then zoom out to <strong className="text-foreground">Labour</strong> and{" "}
-            <strong className="text-foreground">Migration</strong> to see how those price signals translate into
-            actual jobs and population movement.
-          </p>
-          <p>
-            If you're trying to answer <em>"is now a good time to invest, hire, or expand in Alberta?"</em> —
-            these pages give you the raw inputs. The{" "}
-            <Link href="/intelligence/invest" className="underline text-foreground hover:text-accent transition-colors">
-              Investment Thesis
+            Start with <strong className="text-foreground">Energy</strong> to see where commodity prices are,
+            check <strong className="text-foreground">Drilling</strong> for leading-edge capital investment signals,
+            then zoom out to{" "}
+            <Link href="/community/labour" className="underline text-foreground hover:text-accent transition-colors">
+              Labour
             </Link>{" "}
-            page in Intelligence synthesizes them into a view.
+            and{" "}
+            <Link href="/community/immigration" className="underline text-foreground hover:text-accent transition-colors">
+              Migration
+            </Link>{" "}
+            to see how those price signals translate into jobs and population movement.
           </p>
         </div>
       </Card>
 
-      {/* Page grid */}
-      <div className="space-y-3">
-        {pages.map((page) => (
-          <Link key={page.href} href={page.href} className="group block">
-            <Card className="transition-colors hover:border-accent/30">
-              <div className="flex items-start gap-3">
-                <div className="shrink-0 mt-0.5">
-                  <page.icon
-                    size={18}
-                    className="text-muted group-hover:text-accent transition-colors"
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-medium text-foreground group-hover:text-accent transition-colors">
-                      {page.title}
-                    </h3>
-                    <ArrowRight
-                      size={14}
-                      className="text-muted group-hover:text-accent transition-colors"
-                    />
-                  </div>
-                  <p className="text-sm text-muted mt-1 leading-relaxed">
-                    {page.description}
-                  </p>
-                  <p className="text-[10px] font-mono text-muted/60 mt-2">
-                    {page.sources}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </Link>
+      {/* Industries */}
+      <SectionHeader title="Industries" icon={<Flame size={16} />} category="economy" />
+      <HubGrid>
+        {industryPages.map((item) => (
+          <HubCard key={item.href} item={item} />
         ))}
-      </div>
+      </HubGrid>
+
+      {/* Analysis */}
+      <SectionHeader title="Analysis" icon={<TrendingUp size={16} />} category="economy" />
+      <HubGrid>
+        {analysisPages.map((item) => (
+          <HubCard key={item.href} item={item} />
+        ))}
+      </HubGrid>
+
+      {/* Cross-links */}
+      <SectionHeader title="Related" icon={<Users size={16} />} category="economy" />
+      <HubGrid columns={2}>
+        {crossLinks.map((item) => (
+          <HubCard key={item.href} item={item} />
+        ))}
+      </HubGrid>
 
       {/* Jargon box */}
       <Card>
@@ -175,29 +357,18 @@ export default function EconomyPage() {
             <dt className="font-medium text-foreground inline">AER</dt>
             <dd className="text-muted inline">
               {" "}— Alberta Energy Regulator. The provincial body that licences wells, pipelines, and energy projects.
-              Their data is a leading indicator of industry confidence.
             </dd>
           </div>
           <div>
             <dt className="font-medium text-foreground inline">LFS</dt>
             <dd className="text-muted inline">
-              {" "}— Labour Force Survey. Statistics Canada's monthly employment survey. It produces the unemployment
-              rate, employment count, and participation rate you see in headlines.
+              {" "}— Labour Force Survey. Statistics Canada's monthly employment survey.
             </dd>
           </div>
           <div>
             <dt className="font-medium text-foreground inline">Participation rate</dt>
             <dd className="text-muted inline">
               {" "}— The share of working-age people who are either employed or actively looking for work.
-              A falling unemployment rate with a falling participation rate can mean people stopped looking,
-              not that they found jobs.
-            </dd>
-          </div>
-          <div>
-            <dt className="font-medium text-foreground inline">Interprovincial migration</dt>
-            <dd className="text-muted inline">
-              {" "}— Canadians moving between provinces. When Alberta booms, it draws workers from Ontario,
-              B.C., and Atlantic Canada. When it busts, they leave. This is the fastest-reacting population signal.
             </dd>
           </div>
         </dl>

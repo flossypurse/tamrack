@@ -29,10 +29,8 @@ import {
   Fuel, Landmark, Dumbbell, Trees, BookOpen, Info, Database,
 } from "lucide-react";
 
-// Generate static paths for all live municipalities
-export function generateStaticParams() {
-  return getLiveMunicipalities().map((m) => ({ slug: m.slug }));
-}
+// Use dynamic rendering — upstream APIs (ArcGIS, StatsCan) are unreliable at build time
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
