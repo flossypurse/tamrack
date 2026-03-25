@@ -31,6 +31,8 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 // Metadata
 // ============================================================
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Economic Development — Community Levers — Pulse Learn",
   description:

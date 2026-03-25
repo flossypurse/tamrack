@@ -23,6 +23,8 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 // Metadata
 // ============================================================
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Property Tax 101 — Your Tax Dollars — Pulse Learn",
   description:

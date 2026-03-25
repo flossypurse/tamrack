@@ -32,6 +32,8 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 // Metadata
 // ============================================================
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Crime & Economics — Safety & Prosperity — Pulse Learn",
   description:

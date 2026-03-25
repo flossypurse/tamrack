@@ -20,6 +20,8 @@ import {
 } from "@/components/learn-lesson";
 import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "GDP by Sector — The Energy Engine — Pulse Learn",
   description:

@@ -26,6 +26,8 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 // Metadata
 // ============================================================
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Immigration Drivers — People & Growth — Pulse Learn",
   description:

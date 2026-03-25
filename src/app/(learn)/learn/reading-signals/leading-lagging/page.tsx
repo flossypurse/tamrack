@@ -36,6 +36,8 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 // Metadata
 // ============================================================
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Leading vs Lagging — Reading the Signals — Pulse Learn",
   description:

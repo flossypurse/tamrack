@@ -22,6 +22,8 @@ import {
 } from "@/components/learn-lesson";
 import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Mortgage Rates Follow — The Housing Machine — Pulse Learn",
   description:

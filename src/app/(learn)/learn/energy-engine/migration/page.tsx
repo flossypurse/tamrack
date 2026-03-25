@@ -24,6 +24,8 @@ import {
 } from "@/components/learn-lesson";
 import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "The Migration Effect — The Energy Engine — Pulse Learn",
   description:

@@ -19,6 +19,8 @@ import {
 } from "@/components/learn-lesson";
 import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "The Price of Money — The Housing Machine — Pulse Learn",
   description:
