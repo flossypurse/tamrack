@@ -36,10 +36,10 @@ const nextConfig: NextConfig = {
       // Economy
       { source: "/energy", destination: "/economy/energy", permanent: true },
       { source: "/drilling", destination: "/economy/drilling", permanent: true },
-      { source: "/cycle", destination: "/economy/cycle", permanent: true },
+      { source: "/cycle", destination: "/economy/boom-bust", permanent: true },
       { source: "/diversification", destination: "/economy/diversification", permanent: true },
-      { source: "/labour", destination: "/economy/labour", permanent: true },
-      { source: "/migration", destination: "/economy/migration", permanent: true },
+      { source: "/labour", destination: "/community/labour", permanent: true },
+      { source: "/migration", destination: "/community/immigration", permanent: true },
       { source: "/agriculture", destination: "/economy/agriculture", permanent: true },
 
       // Real Estate
@@ -49,12 +49,13 @@ const nextConfig: NextConfig = {
       { source: "/rental", destination: "/real-estate/rental", permanent: true },
       { source: "/commercial", destination: "/real-estate/commercial", permanent: true },
 
-      // Intelligence
-      { source: "/benchmarks", destination: "/intelligence/benchmarks", permanent: true },
-      { source: "/corridors", destination: "/intelligence/corridors", permanent: true },
-      { source: "/risk", destination: "/intelligence/risk", permanent: true },
-      { source: "/invest", destination: "/intelligence/invest", permanent: true },
-      { source: "/compare", destination: "/intelligence/compare", permanent: true },
+      // Intelligence (moved to /economy/ in Phase 1)
+      { source: "/benchmarks", destination: "/economy/benchmarks", permanent: true },
+      { source: "/corridors", destination: "/economy/corridors", permanent: true },
+      { source: "/risk", destination: "/economy/risk", permanent: true },
+      { source: "/invest", destination: "/economy/invest", permanent: true },
+      { source: "/compare", destination: "/economy/compare", permanent: true },
+      { source: "/intelligence/:path*", destination: "/economy/:path*", permanent: true },
 
       // Environment
       { source: "/weather", destination: "/environment/weather", permanent: true },
@@ -62,19 +63,24 @@ const nextConfig: NextConfig = {
       { source: "/water", destination: "/environment/water", permanent: true },
       { source: "/wildfire", destination: "/environment/wildfire", permanent: true },
 
-      // Public Safety
-      { source: "/traffic", destination: "/safety/traffic", permanent: true },
-      { source: "/earthquakes", destination: "/safety/seismic", permanent: true },
-      { source: "/emergencies", destination: "/safety/emergencies", permanent: true },
-      { source: "/elections", destination: "/safety/elections", permanent: true },
+      // Public Safety (moved to /community/ in Phase 1)
+      { source: "/traffic", destination: "/community/traffic", permanent: true },
+      { source: "/earthquakes", destination: "/community/seismic", permanent: true },
+      { source: "/emergencies", destination: "/community/emergencies", permanent: true },
+      { source: "/safety/:path*", destination: "/community/:path*", permanent: true },
 
       // Municipalities
       { source: "/coverage", destination: "/municipalities/coverage", permanent: true },
 
       // Tools
-      { source: "/learn", destination: "/tools/learn", permanent: true },
       { source: "/docs", destination: "/tools/docs", permanent: true },
       { source: "/sources", destination: "/tools/sources", permanent: true },
+
+      // Legacy routes removed in Phase 1
+      { source: "/overview/:path*", destination: "/home/:path*", permanent: true },
+      { source: "/politics/:path*", destination: "/governance/:path*", permanent: true },
+      { source: "/health/:path*", destination: "/community/health", permanent: true },
+      { source: "/dashboard", destination: "/home/dashboard", permanent: true },
     ];
   },
 };
