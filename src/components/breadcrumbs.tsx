@@ -67,6 +67,9 @@ const LABELS: Record<string, string> = {
   // Tools pages
   docs: "API Docs",
   sources: "Data Sources",
+  "home-costs": "Home Buying Costs",
+  "pay-calculator": "Take-Home Pay",
+  "deposit-calculator": "Deposit Interest",
 
   // Utility pages
   account: "Account",

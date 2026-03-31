@@ -40,6 +40,7 @@ import {
   Shield,
   Plane,
   CreditCard,
+  Calculator,
 } from "lucide-react";
 import type { ElementType } from "react";
 import {
@@ -321,6 +322,9 @@ export function getAllNavItems(): NavItem[] {
 
 export const toolsItems: NavItem[] = [
   { href: "/tools", label: "Tools", icon: Wrench },
+  { href: "/tools/home-costs", label: "Home Buying Costs", icon: Home },
+  { href: "/tools/pay-calculator", label: "Take-Home Pay", icon: Calculator },
+  { href: "/tools/deposit-calculator", label: "Deposit Interest", icon: Scale },
   { href: "/tools/docs", label: "API Docs", icon: BookOpen },
   { href: "/tools/sources", label: "Data Sources", icon: Database },
 ];

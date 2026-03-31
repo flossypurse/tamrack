@@ -8,13 +8,43 @@ import {
   BookOpen,
   Database,
   ArrowRight,
+  Home,
+  Calculator,
+  Scale,
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Tools — Learn, API Docs & Data Sources",
+  title: "Tools — Calculators, Learn, API Docs & Data Sources",
   description:
-    "Educational tools, API documentation, and a complete data source reference for Alberta Pulse Check.",
+    "Free Alberta calculators, educational tools, API documentation, and data source reference for Alberta Pulse Check.",
 };
+
+const calculators = [
+  {
+    href: "/tools/home-costs",
+    icon: Home,
+    title: "Home Buying Cost Calculator",
+    description:
+      "Calculate every cost to buy a home in Alberta — closing costs, land titles fees, CMHC mortgage insurance, lawyer fees, GST on new builds, and more.",
+    sources: "Alberta Land Titles, CMHC, CRA — 2026 rates",
+  },
+  {
+    href: "/tools/pay-calculator",
+    icon: Calculator,
+    title: "Take-Home Pay Calculator",
+    description:
+      "See your net pay after federal tax, Alberta provincial tax, CPP, CPP2, and EI deductions — broken down by pay period.",
+    sources: "CRA federal/provincial rates — 2026 brackets",
+  },
+  {
+    href: "/tools/deposit-calculator",
+    icon: Scale,
+    title: "Security Deposit Interest Calculator",
+    description:
+      "Calculate interest owed on rental security deposits using official Alberta rates. Year-by-year breakdown with downloadable PDF report.",
+    sources: "Alberta.ca annual deposit interest rates",
+  },
+];
 
 const pages = [
   {
@@ -80,7 +110,53 @@ export default function ToolsPage() {
         </div>
       </Card>
 
-      {/* Page grid */}
+      {/* Calculators */}
+      <div>
+        <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+          <Calculator size={14} className="text-cat-tools" />
+          Calculators
+        </h2>
+        <div className="space-y-3">
+          {calculators.map((calc) => (
+            <Link key={calc.href} href={calc.href} className="group block">
+              <Card className="transition-colors hover:border-accent/30">
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 mt-0.5">
+                    <calc.icon
+                      size={18}
+                      className="text-muted group-hover:text-accent transition-colors"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-medium text-foreground group-hover:text-accent transition-colors">
+                        {calc.title}
+                      </h3>
+                      <ArrowRight
+                        size={14}
+                        className="text-muted group-hover:text-accent transition-colors"
+                      />
+                    </div>
+                    <p className="text-sm text-muted mt-1 leading-relaxed">
+                      {calc.description}
+                    </p>
+                    <p className="text-[10px] font-mono text-muted/60 mt-2">
+                      {calc.sources}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Reference & learning */}
+      <div>
+        <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+          <BookOpen size={14} className="text-cat-tools" />
+          Reference & Learning
+        </h2>
       <div className="space-y-3">
         {pages.map((page) => (
           <Link key={page.href} href={page.href} className="group block">
@@ -113,6 +189,7 @@ export default function ToolsPage() {
             </Card>
           </Link>
         ))}
+      </div>
       </div>
     </main>
   );
