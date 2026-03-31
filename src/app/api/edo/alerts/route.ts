@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("[edo/alerts] Error:", error);
     return NextResponse.json(
-      { error: "Alert evaluation failed", detail: String(error) },
+      { error: "Alert evaluation failed" },
       { status: 500 },
     );
   }

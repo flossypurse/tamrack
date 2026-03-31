@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("[edo/compare] Error:", error);
     return NextResponse.json(
-      { error: "Comparison failed", detail: String(error) },
+      { error: "Comparison failed" },
       { status: 500 },
     );
   }

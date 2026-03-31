@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { requireAdmin } from "@/lib/admin-auth";
 
 // POST /api/admin/crm/generate-email
 export async function POST(req: NextRequest) {
+  const check = await requireAdmin();
+  if (!check.authorized) return check.response;
+
   const { contact_id } = await req.json();
 
   if (!contact_id) {
@@ -10,7 +14,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured" }, { status: 500 });
+    return NextResponse.json({ error: "Email generation service not configured" }, { status: 500 });
   }
 
   const pool = await getDb();
@@ -119,8 +123,7 @@ ${contact.status === "demo" ? "We're at the demo stage. This should be about sch
 
     return NextResponse.json(parsed);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("Generate email failed:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Generate email failed:", err instanceof Error ? err.message : err);
+    return NextResponse.json({ error: "Failed to generate email" }, { status: 500 });
   }
 }

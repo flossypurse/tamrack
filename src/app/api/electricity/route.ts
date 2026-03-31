@@ -45,6 +45,6 @@ export async function GET(request: NextRequest) {
       note: "Requires AESO_API_KEY environment variable",
     });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch electricity data", detail: String(error) }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch electricity data" }, { status: 500 });
   }
 }

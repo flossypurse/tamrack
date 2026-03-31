@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     return NextResponse.json(
-      { error: "Failed to fetch housing data", detail: String(error) },
+      { error: "Failed to fetch housing data" },
       { status: 500 }
     );
   }

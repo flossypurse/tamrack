@@ -65,7 +65,7 @@ function Sparkline({
               borderRadius: "8px",
               fontSize: "11px",
             }}
-            formatter={(value: number) => [value.toLocaleString(), ""]}
+            formatter={(value) => [Number(value).toLocaleString(), ""]}
           />
           <defs>
             <linearGradient id={`pv-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">

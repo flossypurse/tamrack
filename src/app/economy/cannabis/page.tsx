@@ -270,7 +270,7 @@ async function ProductTypeChart() {
           subtitle="Quarterly non-medical sales by category (millions of units, national)"
           badge="LIVE"
         />
-        <MultiSeriesLineChart data={data} series={series} height={280} />
+        <MultiSeriesLineChart data={data as unknown as MultiSeriesPoint[]} series={series} height={280} />
         <p className="text-[10px] text-muted/60 mt-2">
           National data from Health Canada. Dried flower dominates but edibles and extracts
           have grown steadily since their legal introduction in late 2019.

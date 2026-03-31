@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     return NextResponse.json(
-      { error: "Failed to fetch health data", detail: String(error) },
+      { error: "Failed to fetch health data" },
       { status: 500 }
     );
   }

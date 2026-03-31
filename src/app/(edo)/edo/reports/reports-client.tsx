@@ -106,8 +106,8 @@ function ReportSparkline({
               borderRadius: "6px",
               fontSize: "10px",
             }}
-            formatter={(value: number) => [value.toLocaleString(), ""]}
-            labelFormatter={(label: string) => label}
+            formatter={(value) => [Number(value).toLocaleString(), ""]}
+            labelFormatter={(label) => label}
           />
           <Area
             type="monotone"

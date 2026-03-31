@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { requireAdmin } from "@/lib/admin-auth";
 
 // GET /api/admin/crm/activities?contact_id=123
 export async function GET(req: NextRequest) {
+  const check = await requireAdmin();
+  if (!check.authorized) return check.response;
+
   const pool = await getDb();
   const contactId = new URL(req.url).searchParams.get("contact_id");
 
@@ -20,6 +24,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/admin/crm/activities — add activity to contact
 export async function POST(req: NextRequest) {
+  const check = await requireAdmin();
+  if (!check.authorized) return check.response;
+
   const pool = await getDb();
   const { contact_id, type, content } = await req.json();
 

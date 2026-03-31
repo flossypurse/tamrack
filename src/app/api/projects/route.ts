@@ -35,6 +35,6 @@ export async function GET(request: NextRequest) {
       usage: "GET /api/projects?type=federal",
     });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch project data", detail: String(error) }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch project data" }, { status: 500 });
   }
 }

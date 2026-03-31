@@ -62,7 +62,7 @@ function isApiRoute(pathname: string) {
 }
 
 function isAdminRoute(pathname: string) {
-  return pathname.startsWith("/admin");
+  return pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
 }
 
 function isEdoRoute(pathname: string) {

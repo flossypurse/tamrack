@@ -7,14 +7,28 @@ import type { NextConfig } from "next";
 // .next to prevent Turbopack dev cache from conflicting with Webpack builds.
 const nextConfig: NextConfig = {
   typescript: {
-    // TODO: fix type errors in traffic/benchmarks pages, then remove this
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   experimental: {
     // Limit static generation workers to reduce filesystem race conditions
     // that cause ENOENT / "Cannot find module" errors during build.
     // Default (os.cpus) spawns 10 workers which overwhelms the build pipeline.
     cpus: 2,
+  },
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-XSS-Protection", value: "1; mode=block" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        ],
+      },
+    ];
   },
   async redirects() {
     return [

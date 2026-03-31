@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { requireAdmin } from "@/lib/admin-auth";
 
 // GET /api/admin/crm — list contacts with latest activity
 export async function GET(req: NextRequest) {
+  const check = await requireAdmin();
+  if (!check.authorized) return check.response;
+
   const pool = await getDb();
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");
@@ -42,6 +46,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/admin/crm — create contact
 export async function POST(req: NextRequest) {
+  const check = await requireAdmin();
+  if (!check.authorized) return check.response;
+
   const pool = await getDb();
   const body = await req.json();
   const { name, email, phone, organization, role, municipality, status, source, notes } = body;
@@ -70,6 +77,9 @@ export async function POST(req: NextRequest) {
 
 // PUT /api/admin/crm — update contact
 export async function PUT(req: NextRequest) {
+  const check = await requireAdmin();
+  if (!check.authorized) return check.response;
+
   const pool = await getDb();
   const body = await req.json();
   const { id, ...fields } = body;
@@ -111,6 +121,9 @@ export async function PUT(req: NextRequest) {
 
 // DELETE /api/admin/crm — delete contact
 export async function DELETE(req: NextRequest) {
+  const check = await requireAdmin();
+  if (!check.authorized) return check.response;
+
   const pool = await getDb();
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");

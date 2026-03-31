@@ -229,12 +229,12 @@ export default function EmissionsPage() {
         <EmissionsMetrics />
       </Suspense>
 
-      <SectionHeader title="Top Emitters by Company" />
+      <SectionHeader title="Top Emitters by Company" category="environment" />
       <Suspense fallback={<LoadingCard />}>
         <TopEmittersTable />
       </Suspense>
 
-      <SectionHeader title="Facility Detail" />
+      <SectionHeader title="Facility Detail" category="environment" />
       <Suspense fallback={<LoadingCard />}>
         <FacilityTable />
       </Suspense>

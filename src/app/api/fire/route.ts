@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     return NextResponse.json(
-      { error: "Failed to fetch fire data", detail: String(error) },
+      { error: "Failed to fetch fire data" },
       { status: 500 }
     );
   }

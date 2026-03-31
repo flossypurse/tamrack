@@ -65,8 +65,8 @@ function Sparkline({
               borderRadius: "6px",
               fontSize: "10px",
             }}
-            formatter={(value: number) => [value.toLocaleString(), ""]}
-            labelFormatter={(label: string) => label}
+            formatter={(value) => [Number(value).toLocaleString(), ""]}
+            labelFormatter={(label) => label}
           />
           <Area
             type="monotone"
@@ -323,7 +323,7 @@ function RentalMarket({ data }: { data: RealtorMarketSnapshot["rental"] }) {
                     borderRadius: "8px",
                     fontSize: "11px",
                   }}
-                  formatter={(value: number) => [`${value}%`, ""]}
+                  formatter={(value) => [`${value}%`, ""]}
                 />
                 <Legend wrapperStyle={{ fontSize: "10px" }} />
                 <Area
@@ -408,7 +408,7 @@ function RentalMarket({ data }: { data: RealtorMarketSnapshot["rental"] }) {
                     borderRadius: "8px",
                     fontSize: "11px",
                   }}
-                  formatter={(value: number) => [`$${value}`, ""]}
+                  formatter={(value) => [`$${value}`, ""]}
                 />
                 <Legend wrapperStyle={{ fontSize: "10px" }} />
                 <Bar
@@ -489,8 +489,8 @@ function AssessmentTrends({
                 borderRadius: "8px",
                 fontSize: "11px",
               }}
-              formatter={(value: number) => [
-                `$${value.toLocaleString()}`,
+              formatter={(value) => [
+                `$${Number(value).toLocaleString()}`,
                 "",
               ]}
             />

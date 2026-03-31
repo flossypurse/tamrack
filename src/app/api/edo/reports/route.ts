@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("[edo/reports] Error:", error);
     return NextResponse.json(
-      { error: "Report generation failed", detail: String(error) },
+      { error: "Report generation failed" },
       { status: 500 },
     );
   }

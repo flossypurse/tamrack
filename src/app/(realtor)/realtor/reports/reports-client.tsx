@@ -170,8 +170,8 @@ function Sparkline({
               borderRadius: "6px",
               fontSize: "10px",
             }}
-            formatter={(value: number) => [value.toLocaleString(), ""]}
-            labelFormatter={(label: string) => label}
+            formatter={(value) => [Number(value).toLocaleString(), ""]}
+            labelFormatter={(label) => label}
           />
           <Area
             type="monotone"
@@ -374,11 +374,11 @@ function ZoningBreakdownChart({
                 borderRadius: "8px",
                 fontSize: "11px",
               }}
-              formatter={(value: number, name: string) => [
-                name === "avg"
-                  ? `$${value.toLocaleString()}`
-                  : value.toLocaleString(),
-                name === "avg" ? "Avg Assessment" : "Properties",
+              formatter={(value, name) => [
+                String(name) === "avg"
+                  ? `$${Number(value).toLocaleString()}`
+                  : Number(value).toLocaleString(),
+                String(name) === "avg" ? "Avg Assessment" : "Properties",
               ]}
             />
             <Bar
@@ -500,7 +500,7 @@ function RentalSnapshot({
                     borderRadius: "8px",
                     fontSize: "11px",
                   }}
-                  formatter={(value: number) => [`${value}%`, ""]}
+                  formatter={(value) => [`${value}%`, ""]}
                 />
                 <Legend wrapperStyle={{ fontSize: "10px" }} />
                 <Area

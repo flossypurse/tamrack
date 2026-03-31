@@ -13,14 +13,14 @@ export async function authenticateApiRequest(req: NextRequest): Promise<ApiAuthR
   // API key auth
   if (authHeader?.startsWith("Bearer ap_")) {
     const key = authHeader.slice(7);
-    const result = validateApiKey(key);
+    const result = await validateApiKey(key);
     if (!result) {
       return { authorized: false, response: NextResponse.json({ error: "Invalid API key" }, { status: 401 }) };
     }
 
-    const rateCheck = checkRateLimit(result.keyId);
+    const rateCheck = await checkRateLimit(result.keyId);
     if (!rateCheck.allowed) {
-      logApiUsage(result.keyId, result.userId, endpoint, 429);
+      await logApiUsage(result.keyId, result.userId, endpoint, 429);
       return {
         authorized: false,
         response: NextResponse.json(
@@ -30,14 +30,14 @@ export async function authenticateApiRequest(req: NextRequest): Promise<ApiAuthR
       };
     }
 
-    logApiUsage(result.keyId, result.userId, endpoint, 200);
+    await logApiUsage(result.keyId, result.userId, endpoint, 200);
     return { authorized: true, userId: result.userId, keyId: result.keyId };
   }
 
   // Session auth (already validated by middleware)
   const session = await auth();
   if (session?.user?.id) {
-    logApiUsage(null, session.user.id, endpoint, 200);
+    await logApiUsage(null, session.user.id, endpoint, 200);
     return { authorized: true, userId: session.user.id, keyId: null };
   }
 

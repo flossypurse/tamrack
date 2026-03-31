@@ -281,7 +281,7 @@ async function MarketRead() {
     bullets.push({
       icon: Shield,
       text: `Bankruptcies — Edmonton: ${Math.round(edmontonBankruptcies).toLocaleString()}${calgaryBankruptcies != null ? `, Calgary: ${Math.round(calgaryBankruptcies).toLocaleString()}` : ""}. ${edmontonBankruptcies > 2000 ? "Elevated levels — distressed opportunities may emerge." : "Within normal range."}`,
-      signal: edmontonBankruptcies > 2000 ? "caution" : "neutral",
+      signal: edmontonBankruptcies > 2000 ? "negative" : "neutral",
     });
   }
 

@@ -52,6 +52,6 @@ export async function GET(request: NextRequest) {
       usage: "GET /api/energy?type=throughput&pipeline=NGTL_THROUGHPUT",
     });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch energy data", detail: String(error) }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch energy data" }, { status: 500 });
   }
 }

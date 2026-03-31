@@ -218,11 +218,11 @@ function AssessmentBreakdownChart({
                 borderRadius: "8px",
                 fontSize: "11px",
               }}
-              formatter={(value: number, name: string) => [
-                name === "avg"
-                  ? `$${value.toLocaleString()}`
-                  : value.toLocaleString(),
-                name === "avg" ? "Avg Assessment" : "Properties",
+              formatter={(value, name) => [
+                String(name) === "avg"
+                  ? `$${Number(value).toLocaleString()}`
+                  : Number(value).toLocaleString(),
+                String(name) === "avg" ? "Avg Assessment" : "Properties",
               ]}
             />
             <Bar

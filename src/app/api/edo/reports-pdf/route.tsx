@@ -403,7 +403,7 @@ export async function GET(request: NextRequest) {
     const templateName = getTemplate(templateId)?.name ?? templateId;
     const filename = `${municipalityName.replace(/\s+/g, "-")}-${templateName.replace(/\s+/g, "-")}-${rangeLabel.replace(/\s+/g, "")}.pdf`;
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(pdfBuffer as unknown as BodyInit, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
@@ -412,7 +412,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("[edo/reports-pdf] Error:", error);
     return NextResponse.json(
-      { error: "Failed to generate PDF", detail: String(error) },
+      { error: "Failed to generate PDF" },
       { status: 500 },
     );
   }

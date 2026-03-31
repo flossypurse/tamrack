@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("[edo/pitch] Error:", error);
     return NextResponse.json(
-      { error: "Pitch kit generation failed", detail: String(error) },
+      { error: "Pitch kit generation failed" },
       { status: 500 },
     );
   }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { requireAdmin } from "@/lib/admin-auth";
 import * as nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
@@ -14,6 +15,9 @@ const transporter = nodemailer.createTransport({
 
 // POST /api/admin/crm/send-email
 export async function POST(req: NextRequest) {
+  const check = await requireAdmin();
+  if (!check.authorized) return check.response;
+
   const { contact_id, to, subject, body } = await req.json();
 
   if (!to || !subject || !body) {
@@ -25,7 +29,7 @@ export async function POST(req: NextRequest) {
 
   if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
     return NextResponse.json(
-      { error: "Gmail credentials not configured. Set GMAIL_USER and GMAIL_APP_PASSWORD in .env.local" },
+      { error: "Email service not configured" },
       { status: 500 }
     );
   }
@@ -58,6 +62,6 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("Email send failed:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to send email" }, { status: 500 });
   }
 }

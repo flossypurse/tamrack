@@ -8,6 +8,7 @@ const categoryColors: Record<Category, string> = {
   intelligence: "var(--cat-intelligence)",
   environment: "var(--cat-environment)",
   safety: "var(--cat-safety)",
+  politics: "var(--cat-politics)",
   municipalities: "var(--cat-municipalities)",
   tools: "var(--cat-tools)",
   health: "var(--cat-health)",

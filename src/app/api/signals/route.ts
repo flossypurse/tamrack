@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     return NextResponse.json(
-      { error: "Failed to compute signals", detail: String(error) },
+      { error: "Failed to compute signals" },
       { status: 500 }
     );
   }

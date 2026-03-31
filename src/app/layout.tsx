@@ -5,6 +5,7 @@ import { Providers } from "@/components/providers";
 import { AppShell } from "@/components/app-shell";
 import { OrganizationJsonLd, WebsiteJsonLd, SoftwareApplicationJsonLd } from "@/components/json-ld";
 import { Analytics } from "@/components/analytics";
+import { CookieConsent } from "@/components/cookie-consent";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -94,6 +95,7 @@ export default function RootLayout({
           <AppShell>{children}</AppShell>
         </Providers>
         <Analytics />
+        <CookieConsent />
       </body>
     </html>
   );

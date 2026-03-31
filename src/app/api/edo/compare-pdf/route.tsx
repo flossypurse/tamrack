@@ -285,7 +285,7 @@ export async function GET(request: NextRequest) {
     const names = result.municipalities.map((m) => m.name.replace(/\s+/g, "-"));
     const filename = `Comparison-${names.join("-vs-")}.pdf`;
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(pdfBuffer as unknown as BodyInit, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
@@ -294,7 +294,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("[edo/compare-pdf] Error:", error);
     return NextResponse.json(
-      { error: "Failed to generate PDF", detail: String(error) },
+      { error: "Failed to generate PDF" },
       { status: 500 },
     );
   }

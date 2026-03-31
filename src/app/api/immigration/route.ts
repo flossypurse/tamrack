@@ -43,6 +43,6 @@ export async function GET(request: NextRequest) {
       usage: "GET /api/immigration?type=trend&province=Alberta",
     });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch immigration data", detail: String(error) }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch immigration data" }, { status: 500 });
   }
 }

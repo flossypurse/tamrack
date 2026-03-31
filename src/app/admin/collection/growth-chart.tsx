@@ -67,9 +67,9 @@ export function GrowthChart({ data }: GrowthChartProps) {
               fontSize: "11px",
             }}
             labelStyle={{ color: "#a1a1aa" }}
-            formatter={(value: number, name: string) => [
-              value.toLocaleString(),
-              SOURCE_LABELS[name] ?? name,
+            formatter={(value, name) => [
+              Number(value).toLocaleString(),
+              SOURCE_LABELS[String(name)] ?? String(name),
             ]}
           />
           <Legend

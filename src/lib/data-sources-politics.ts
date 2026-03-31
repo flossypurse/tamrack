@@ -213,7 +213,7 @@ export async function fetchParliamentVotes(
           paired: Number(v.paired_total || 0),
           result: String(v.result || ""),
           billUrl: String(v.bill_url || ""),
-          description: String(v.description?.en || v.description || ""),
+          description: String((v.description as Record<string, string>)?.en || v.description || ""),
         });
       }
 

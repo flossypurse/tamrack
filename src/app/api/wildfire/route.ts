@@ -16,6 +16,6 @@ export async function GET(request: NextRequest) {
       data: data.slice(-200),
     });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch wildfire data", detail: String(error) }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch wildfire data" }, { status: 500 });
   }
 }

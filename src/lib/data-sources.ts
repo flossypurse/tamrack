@@ -384,7 +384,7 @@ export async function fetchEdmontonPermitsSummary(): Promise<TimeSeriesPoint[]> 
         "SELECT date_trunc_ym(issue_date) as month, count(*) as cnt, sum(construction_value) as total_value WHERE issue_date > '2023-01-01' GROUP BY date_trunc_ym(issue_date) ORDER BY month",
     });
     if (!Array.isArray(data)) return [];
-    return data.map((row: { month: string; cnt: string; total_value: string }) => ({
+    return (data as any[]).map((row: { month: string; cnt: string; total_value: string }) => ({
       date: row.month?.split("T")[0] || "",
       value: parseInt(row.cnt || "0"),
       label: `$${(parseInt(row.total_value || "0") / 1_000_000).toFixed(1)}M`,
@@ -405,7 +405,7 @@ export async function fetchEdmontonBusinessLicences(): Promise<TimeSeriesPoint[]
     });
     if (!Array.isArray(data)) return [];
     const counts: Record<string, number> = {};
-    for (const row of data) {
+    for (const row of (data as any[])) {
       const d = row.most_recent_issue_date;
       if (!d) continue;
       const month = d.slice(0, 7); // "YYYY-MM"
@@ -438,7 +438,7 @@ export async function fetchEdmontonCommercialAssessments(
       $query: `SELECT neighbourhood, count(*) as cnt, avg(assessed_value::number) as avg_val, sum(assessed_value::number) as total_val WHERE tax_class='Non Residential' AND neighbourhood IS NOT NULL GROUP BY neighbourhood ORDER BY total_val DESC LIMIT ${limit}`,
     });
     if (!Array.isArray(data)) return [];
-    return data.map((row: { neighbourhood: string; cnt: string; avg_val: string; total_val: string }) => ({
+    return (data as any[]).map((row: { neighbourhood: string; cnt: string; avg_val: string; total_val: string }) => ({
       neighbourhood: row.neighbourhood || "Unknown",
       count: parseInt(row.cnt || "0"),
       avgValue: Math.round(parseFloat(row.avg_val || "0")),
@@ -462,7 +462,7 @@ export async function fetchEdmontonBusinessCategories(
       $query: `SELECT category, count(*) as cnt WHERE status='ISSUED' AND category IS NOT NULL GROUP BY category ORDER BY cnt DESC LIMIT ${limit}`,
     });
     if (!Array.isArray(data)) return [];
-    return data.map((row: { category: string; cnt: string }) => ({
+    return (data as any[]).map((row: { category: string; cnt: string }) => ({
       category: row.category || "Unknown",
       count: parseInt(row.cnt || "0"),
     }));
@@ -484,7 +484,7 @@ export async function fetchEdmontonBusinessesByNeighbourhood(
       $query: `SELECT neighbourhood, count(*) as cnt WHERE status='ISSUED' AND neighbourhood IS NOT NULL GROUP BY neighbourhood ORDER BY cnt DESC LIMIT ${limit}`,
     });
     if (!Array.isArray(data)) return [];
-    return data.map((row: { neighbourhood: string; cnt: string }) => ({
+    return (data as any[]).map((row: { neighbourhood: string; cnt: string }) => ({
       neighbourhood: row.neighbourhood || "Unknown",
       count: parseInt(row.cnt || "0"),
     }));
@@ -500,7 +500,7 @@ export async function fetchEdmontonCommercialPermits(): Promise<TimeSeriesPoint[
         "SELECT date_trunc_ym(issue_date) as month, count(*) as cnt, sum(construction_value) as total_val WHERE issue_date > '2023-01-01' AND job_category='Commercial' GROUP BY date_trunc_ym(issue_date) ORDER BY month",
     });
     if (!Array.isArray(data)) return [];
-    return data.map((row: { month: string; cnt: string; total_val: string }) => ({
+    return (data as any[]).map((row: { month: string; cnt: string; total_val: string }) => ({
       date: row.month?.split("T")[0] || "",
       value: parseInt(row.cnt || "0"),
     }));
@@ -619,7 +619,7 @@ export async function fetchEdmontonDevPermits(): Promise<TimeSeriesPoint[]> {
         "SELECT date_trunc_ym(permit_date) as month, count(*) as cnt WHERE permit_date > '2023-01-01' GROUP BY date_trunc_ym(permit_date) ORDER BY month",
     });
     if (!Array.isArray(data)) return [];
-    return data.map((row: { month: string; cnt: string }) => ({
+    return (data as any[]).map((row: { month: string; cnt: string }) => ({
       date: row.month?.split("T")[0] || "",
       value: parseInt(row.cnt || "0"),
     }));
@@ -641,7 +641,7 @@ export async function fetchEdmontonAssessmentsByWard(): Promise<AssessmentByWard
         "SELECT ward, count(*) as cnt, avg(assessed_value::number) as avg_val WHERE tax_class='Residential' AND ward IS NOT NULL GROUP BY ward ORDER BY avg_val DESC",
     });
     if (!Array.isArray(data)) return [];
-    return data.map((row: { ward: string; cnt: string; avg_val: string }) => ({
+    return (data as any[]).map((row: { ward: string; cnt: string; avg_val: string }) => ({
       ward: row.ward || "Unknown",
       count: parseInt(row.cnt || "0"),
       avgValue: Math.round(parseFloat(row.avg_val || "0")),
@@ -671,7 +671,7 @@ export async function fetchHotNeighbourhoods(
       $query: `SELECT neighbourhood, count(*) as cnt, sum(units_added) as total_units, sum(construction_value) as total_val WHERE issue_date > '2025-01-01' AND (job_category='Single, Semi-detached & Rowhousing' OR job_category='House Combination') AND neighbourhood IS NOT NULL GROUP BY neighbourhood ORDER BY total_units DESC LIMIT ${limit}`,
     });
     if (!Array.isArray(data)) return [];
-    return data.map(
+    return (data as any[]).map(
       (row: {
         neighbourhood: string;
         cnt: string;
@@ -712,7 +712,7 @@ export async function fetchRecentResidentialDevPermits(
       $query: `SELECT address, neighbourhood, neighbourhood_classification, description_of_development, permit_date, status, zoning WHERE permit_date > '2025-01-01' AND description_of_development like '%Residential%' ORDER BY permit_date DESC LIMIT ${limit}`,
     });
     if (!Array.isArray(data)) return [];
-    return data.map(
+    return (data as any[]).map(
       (row: {
         address: string;
         neighbourhood: string;
@@ -748,7 +748,7 @@ export async function fetchRedevelopingActivity(): Promise<RedevelopingArea[]> {
         "SELECT neighbourhood, count(*) as cnt WHERE permit_date > '2025-01-01' AND neighbourhood_classification = 'Redeveloping' AND description_of_development like '%Residential%' GROUP BY neighbourhood ORDER BY cnt DESC LIMIT 15",
     });
     if (!Array.isArray(data)) return [];
-    return data.map((row: { neighbourhood: string; cnt: string }) => ({
+    return (data as any[]).map((row: { neighbourhood: string; cnt: string }) => ({
       neighbourhood: row.neighbourhood || "Unknown",
       permits: parseInt(row.cnt || "0"),
     }));
@@ -764,7 +764,7 @@ export async function fetchResidentialPermitTrend(): Promise<TimeSeriesPoint[]> 
         "SELECT date_trunc_ym(issue_date) as month, sum(units_added) as total_units WHERE issue_date > '2023-01-01' AND (job_category='Single, Semi-detached & Rowhousing' OR job_category='House Combination') GROUP BY date_trunc_ym(issue_date) ORDER BY month",
     });
     if (!Array.isArray(data)) return [];
-    return data.map((row: { month: string; total_units: string }) => ({
+    return (data as any[]).map((row: { month: string; total_units: string }) => ({
       date: row.month?.split("T")[0] || "",
       value: parseInt(row.total_units || "0"),
     }));
@@ -787,7 +787,7 @@ export async function fetchTopNeighbourhoodAssessments(
       $query: `SELECT neighbourhood, count(*) as cnt, avg(assessed_value::number) as avg_val WHERE tax_class='Residential' AND neighbourhood IS NOT NULL GROUP BY neighbourhood HAVING count(*) > 100 ORDER BY avg_val DESC LIMIT ${limit}`,
     });
     if (!Array.isArray(data)) return [];
-    return data.map(
+    return (data as any[]).map(
       (row: { neighbourhood: string; cnt: string; avg_val: string }) => ({
         neighbourhood: row.neighbourhood || "Unknown",
         count: parseInt(row.cnt || "0"),
@@ -808,7 +808,7 @@ export async function fetchHomeImprovementHotspots(): Promise<
         "SELECT neighbourhood, count(*) as cnt, sum(construction_value) as total_val WHERE issue_date > '2025-01-01' AND job_category='Home Improvement' AND neighbourhood IS NOT NULL GROUP BY neighbourhood ORDER BY cnt DESC LIMIT 15",
     });
     if (!Array.isArray(data)) return [];
-    return data.map(
+    return (data as any[]).map(
       (row: { neighbourhood: string; cnt: string; total_val: string }) => {
         const permits = parseInt(row.cnt || "0");
         const totalValue = parseInt(row.total_val || "0");
@@ -1709,7 +1709,7 @@ export async function fetchEdmontonRoadConstruction(
       $order: "start_date DESC",
       $limit: String(limit),
     });
-    return (data || []).map((d: Record<string, unknown>) => ({
+    return ((data || []) as any[]).map((d: Record<string, unknown>) => ({
       fileNumber: String(d.file_number || ""),
       startDate: String(d.start_date || "").slice(0, 10),
       finishDate: String(d.finish_date || "").slice(0, 10),
@@ -1734,7 +1734,7 @@ export async function fetchRoadConstructionByType(): Promise<
       $order: "cnt DESC",
       $limit: "20",
     });
-    return (data || []).map((d: Record<string, unknown>) => ({
+    return ((data || []) as any[]).map((d: Record<string, unknown>) => ({
       type: String(d.work_reason || "Unknown").replace(/_/g, " "),
       count: Number(d.cnt || 0),
     }));
@@ -2601,7 +2601,7 @@ export async function fetchEdmontonTrafficDisruptions(): Promise<{ description: 
       $order: "start_date DESC",
     });
     if (!Array.isArray(data)) return [];
-    return data.map((r: Record<string, string>) => ({
+    return (data as any[]).map((r: Record<string, string>) => ({
       description: r.description || r.activity || "",
       location: r.location || r.address || "",
       startDate: r.start_date || "",

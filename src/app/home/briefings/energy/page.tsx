@@ -254,7 +254,7 @@ async function MarketRead() {
     bullets.push({
       icon: AlertTriangle,
       text: `${recentIncidents.length} pipeline incidents reported in past 12 months (${incidents.length} total on record). ${recentIncidents.length > 20 ? "Elevated — monitor for regulatory tightening." : "Within normal range."}`,
-      signal: recentIncidents.length > 20 ? "caution" : "neutral",
+      signal: recentIncidents.length > 20 ? "negative" : "neutral",
     });
   }
 

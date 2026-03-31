@@ -303,7 +303,7 @@ export default function EmployersPage() {
         <EmployerMetrics />
       </Suspense>
 
-      <SectionHeader title="WCB Employer Records" />
+      <SectionHeader title="WCB Employer Records" category="economy" />
       <Suspense fallback={<LoadingCard />}>
         <WCBIndustryTable />
       </Suspense>
@@ -312,7 +312,7 @@ export default function EmployersPage() {
         <WCBDetailTable />
       </Suspense>
 
-      <SectionHeader title="Corporate Tax Statistics" />
+      <SectionHeader title="Corporate Tax Statistics" category="economy" />
       <Suspense fallback={<LoadingCard />}>
         <CRAT2Table />
       </Suspense>

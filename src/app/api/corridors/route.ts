@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ corridors });
   } catch (error) {
     return NextResponse.json(
-      { error: "Failed to fetch data", detail: String(error) },
+      { error: "Failed to fetch data" },
       { status: 500 }
     );
   }

@@ -34,6 +34,6 @@ export async function GET(request: NextRequest) {
     const data = await fetchRegionalIndicator(indicator);
     return NextResponse.json({ indicator, records: data.length, data });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch regional data", detail: String(error) }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch regional data" }, { status: 500 });
   }
 }

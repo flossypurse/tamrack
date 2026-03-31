@@ -239,7 +239,7 @@ export async function GET(request: NextRequest) {
     const profile = await buildCommunityProfile(slug);
     const pdfBuffer = await renderPdf(profile);
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(pdfBuffer as unknown as BodyInit, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${profile.municipalityName.replace(/\s+/g, "-")}-Community-Profile.pdf"`,
@@ -248,7 +248,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("[edo/profile-pdf] Error:", error);
     return NextResponse.json(
-      { error: "Failed to generate PDF", detail: String(error) },
+      { error: "Failed to generate PDF" },
       { status: 500 },
     );
   }

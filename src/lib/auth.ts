@@ -59,7 +59,7 @@ async function sendVerificationRequest(params: {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  debug: true,
+  debug: process.env.NODE_ENV === "development",
   trustHost: true,
   adapter: PostgresAdapter(),
   session: { strategy: "jwt" },
@@ -85,13 +85,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       : []),
   ],
   callbacks: {
-    async signIn({ user, account }) {
-      console.log(`[auth] signIn callback: user=${user?.email}, provider=${account?.provider}`);
+    async signIn() {
       return true;
     },
 
     async redirect({ url, baseUrl }) {
-      console.log(`[auth] redirect callback: url=${url}, baseUrl=${baseUrl}`);
       // Allow relative URLs
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       // Allow same-origin URLs
@@ -100,12 +98,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     async jwt({ token, user, trigger }) {
-      console.log(`[auth] jwt callback: trigger=${trigger}, hasUser=${!!user}, sub=${token.sub}`);
       try {
         // On sign-in or explicit update, load fresh data
         if (user || trigger === "update") {
           const userId = (user?.id ?? token.sub) as string;
-          console.log(`[auth] jwt: loading user data for ${userId}`);
           const pool = await getDb();
 
           const { rows: userRows } = await pool.query(`SELECT role FROM users WHERE id = $1`, [userId]);
@@ -124,7 +120,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             operating_area: string | null;
           } | undefined;
 
-          console.log(`[auth] jwt: role=${dbUser?.role}, subStatus=${sub?.status}, plan=${sub?.plan}, trialEnd=${sub?.trial_end}`);
           token.role = dbUser?.role ?? "user";
           token.subscriptionStatus = sub?.status ?? "none";
           token.plan = sub?.plan ?? "pro";
@@ -146,7 +141,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     async session({ session, token }) {
-      console.log(`[auth] session callback: sub=${token.sub}`);
       session.user.id = token.sub as string;
       session.user.role = token.role as string;
       session.user.subscriptionStatus = token.subscriptionStatus as string;

@@ -28,8 +28,8 @@ function Sparkline({ data, color = "#6366f1" }: { data: { date: string; value: n
               borderRadius: "6px",
               fontSize: "10px",
             }}
-            formatter={(value: number) => [value.toLocaleString(), ""]}
-            labelFormatter={(label: string) => label}
+            formatter={(value) => [Number(value).toLocaleString(), ""]}
+            labelFormatter={(label) => label}
           />
           <Area
             type="monotone"

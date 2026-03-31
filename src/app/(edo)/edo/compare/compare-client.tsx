@@ -385,13 +385,13 @@ function ComparisonBarChart({
                 borderRadius: "8px",
                 fontSize: "11px",
               }}
-              formatter={(value: number) => [
-                formatComparisonValue(value, indicator.format),
+              formatter={(value) => [
+                formatComparisonValue(value as number | null, indicator.format),
                 indicator.label,
               ]}
-              labelFormatter={(label: string) => {
-                const item = chartData.find((d) => d.name === label);
-                return item?.fullName ?? label;
+              labelFormatter={(label) => {
+                const item = chartData.find((d) => d.name === String(label));
+                return item?.fullName ?? String(label);
               }}
             />
             <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={48}>
@@ -503,11 +503,11 @@ function ComparisonTrendChart({
                 borderRadius: "8px",
                 fontSize: "11px",
               }}
-              formatter={(value: number, name: string) => {
-                const m = municipalities.find((mu) => mu.slug === name);
+              formatter={(value, name) => {
+                const m = municipalities.find((mu) => mu.slug === String(name));
                 return [
-                  formatComparisonValue(value, indicator.format),
-                  m?.name ?? name,
+                  formatComparisonValue(value as number | null, indicator.format),
+                  m?.name ?? String(name),
                 ];
               }}
             />
