@@ -14,7 +14,6 @@ import {
   ChevronRight,
   Activity,
 } from "lucide-react";
-import { signOutAction } from "@/lib/actions/auth";
 import type { ElementType, ReactNode } from "react";
 
 type RealtorNavItem = {
@@ -103,7 +102,7 @@ function RealtorTopBar() {
         <span className="text-xs text-muted hidden sm:inline">
           {session?.user?.email}
         </span>
-        <form action={signOutAction}>
+        <form action="/api/auth/sign-out" method="post">
           <button
             type="submit"
             className="p-1.5 text-muted hover:text-foreground transition-colors"
