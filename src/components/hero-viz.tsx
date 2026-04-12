@@ -2,10 +2,10 @@
 
 import { useEffect, useRef } from "react";
 
-// "Pulse Radar" — concentric rings radiate outward from varying origins.
-// A grid of data nodes lights up as the pulse wave passes through them,
-// briefly showing values before fading. Covers the full page as a fixed
-// background layer.
+// "Ambient Ripple" — slow, elegant rings radiate from random origins within
+// the hero area. No nodes, no text, no connection lines — just soft expanding
+// circles that fade out. Confined to the top ~70vh with a feathered bottom
+// edge and scroll-based opacity fade. One pulse at a time max.
 
 export function HeroVisualization() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -20,24 +20,13 @@ export function HeroVisualization() {
     let animationId: number;
     let time = 0;
     let scrollY = 0;
-    const parallaxFactor = 0.35; // background scrolls at 35% of content speed
 
     const colors = [
-      { r: 212, g: 134, b: 58 },  // brand accent orange (dominant)
-      { r: 212, g: 134, b: 58 },  // brand accent orange (weighted)
+      { r: 212, g: 134, b: 58 }, // brand accent orange (dominant)
+      { r: 212, g: 134, b: 58 }, // brand accent orange (weighted)
       { r: 120, g: 160, b: 158 }, // muted teal
       { r: 140, g: 150, b: 165 }, // soft slate
     ];
-
-    interface Node {
-      x: number;
-      y: number;
-      baseRadius: number;
-      color: typeof colors[number];
-      phase: number;
-      value: string;
-      glow: number;
-    }
 
     interface Pulse {
       cx: number;
@@ -45,75 +34,37 @@ export function HeroVisualization() {
       radius: number;
       maxRadius: number;
       speed: number;
-      color: typeof colors[number];
-      opacity: number;
+      color: (typeof colors)[number];
     }
 
-    let nodes: Node[] = [];
     let pulses: Pulse[] = [];
     let w = 0;
     let h = 0;
-
-    const sampleValues = [
-      "2.75%", "$0.72", "6.1%", "4.8%", "4.6M", "1,247",
-      "+0.3%", "$485K", "3.2%", "12.4K", "$1.2B", "847",
-      "+2.1%", "54", "22", "165+", "$29", "340+",
-    ];
+    let heroH = 0; // height of the visible hero region
 
     function resize() {
       const dpr = window.devicePixelRatio || 1;
       w = window.innerWidth;
       h = window.innerHeight;
+      heroH = h * 0.7; // canvas covers top 70% of viewport
       canvas!.width = w * dpr;
-      canvas!.height = h * dpr;
+      canvas!.height = heroH * dpr;
+      canvas!.style.height = `${heroH}px`;
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
-      initNodes();
-    }
-
-    function initNodes() {
-      nodes = [];
-      const spacingX = 90;
-      const spacingY = 80;
-      // Extend grid vertically so parallax reveals dots as you scroll
-      const extraHeight = h * 2; // cover enough for a full page scroll
-      const totalH = h + extraHeight;
-      const cols = Math.ceil(w / spacingX) + 1;
-      const rows = Math.ceil(totalH / spacingY) + 1;
-      const offsetX = (w - (cols - 1) * spacingX) / 2;
-      const offsetY = 0; // start from top, grid extends well below viewport
-
-      for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-          const jitterX = (Math.random() - 0.5) * 30;
-          const jitterY = (Math.random() - 0.5) * 25;
-          nodes.push({
-            x: offsetX + col * spacingX + jitterX,
-            y: offsetY + row * spacingY + jitterY,
-            baseRadius: 1.2 + Math.random() * 0.8,
-            color: colors[Math.floor(Math.random() * colors.length)],
-            phase: Math.random() * Math.PI * 2,
-            value: sampleValues[Math.floor(Math.random() * sampleValues.length)],
-            glow: 0,
-          });
-        }
-      }
     }
 
     function spawnPulse() {
-      const color = colors[Math.floor(Math.random() * colors.length)];
-      const cx = w * (0.15 + Math.random() * 0.7);
-      // Spawn pulses near the current scroll-adjusted viewport
-      const viewCenter = scrollY * parallaxFactor + h * 0.5;
-      const cy = viewCenter + (Math.random() - 0.5) * h * 0.8;
+      // Only spawn if no active pulses (max 1 at a time)
+      if (pulses.length > 0) return;
 
+      const color = colors[Math.floor(Math.random() * colors.length)];
       pulses.push({
-        cx,
-        cy,
+        cx: w * (0.2 + Math.random() * 0.6),
+        cy: heroH * (0.2 + Math.random() * 0.6),
         radius: 0,
-        maxRadius: Math.max(w, h) * 0.7,
-        speed: 1.2 + Math.random() * 0.8,
+        maxRadius: Math.max(w, heroH) * 0.75,
+        speed: 0.6 + Math.random() * 0.4, // half the original speed
         color,
-        opacity: 0.25,
       });
     }
 
@@ -123,115 +74,51 @@ export function HeroVisualization() {
 
     function draw() {
       time += 1;
-      ctx!.clearRect(0, 0, w, h);
+      ctx!.clearRect(0, 0, w, heroH);
 
-      // Apply parallax offset — shift everything up as user scrolls down
-      ctx!.save();
-      ctx!.translate(0, -scrollY * parallaxFactor);
+      // Fade canvas out as user scrolls past the hero region
+      const scrollFade = Math.max(0, 1 - scrollY / (heroH * 0.8));
+      if (scrollFade <= 0) {
+        animationId = requestAnimationFrame(draw);
+        return;
+      }
+      ctx!.globalAlpha = scrollFade;
 
-      // Spawn pulses periodically (~every 5 seconds at 60fps)
-      if (time % 300 === 0) spawnPulse();
-      if (time === 1) spawnPulse();
+      // Spawn a new pulse every ~8 seconds (480 frames at 60fps)
+      if (time % 480 === 0 || time === 1) spawnPulse();
 
       // Update and draw pulses
       for (let i = pulses.length - 1; i >= 0; i--) {
         const p = pulses[i];
         p.radius += p.speed;
-        p.opacity = 0.25 * (1 - p.radius / p.maxRadius);
 
-        if (p.radius > p.maxRadius) {
+        const life = p.radius / p.maxRadius;
+        if (life > 1) {
           pulses.splice(i, 1);
           continue;
         }
 
-        // Draw the ring
+        // Ease opacity: fade in quickly, hold, then fade out
+        const opacity = life < 0.05
+          ? life / 0.05 * 0.18          // fade in
+          : 0.18 * (1 - life);           // long fade out
+
+        // Main ring — soft, wider stroke
         ctx!.beginPath();
         ctx!.arc(p.cx, p.cy, p.radius, 0, Math.PI * 2);
-        ctx!.strokeStyle = `rgba(${p.color.r}, ${p.color.g}, ${p.color.b}, ${p.opacity})`;
-        ctx!.lineWidth = 1.5;
+        ctx!.strokeStyle = `rgba(${p.color.r}, ${p.color.g}, ${p.color.b}, ${opacity})`;
+        ctx!.lineWidth = 2.5;
         ctx!.stroke();
 
-        // Thinner trailing ring
-        if (p.radius > 20) {
-          ctx!.beginPath();
-          ctx!.arc(p.cx, p.cy, p.radius - 15, 0, Math.PI * 2);
-          ctx!.strokeStyle = `rgba(${p.color.r}, ${p.color.g}, ${p.color.b}, ${p.opacity * 0.25})`;
-          ctx!.lineWidth = 0.8;
-          ctx!.stroke();
-        }
-
-        // Light up nodes near the pulse ring
-        for (const node of nodes) {
-          const dx = node.x - p.cx;
-          const dy = node.y - p.cy;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          const ringDist = Math.abs(dist - p.radius);
-
-          if (ringDist < 25) {
-            const intensity = 1 - ringDist / 25;
-            node.glow = Math.max(node.glow, intensity);
-          }
-        }
-      }
-
-      // Draw nodes
-      for (const node of nodes) {
-        const breathe = 1 + Math.sin(time * 0.02 + node.phase) * 0.15;
-        const baseOpacity = 0.1;
-        const glowOpacity = node.glow * 0.55;
-        const radius = node.baseRadius * breathe * (1 + node.glow * 1.8);
-
-        // Outer glow when activated
-        if (node.glow > 0.1) {
-          ctx!.beginPath();
-          ctx!.arc(node.x, node.y, radius + 5, 0, Math.PI * 2);
-          ctx!.fillStyle = `rgba(${node.color.r}, ${node.color.g}, ${node.color.b}, ${glowOpacity * 0.12})`;
-          ctx!.fill();
-        }
-
-        // Core dot
+        // Soft outer glow ring (wider, very faint)
         ctx!.beginPath();
-        ctx!.arc(node.x, node.y, radius, 0, Math.PI * 2);
-        ctx!.fillStyle = `rgba(${node.color.r}, ${node.color.g}, ${node.color.b}, ${baseOpacity + glowOpacity})`;
-        ctx!.fill();
-
-        // Show value label when glowing
-        if (node.glow > 0.5) {
-          ctx!.font = "9px ui-monospace, monospace";
-          ctx!.fillStyle = `rgba(${node.color.r}, ${node.color.g}, ${node.color.b}, ${node.glow * 0.45})`;
-          ctx!.textAlign = "center";
-          ctx!.fillText(node.value, node.x, node.y - 9);
-        }
-
-        // Decay glow
-        node.glow *= 0.96;
-        if (node.glow < 0.01) node.glow = 0;
+        ctx!.arc(p.cx, p.cy, p.radius, 0, Math.PI * 2);
+        ctx!.strokeStyle = `rgba(${p.color.r}, ${p.color.g}, ${p.color.b}, ${opacity * 0.25})`;
+        ctx!.lineWidth = 8;
+        ctx!.stroke();
       }
 
-      // Draw faint connections between nearby glowing nodes
-      for (let i = 0; i < nodes.length; i++) {
-        const a = nodes[i];
-        if (a.glow < 0.1) continue;
-
-        for (let j = i + 1; j < nodes.length; j++) {
-          const b = nodes[j];
-          const dx = a.x - b.x;
-          const dy = a.y - b.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist < 110) {
-            const opacity = (1 - dist / 110) * Math.max(a.glow, b.glow) * 0.15;
-            ctx!.beginPath();
-            ctx!.strokeStyle = `rgba(${a.color.r}, ${a.color.g}, ${a.color.b}, ${opacity})`;
-            ctx!.lineWidth = 0.5;
-            ctx!.moveTo(a.x, a.y);
-            ctx!.lineTo(b.x, b.y);
-            ctx!.stroke();
-          }
-        }
-      }
-
-      ctx!.restore();
+      ctx!.globalAlpha = 1;
       animationId = requestAnimationFrame(draw);
     }
 
@@ -251,7 +138,11 @@ export function HeroVisualization() {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 w-full h-full pointer-events-none z-0"
+      className="fixed inset-x-0 top-0 w-full pointer-events-none z-0"
+      style={{
+        maskImage: "linear-gradient(to bottom, black 60%, transparent 100%)",
+        WebkitMaskImage: "linear-gradient(to bottom, black 60%, transparent 100%)",
+      }}
     />
   );
 }
