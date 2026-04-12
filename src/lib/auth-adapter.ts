@@ -13,11 +13,6 @@ export function PostgresAdapter(): Adapter {
         [id, user.email, user.name ?? null, user.image ?? null, user.emailVerified?.toISOString() ?? null]
       );
 
-      // Auto-assign admin role
-      if (process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL) {
-        await pool.query(`UPDATE users SET role = 'admin' WHERE id = $1`, [id]);
-      }
-
       // Create 14-day trial subscription
       const trialStart = new Date().toISOString();
       const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();

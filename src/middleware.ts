@@ -166,13 +166,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // EDO routes — require EDO plan + active subscription (admins bypass)
+  // EDO routes — require EDO plan + active subscription
   if (isEdoRoute(pathname)) {
     const plan = token.plan as string | undefined;
     const status = token.subscriptionStatus as string | undefined;
     const trialEnd = token.trialEnd as string | null | undefined;
-
-    if (token.role === "admin") return NextResponse.next();
 
     if (plan !== "edo" || !isActiveSubscription(status, trialEnd)) {
       // Allow onboarding page for EDO trialing users who haven't picked a municipality yet
@@ -191,13 +189,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Realtor routes — require realtor plan + active subscription (admins bypass)
+  // Realtor routes — require realtor plan + active subscription
   if (isRealtorRoute(pathname)) {
     const plan = token.plan as string | undefined;
     const status = token.subscriptionStatus as string | undefined;
     const trialEnd = token.trialEnd as string | null | undefined;
-
-    if (token.role === "admin") return NextResponse.next();
 
     if (plan !== "realtor" || !isActiveSubscription(status, trialEnd)) {
       // Allow onboarding page for realtor users who haven't picked an area yet

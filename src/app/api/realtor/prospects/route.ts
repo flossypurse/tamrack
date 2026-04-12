@@ -10,10 +10,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Check realtor plan (admins bypass)
+  // Check realtor plan
   const plan = (session.user as Record<string, unknown>).plan as string | undefined;
-  const role = (session.user as Record<string, unknown>).role as string | undefined;
-  if (role !== "admin" && plan !== "realtor") {
+  if (plan !== "realtor") {
     return NextResponse.json({ error: "Realtor subscription required" }, { status: 403 });
   }
 

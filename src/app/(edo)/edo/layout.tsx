@@ -15,7 +15,7 @@ import {
   LogOut,
   ChevronRight,
 } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { signOutAction } from "@/lib/actions/auth";
 import type { ElementType, ReactNode } from "react";
 
 type EdoNavItem = {
@@ -107,13 +107,15 @@ function EdoTopBar() {
         <span className="text-xs text-muted hidden sm:inline">
           {session?.user?.email}
         </span>
-        <button
-          onClick={() => signOut({ callbackUrl: "/" })}
-          className="p-1.5 text-muted hover:text-foreground transition-colors"
-          title="Sign out"
-        >
-          <LogOut size={14} />
-        </button>
+        <form action={signOutAction}>
+          <button
+            type="submit"
+            className="p-1.5 text-muted hover:text-foreground transition-colors"
+            title="Sign out"
+          >
+            <LogOut size={14} />
+          </button>
+        </form>
       </div>
     </header>
   );
