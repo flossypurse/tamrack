@@ -114,7 +114,7 @@ function RealtorOnboardingContent() {
         <div className="text-center space-y-3">
           <div className="flex items-center justify-center gap-2">
             <Activity size={24} className="text-teal-400" />
-            <span className="text-lg font-bold">Pulse Realtor</span>
+            <span className="text-lg font-bold">Pulse Real Estate</span>
           </div>
           {success && (
             <div className="bg-accent-green/10 text-accent-green text-sm px-4 py-2 rounded-lg">

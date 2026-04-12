@@ -79,7 +79,7 @@ export default async function EdoDashboardPage() {
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold">{municipalityName}</h1>
         <p className="text-muted text-sm">
-          Your economic development intelligence hub. Data is updated daily from 50+ public sources.
+          Your economic development intelligence hub. Data is updated daily from 18 government sources.
         </p>
       </div>
 
@@ -125,7 +125,7 @@ export default async function EdoDashboardPage() {
       {/* Data coverage note */}
       <div className="text-xs text-muted/60 border-t border-card-border pt-4">
         <p>
-          Data sourced from regionaldashboard.alberta.ca, StatsCan, ArcGIS, and 50+ other public APIs.
+          Data sourced from regionaldashboard.alberta.ca, StatsCan, ArcGIS, and 15+ other government APIs.
           See <Link href={`/municipalities/${municipalitySlug}`} className="underline hover:text-foreground">public municipality page</Link> for
           the full data available.
         </p>

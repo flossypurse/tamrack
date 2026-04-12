@@ -5,7 +5,7 @@ import { getToken } from "next-auth/jwt";
 // SEO strategy: macro pages are public to be indexed by Google.
 // Users see value → hit paywall on deep-dives → sign up.
 const publicRoutes = [
-  "/", "/login", "/terms", "/privacy", "/pricing",
+  "/", "/login", "/subscribe", "/terms", "/privacy", "/pricing",
   "/home/dashboard", "/municipalities",
   "/municipalities/coverage",
   // Category overview pages — rich SEO landing pages, no gated data
@@ -16,7 +16,7 @@ const publicRoutes = [
   "/learn",
 ];
 const publicPrefixes = [
-  "/api/auth", "/api/webhooks", "/api/health", "/api/og", "/embed/",
+  "/api/auth", "/api/webhooks", "/api/waitlist", "/api/health", "/api/og", "/embed/", "/waitlist/",
   // Category pages — all public for SEO (rank for "Alberta [topic]" queries)
   "/economy/", "/community/", "/environment/", "/governance/",
   "/home/signals",
@@ -91,11 +91,6 @@ function isFreePage(pathname: string): boolean {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Public routes — always pass through
-  if (isPublicRoute(pathname)) {
-    return NextResponse.next();
-  }
-
   // Static files and Next.js internals
   if (pathname.startsWith("/_next") || pathname.startsWith("/favicon") || pathname.includes(".")) {
     return NextResponse.next();
@@ -118,6 +113,40 @@ export async function middleware(req: NextRequest) {
     secret: process.env.AUTH_SECRET,
     secureCookie,
   });
+
+  // Plan-aware redirects for logged-in users on public pages
+  if (token && pathname === "/subscribe") {
+    const plan = req.nextUrl.searchParams.get("plan");
+    const userPlan = token.plan as string | undefined;
+    const status = token.subscriptionStatus as string | undefined;
+    const trialEnd = token.trialEnd as string | null | undefined;
+
+    if (plan && plan === userPlan && isActiveSubscription(status, trialEnd)) {
+      const dest = plan === "realtor" ? "/realtor/market" : plan === "edo" ? "/edo" : "/home/dashboard";
+      return NextResponse.redirect(new URL(dest, req.url));
+    }
+  }
+
+  // Returning user redirect: /home/dashboard → product dashboard if subscribed
+  if (token && pathname === "/home/dashboard") {
+    const userPlan = token.plan as string | undefined;
+    const status = token.subscriptionStatus as string | undefined;
+    const trialEnd = token.trialEnd as string | null | undefined;
+
+    if (isActiveSubscription(status, trialEnd)) {
+      if (userPlan === "realtor") {
+        return NextResponse.redirect(new URL("/realtor/market", req.url));
+      }
+      if (userPlan === "edo") {
+        return NextResponse.redirect(new URL("/edo", req.url));
+      }
+    }
+  }
+
+  // Public routes — always pass through
+  if (isPublicRoute(pathname)) {
+    return NextResponse.next();
+  }
 
   // No token — redirect to login or return 401 for API
   if (!token) {
@@ -150,7 +179,7 @@ export async function middleware(req: NextRequest) {
       if (pathname === "/edo/onboarding" && plan === "edo") {
         return NextResponse.next();
       }
-      return NextResponse.redirect(new URL("/pricing?plan=edo", req.url));
+      return NextResponse.redirect(new URL("/subscribe?plan=edo", req.url));
     }
 
     // EDO users without a municipality binding get redirected to onboarding
@@ -175,7 +204,7 @@ export async function middleware(req: NextRequest) {
       if (pathname === "/realtor/onboarding" && plan === "realtor") {
         return NextResponse.next();
       }
-      return NextResponse.redirect(new URL("/pricing?plan=realtor", req.url));
+      return NextResponse.redirect(new URL("/subscribe?plan=realtor", req.url));
     }
 
     // Realtor users without an operating area get redirected to onboarding

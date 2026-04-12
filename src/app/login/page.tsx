@@ -14,8 +14,24 @@ function LoginForm() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/home/dashboard";
+  const plan = searchParams.get("plan");
+  const rawCallbackUrl = searchParams.get("callbackUrl") || "/home/dashboard";
+  const callbackUrl = plan && !rawCallbackUrl.includes("plan=")
+    ? `${rawCallbackUrl}${rawCallbackUrl.includes("?") ? "&" : "?"}plan=${plan}`
+    : rawCallbackUrl;
   const authError = searchParams.get("error");
+
+  const heading = plan === "realtor"
+    ? "Start Pulse Real Estate"
+    : plan === "edo"
+    ? "Start Pulse EDO"
+    : "Sign in to Alberta Pulse Check";
+
+  const subtitle = plan === "realtor"
+    ? "$49/mo per seat — sign in to begin"
+    : plan === "edo"
+    ? "$299/mo per municipality — sign in to begin"
+    : "Community intelligence for Alberta decision-makers";
 
   async function handleEmail(e: React.FormEvent) {
     e.preventDefault();
@@ -64,9 +80,9 @@ function LoginForm() {
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
-        <h1 className="text-2xl font-bold">Sign in to Alberta Pulse</h1>
+        <h1 className="text-2xl font-bold">{heading}</h1>
         <p className="text-muted text-sm">
-          Community intelligence for Alberta decision-makers
+          {subtitle}
         </p>
       </div>
 
@@ -115,7 +131,7 @@ function LoginForm() {
 
           {/* Google */}
           <button
-            onClick={() => signIn("google", { callbackUrl })}
+            onClick={() => signIn("google", { callbackUrl: callbackUrl })}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-card-border rounded-lg text-foreground hover:bg-card transition-colors"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">

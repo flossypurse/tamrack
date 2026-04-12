@@ -42,7 +42,7 @@ export default async function EmbedPage({ params }: { params: Promise<{ chartId:
       <div className="flex items-center justify-between mt-3 pt-2 border-t border-card-border">
         <span className="text-[9px] text-muted/60">{chart.source}</span>
         <a
-          href="https://albertapulse.com"
+          href="https://albertapulsecheck.ca"
           target="_blank"
           rel="noopener noreferrer"
           className="text-[9px] text-accent/60 hover:text-accent transition-colors"

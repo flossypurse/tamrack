@@ -23,11 +23,11 @@ export function ChartCard({ chartId, title, timeRange, source, children }: Chart
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://albertapulse.com";
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://albertapulsecheck.ca";
   const embedSnippet = `<div data-ap-chart="${chartId}"></div>\n<script src="${origin}/embed/widget.js"><\/script>`;
 
   const shareUrl = `${origin}/embed/${chartId}`;
-  const shareText = `${title} — Alberta Pulse`;
+  const shareText = `${title} — Alberta Pulse Check`;
 
   const handleCopy = useCallback(async () => {
     try {
@@ -99,7 +99,7 @@ export function ChartCard({ chartId, title, timeRange, source, children }: Chart
           )}
           {!timeRange && !source && (
             <span className="text-[8px] text-muted/30 font-mono">
-              albertapulse.com
+              albertapulsecheck.ca
             </span>
           )}
         </div>

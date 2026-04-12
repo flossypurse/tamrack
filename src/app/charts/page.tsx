@@ -13,15 +13,15 @@ import { ChartCatalogueFilter } from "./catalogue-filter";
 export const metadata: Metadata = {
   title: "Chart Catalogue — Alberta Pulse Check",
   description:
-    "Browse 100+ live data charts covering Alberta's economy, real estate, community, and environment. Free to embed, share, and explore.",
+    "Browse 110+ live data charts covering Alberta's economy, real estate, community, and environment. Free to embed, share, and explore.",
   alternates: { canonical: "https://albertapulsecheck.ca/charts" },
   openGraph: {
     title: "Chart Catalogue — Alberta Pulse Check",
     description:
-      "Browse 100+ live data charts covering Alberta's economy, real estate, community, and environment.",
+      "Browse 110+ live data charts covering Alberta's economy, real estate, community, and environment.",
     images: [
       {
-        url: "/api/og?title=Chart+Catalogue&subtitle=100%2B+live+Alberta+data+charts",
+        url: "/api/og?title=Chart+Catalogue&subtitle=110%2B+live+Alberta+data+charts",
         width: 1200,
         height: 630,
       },

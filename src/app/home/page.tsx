@@ -28,7 +28,7 @@ import {
 } from "@/lib/data-sources";
 
 export const metadata: Metadata = {
-  title: "Alberta Pulse — Home",
+  title: "Alberta Pulse Check — Home",
   description:
     "Your starting point for Alberta economic data — dashboard, signals, briefings, and learning resources.",
 };
@@ -221,7 +221,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
       <PageHeader
-        title="Alberta Pulse"
+        title="Alberta Pulse Check"
         category="overview"
         icon={<Activity size={22} />}
         description="Your starting point for Alberta economic data. Live indicators, signals, briefings, and learning resources."

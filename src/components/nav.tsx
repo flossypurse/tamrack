@@ -17,6 +17,8 @@ import {
   Sun,
   Moon,
   Search,
+  Home,
+  Building2,
 } from "lucide-react";
 import { sections, buildMunicipalitySubSections, toolsItems, getAllNavItems } from "./nav-config";
 import { CommandPalette, InlineSearch } from "./command-palette";
@@ -147,7 +149,7 @@ export function Nav() {
         <div className="flex items-center justify-between px-4 py-3">
           <Link href="/" className="flex items-center gap-2">
             <Activity size={18} className="text-accent" />
-            <span className="text-sm font-semibold">Alberta Pulse</span>
+            <span className="text-sm font-semibold">Alberta Pulse Check</span>
           </Link>
           <div className="flex items-center gap-1">
             {/* Mobile search */}
@@ -215,7 +217,7 @@ export function Nav() {
           >
             <Activity size={20} className="text-accent" />
             <span className="text-sm font-semibold tracking-tight">
-              Alberta Pulse
+              Alberta Pulse Check
             </span>
           </Link>
           <button
@@ -349,6 +351,34 @@ export function Nav() {
 
         {/* Bottom: account quick links */}
         <div className="shrink-0 border-t border-card-border p-2 space-y-0.5">
+          {session?.user?.plan === "realtor" && session?.user?.subscriptionStatus === "active" && (
+            <Link
+              href="/realtor/market"
+              onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
+                pathname.startsWith("/realtor")
+                  ? "bg-teal-500/10 text-teal-400 font-medium"
+                  : "text-muted hover:text-foreground hover:bg-foreground/[0.05]"
+              }`}
+            >
+              <Home size={14} />
+              Realtor Dashboard
+            </Link>
+          )}
+          {session?.user?.plan === "edo" && session?.user?.subscriptionStatus === "active" && (
+            <Link
+              href="/edo"
+              onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
+                pathname.startsWith("/edo")
+                  ? "bg-indigo-500/10 text-indigo-400 font-medium"
+                  : "text-muted hover:text-foreground hover:bg-foreground/[0.05]"
+              }`}
+            >
+              <Building2 size={14} />
+              EDO Dashboard
+            </Link>
+          )}
           {isAdmin && (
             <Link
               href="/admin"

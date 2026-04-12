@@ -45,12 +45,13 @@ export default function BillingPage() {
   }
 
   async function handleCheckout() {
-    trackEvent("begin_trial", "conversion", "billing_page");
+    trackEvent("begin_checkout", "conversion", "billing_page");
     setLoading("checkout");
+    const userPlan = sub?.plan || "pro";
     const res = await fetch("/api/billing", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "checkout" }),
+      body: JSON.stringify({ action: "checkout", plan: userPlan }),
     });
     const data = await res.json();
     if (data.url) window.location.href = data.url;
@@ -147,29 +148,28 @@ export default function BillingPage() {
             </>
           ) : isRealtor ? (
             <>
-              Pulse Realtor — <span className="text-foreground font-medium">$49/mo CAD</span> per seat
+              Pulse Real Estate — <span className="text-foreground font-medium">$49/mo CAD</span> per seat
               <br />
               Market intelligence, prospect tracking, and listing presentation tools.
             </>
           ) : (
             <>
-              Alberta Pulse Pro — <span className="text-foreground font-medium">$29/mo CAD</span>
+              Alberta Pulse Check — <span className="text-muted">Free tier</span>
               <br />
-              Full access to all dashboards, municipality data, and API.
+              Browse charts, explore municipalities, and access public dashboards.
             </>
           )}
         </p>
 
         <div className="flex flex-wrap gap-3">
-          {!isActive && !isEdo && (
-            <button
-              onClick={handleCheckout}
-              disabled={!!loading}
-              className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg font-medium hover:bg-accent/90 disabled:opacity-50 transition-colors"
+          {!isActive && !isEdo && !isRealtor && (
+            <Link
+              href="/pricing"
+              className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg font-medium hover:bg-accent/90 transition-colors"
             >
-              {loading === "checkout" ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
-              Subscribe — $29/mo
-            </button>
+              <CreditCard size={14} />
+              View plans
+            </Link>
           )}
           {(isActive || sub?.subscriptionStatus === "past_due") && (
             <button
@@ -196,7 +196,7 @@ export default function BillingPage() {
               className="flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg font-medium hover:bg-teal-600 transition-colors"
             >
               <Home size={14} />
-              Go to Realtor Dashboard
+              Go to Real Estate Dashboard
             </Link>
           )}
         </div>
@@ -231,13 +231,13 @@ export default function BillingPage() {
         <div className="bg-card border border-teal-500/30 rounded-xl p-6 space-y-4">
           <div className="flex items-center gap-2">
             <Home size={18} className="text-teal-400" />
-            <h2 className="font-semibold">Pulse Realtor</h2>
+            <h2 className="font-semibold">Pulse Real Estate</h2>
             <span className="text-[10px] font-mono px-2 py-0.5 bg-teal-500/10 text-teal-400 rounded-full">
               $49/mo
             </span>
           </div>
           <p className="text-sm text-muted">
-            Purpose-built for Alberta realtors. Get market intelligence, development permit
+            Purpose-built for Alberta real estate professionals. Get market intelligence, development permit
             tracking, neighbourhood reports, and listing presentation tools.
           </p>
           <Link

@@ -4,12 +4,8 @@ import { Suspense } from "react";
 import {
   Activity,
   ArrowRight,
-  BarChart3,
-  Building2,
-  GraduationCap,
-  Home,
-  MapPin,
   Shield,
+  MapPin,
 } from "lucide-react";
 import {
   fetchBoCTimeSeries,
@@ -19,20 +15,21 @@ import {
   STATSCAN_SERIES,
 } from "@/lib/data-sources";
 import { MUNICIPALITY_REGISTRY } from "@/lib/municipality-registry";
-import { CHART_REGISTRY, CATEGORY_LABELS, CATEGORY_COLORS, type ChartCategory } from "@/lib/chart-registry";
+import { CHART_REGISTRY } from "@/lib/chart-registry";
 import { Sparkline } from "@/components/sparkline";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { HeroVisualization } from "@/components/hero-viz";
+import { LandingTabs } from "@/components/landing-tabs";
 
 export const metadata: Metadata = {
-  title: "Alberta Pulse — See What's Really Happening in Alberta",
+  title: "Alberta Pulse Check — Live Economic Intelligence for Alberta",
   description:
-    "Live economic data for the people who build, sell, and govern Alberta. Free charts, municipal intelligence, realtor market reports, and an economics learning hub — powered by 185+ government data feeds.",
+    "Live economic data for the people who build, sell, and govern Alberta. Free charts, municipal intelligence, real estate market reports, and an economics learning hub — powered by 185+ government data feeds.",
   alternates: { canonical: "https://albertapulsecheck.ca" },
   openGraph: {
     images: [
       {
-        url: "/api/og?title=Alberta+Pulse&subtitle=See+what%27s+really+happening+in+Alberta",
+        url: "/api/og?title=Alberta+Pulse+Check&subtitle=Live+economic+intelligence+for+Alberta",
         width: 1200,
         height: 630,
       },
@@ -41,26 +38,18 @@ export const metadata: Metadata = {
 };
 
 // ============================================================
-// Data fetching (unchanged)
+// Data fetching
 // ============================================================
 
 interface PulseMetrics {
   policyRate: string;
   cadUsd: string;
-  cadChange: string | null;
   unemployment: string;
-  unemploymentChange: string | null;
   mortgage5y: string;
-  cpi: string;
-  cpiChange: string | null;
-  population: string;
-  popChange: string | null;
   rateHistory: { date: string; value: number }[];
   cadHistory: { date: string; value: number }[];
   unemploymentHistory: { date: string; value: number }[];
   mortgageHistory: { date: string; value: number }[];
-  gdpHistory: { date: string; value: number }[];
-  housingStartsHistory: { date: string; value: number }[];
 }
 
 async function getPulseData(): Promise<PulseMetrics> {
@@ -69,190 +58,77 @@ async function getPulseData(): Promise<PulseMetrics> {
     cadUsdObs,
     mortgageObs,
     unemploymentData,
-    populationData,
-    cpiData,
     rateHistory,
     cadHistory,
     unemploymentHistory,
     mortgageHistory,
-    gdpHistory,
-    housingStartsHistory,
   ] = await Promise.all([
     fetchBoCObservations(BOC_SERIES.POLICY_RATE, 1).catch(() => null),
-    fetchBoCObservations(BOC_SERIES.CAD_USD, 2).catch(() => null),
+    fetchBoCObservations(BOC_SERIES.CAD_USD, 1).catch(() => null),
     fetchBoCObservations(BOC_SERIES.MORTGAGE_5Y_FIXED, 1).catch(() => null),
-    fetchStatCanTimeSeries(STATSCAN_SERIES.AB_UNEMPLOYMENT_RATE.tableId, STATSCAN_SERIES.AB_UNEMPLOYMENT_RATE.coordinate, 2).catch(() => []),
-    fetchStatCanTimeSeries(STATSCAN_SERIES.AB_POPULATION.tableId, STATSCAN_SERIES.AB_POPULATION.coordinate, 2).catch(() => []),
-    fetchStatCanTimeSeries(STATSCAN_SERIES.AB_CPI.tableId, STATSCAN_SERIES.AB_CPI.coordinate, 2).catch(() => []),
+    fetchStatCanTimeSeries(STATSCAN_SERIES.AB_UNEMPLOYMENT_RATE.tableId, STATSCAN_SERIES.AB_UNEMPLOYMENT_RATE.coordinate, 1).catch(() => []),
     fetchBoCTimeSeries(BOC_SERIES.POLICY_RATE, 24).catch(() => []),
     fetchBoCTimeSeries(BOC_SERIES.CAD_USD, 24).catch(() => []),
     fetchStatCanTimeSeries(STATSCAN_SERIES.AB_UNEMPLOYMENT_RATE.tableId, STATSCAN_SERIES.AB_UNEMPLOYMENT_RATE.coordinate, 24).catch(() => []),
     fetchBoCTimeSeries(BOC_SERIES.MORTGAGE_5Y_FIXED, 24).catch(() => []),
-    fetchStatCanTimeSeries(STATSCAN_SERIES.AB_GDP.tableId, STATSCAN_SERIES.AB_GDP.coordinate, 16).catch(() => []),
-    fetchStatCanTimeSeries(STATSCAN_SERIES.EDMONTON_HOUSING_STARTS.tableId, STATSCAN_SERIES.EDMONTON_HOUSING_STARTS.coordinate, 24).catch(() => []),
   ]);
 
   const policyRate = policyRateObs?.observations?.[0]?.[BOC_SERIES.POLICY_RATE]?.v;
   const cadCurrent = cadUsdObs?.observations?.at(-1)?.[BOC_SERIES.CAD_USD]?.v;
-  const cadPrev = cadUsdObs?.observations?.at(-2)?.[BOC_SERIES.CAD_USD]?.v;
   const mortgage5y = mortgageObs?.observations?.[0]?.[BOC_SERIES.MORTGAGE_5Y_FIXED]?.v;
-
-  const cadChange = cadCurrent && cadPrev
-    ? ((parseFloat(cadCurrent) - parseFloat(cadPrev)) * 100).toFixed(2)
-    : null;
-
   const latestU = unemploymentData.at?.(-1);
-  const prevU = unemploymentData.at?.(-2);
-  const latestPop = populationData.at?.(-1);
-  const prevPop = populationData.at?.(-2);
-  const latestCpi = cpiData.at?.(-1);
-  const prevCpi = cpiData.at?.(-2);
 
   return {
     policyRate: policyRate ? `${policyRate}%` : "—",
     cadUsd: cadCurrent ? `$${parseFloat(cadCurrent).toFixed(4)}` : "—",
-    cadChange: cadChange ? `${parseFloat(cadChange) >= 0 ? "+" : ""}${cadChange}¢` : null,
     unemployment: latestU ? `${latestU.value}%` : "—",
-    unemploymentChange: latestU && prevU ? `${(latestU.value - prevU.value) >= 0 ? "+" : ""}${(latestU.value - prevU.value).toFixed(1)}pp` : null,
     mortgage5y: mortgage5y ? `${mortgage5y}%` : "—",
-    cpi: latestCpi ? `${latestCpi.value}` : "—",
-    cpiChange: latestCpi && prevCpi ? `${(latestCpi.value - prevCpi.value) >= 0 ? "+" : ""}${(latestCpi.value - prevCpi.value).toFixed(1)}` : null,
-    population: latestPop ? `${(latestPop.value / 1_000_000).toFixed(2)}M` : "—",
-    popChange: latestPop && prevPop ? `+${((latestPop.value - prevPop.value) / prevPop.value * 100).toFixed(1)}%` : null,
-    rateHistory: rateHistory,
-    cadHistory: cadHistory,
-    unemploymentHistory: unemploymentHistory,
-    mortgageHistory: mortgageHistory,
-    gdpHistory: gdpHistory,
-    housingStartsHistory: housingStartsHistory,
+    rateHistory,
+    cadHistory,
+    unemploymentHistory,
+    mortgageHistory,
   };
 }
 
 // ============================================================
-// LivePulseBar + Fallback (unchanged — do not modify)
+// Live proof strip — compact, 4 indicators with sparklines
 // ============================================================
 
-async function LivePulseBar() {
+async function LiveProofStrip() {
   const d = await getPulseData();
 
-  const tickers = [
-    { label: "BoC Rate", value: d.policyRate, change: null },
-    { label: "CAD/USD", value: d.cadUsd, change: d.cadChange },
-    { label: "5Y Mortgage", value: d.mortgage5y, change: null },
-    { label: "AB Unemployment", value: d.unemployment, change: d.unemploymentChange },
-    { label: "AB CPI", value: d.cpi, change: d.cpiChange },
-    { label: "AB Population", value: d.population, change: d.popChange },
-  ];
-
-  const sparkCards = [
-    { title: "BoC Policy Rate", data: d.rateHistory, color: "#3b82f6", suffix: "%" },
-    { title: "CAD/USD", data: d.cadHistory, color: "#10b981", prefix: "$" },
-    { title: "AB Unemployment", data: d.unemploymentHistory, color: "#f97316", suffix: "%" },
-    { title: "5Y Fixed Mortgage", data: d.mortgageHistory, color: "#ef4444", suffix: "%" },
-    { title: "Alberta GDP", data: d.gdpHistory, color: "#a855f7", compact: true },
-    { title: "Housing Starts", data: d.housingStartsHistory, color: "#06b6d4", compact: true },
+  const indicators = [
+    { label: "BoC Rate", value: d.policyRate, data: d.rateHistory, color: "#3b82f6" },
+    { label: "CAD/USD", value: d.cadUsd, data: d.cadHistory, color: "#10b981" },
+    { label: "AB Unemployment", value: d.unemployment, data: d.unemploymentHistory, color: "#f97316" },
+    { label: "5Y Mortgage", value: d.mortgage5y, data: d.mortgageHistory, color: "#ef4444" },
   ];
 
   return (
-    <>
-      {/* Live ticker */}
-      <div className="border-b border-card-border bg-card sticky top-0 z-30 relative">
-        <div className="max-w-6xl mx-auto px-4 py-2 flex items-center gap-1 overflow-x-auto scrollbar-none">
-          <span className="flex items-center gap-1.5 shrink-0 mr-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-green opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-accent-green" />
-            </span>
-            <span className="text-[10px] font-mono text-muted uppercase tracking-wider">Live</span>
-          </span>
-          {tickers.map((t) => (
-            <div key={t.label} className="flex items-center gap-1.5 px-3 py-0.5 shrink-0">
-              <span className="text-[10px] text-muted font-medium">{t.label}</span>
-              <span className="text-xs font-semibold">{t.value}</span>
-              {t.change && (
-                <span className={`text-[10px] ${t.change.startsWith("+") ? "text-accent-green" : t.change.startsWith("-") ? "text-accent-red" : "text-muted"}`}>
-                  {t.change}
-                </span>
-              )}
-            </div>
-          ))}
-          {/* Maple leaf on the right */}
-          <span className="ml-auto shrink-0 pl-2">
-            <img src="/mapleleaf.svg" alt="" width={14} height={14} className="opacity-40" />
-          </span>
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto">
+      {indicators.map((ind) => (
+        <div key={ind.label} className="bg-card/80 backdrop-blur border border-card-border rounded-xl px-3 py-2.5 flex items-center gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] text-muted font-medium truncate">{ind.label}</p>
+            <p className="text-sm font-semibold leading-tight">{ind.value}</p>
+          </div>
+          <Sparkline data={ind.data} color={ind.color} width={56} height={20} />
         </div>
-      </div>
-
-      {/* Sparkline grid */}
-      <section className="relative z-10 bg-card pb-2 border-b border-card-border">
-        <div className="max-w-6xl mx-auto px-4 pt-6">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {sparkCards.map((card) => {
-            const latest = card.data.at?.(-1);
-            const prev = card.data.at?.(-2);
-            const val = latest?.value;
-            const displayVal = val != null
-              ? card.compact
-                ? val >= 1_000_000_000
-                  ? `${(val / 1_000_000_000).toFixed(1)}B`
-                  : val >= 1_000_000
-                    ? `${(val / 1_000_000).toFixed(1)}M`
-                    : val >= 1_000
-                      ? `${(val / 1_000).toFixed(0)}K`
-                      : val.toLocaleString()
-                : `${card.prefix || ""}${typeof val === "number" ? val.toLocaleString(undefined, { maximumFractionDigits: 2 }) : val}${card.suffix || ""}`
-              : "—";
-            const delta = val != null && prev?.value != null ? val - prev.value : null;
-            const pctChange = delta != null && prev?.value ? ((delta / prev.value) * 100).toFixed(1) : null;
-
-            return (
-              <div key={card.title} className="bg-card border border-card-border rounded-xl p-3 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-muted font-medium leading-tight">{card.title}</span>
-                  <span className="text-[9px] font-mono text-accent/60">LIVE</span>
-                </div>
-                <div className="flex items-end justify-between gap-2">
-                  <div>
-                    <span className="text-lg font-semibold tracking-tight leading-none">{displayVal}</span>
-                    {pctChange && (
-                      <span className={`block text-[10px] mt-0.5 ${parseFloat(pctChange) >= 0 ? "text-accent-green" : "text-accent-red"}`}>
-                        {parseFloat(pctChange) >= 0 ? "+" : ""}{pctChange}%
-                      </span>
-                    )}
-                  </div>
-                  <Sparkline data={card.data} color={card.color} width={80} height={28} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        </div>
-      </section>
-    </>
+      ))}
+    </div>
   );
 }
 
-function PulseBarFallback() {
+function LiveProofFallback() {
   return (
-    <>
-      <div className="border-b border-card-border bg-card relative z-10">
-        <div className="max-w-6xl mx-auto px-4 py-2 flex items-center gap-4">
-          <div className="h-3 w-32 bg-card-border rounded animate-pulse" />
-          <div className="h-3 w-48 bg-card-border rounded animate-pulse" />
-          <div className="h-3 w-40 bg-card-border rounded animate-pulse" />
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="bg-card/80 border border-card-border rounded-xl px-3 py-2.5 animate-pulse">
+          <div className="h-3 w-16 bg-card-border rounded mb-1.5" />
+          <div className="h-4 w-12 bg-card-border rounded" />
         </div>
-      </div>
-      <section className="max-w-6xl mx-auto px-4 pt-6">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-card border border-card-border rounded-xl p-3 animate-pulse">
-              <div className="h-3 w-16 bg-card-border rounded mb-2" />
-              <div className="h-5 w-12 bg-card-border rounded" />
-            </div>
-          ))}
-        </div>
-      </section>
-    </>
+      ))}
+    </div>
   );
 }
 
@@ -283,49 +159,53 @@ const dataSources = [
 
 const totalFeeds = dataSources.reduce((sum, s) => sum + s.feeds, 0);
 
+// Key sources to display as trust logos
+const trustSources = [
+  "Bank of Canada",
+  "Statistics Canada",
+  "CMHC",
+  "Canada Energy Regulator",
+  "IRCC",
+];
+
 // ============================================================
 // Page
 // ============================================================
 
 export default function LandingPage() {
   const liveMunicipalities = MUNICIPALITY_REGISTRY.filter((m) => m.status === "live");
+  const chartCount = CHART_REGISTRY.length;
 
   return (
     <main className="min-h-screen relative">
       {/* Full-page animated background */}
       <HeroVisualization />
 
-      {/* Live data bar + sparklines (unchanged) */}
-      <Suspense fallback={<PulseBarFallback />}>
-        <LivePulseBar />
-      </Suspense>
-
-      {/* ── Section 1: Hero ── */}
-      <section className="relative overflow-hidden">
-        <div className="relative max-w-3xl mx-auto px-6 py-16 sm:py-20 lg:py-32 text-center space-y-6">
+      {/* ── Hero ── */}
+      <section className="relative">
+        <div className="relative max-w-3xl mx-auto px-6 pt-16 sm:pt-24 lg:pt-32 pb-12 text-center space-y-8">
           <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
             <ThemeToggle />
           </div>
 
           <div className="flex items-center justify-center gap-2.5">
             <Activity size={28} className="text-accent" />
-            <span className="text-lg font-bold tracking-tight">Alberta Pulse</span>
+            <span className="text-lg font-bold tracking-tight">Alberta Pulse Check</span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight">
-            See what{"'"}s really happening
-            <br />
-            <span className="text-accent">in Alberta</span>
-          </h1>
+          <div className="space-y-4">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight">
+              Alberta{"'"}s economy,{" "}
+              <span className="text-accent">one place</span>
+            </h1>
 
-          <p className="text-muted text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
-            Live economic data for the people who build, sell, and govern this province.
-            {" "}<span className="text-foreground font-medium">{totalFeeds}+ data feeds</span> from{" "}
-            <span className="text-foreground font-medium">{dataSources.length} government sources</span> across{" "}
-            <span className="text-foreground font-medium">{liveMunicipalities.length} municipalities</span>.
-          </p>
+            <p className="text-muted text-lg sm:text-xl max-w-xl mx-auto leading-relaxed">
+              {chartCount}+ live charts from {dataSources.length} government sources.
+              Free to browse. No account needed.
+            </p>
+          </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/charts"
               className="flex items-center gap-2 px-7 py-3.5 bg-accent text-white rounded-2xl font-semibold hover:bg-accent-hover transition-colors text-base shadow-lg shadow-accent/20"
@@ -334,222 +214,116 @@ export default function LandingPage() {
               <ArrowRight size={18} />
             </Link>
             <Link
-              href="#for-professionals"
+              href="/pricing"
               className="px-7 py-3.5 border border-card-border rounded-2xl text-foreground hover:bg-card transition-colors text-base"
             >
-              For professionals
+              See professional tools
             </Link>
           </div>
+        </div>
 
-          <p className="text-sm text-muted">
-            <Link href="/login" className="hover:text-foreground transition-colors underline underline-offset-4 decoration-card-border">
-              Sign in to your account
-            </Link>
+        {/* Live proof — small sparkline strip right under hero */}
+        <div className="relative px-6 pb-16 sm:pb-20">
+          <Suspense fallback={<LiveProofFallback />}>
+            <LiveProofStrip />
+          </Suspense>
+          <p className="text-center text-[11px] text-muted/60 mt-3 font-mono">
+            Live from government APIs — updated hourly
           </p>
         </div>
       </section>
 
-      {/* ── Section 2: Chart catalogue showcase ── */}
-      <section className="relative max-w-full px-6 py-16 lg:py-24">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-10">
-            <p className="text-sm font-medium text-accent mb-2">Free forever. No account required.</p>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              {CHART_REGISTRY.length}+ live charts, ready to explore
-            </h2>
-            <p className="text-base text-muted mt-3 max-w-xl mx-auto leading-relaxed">
-              Every chart pulls directly from government APIs — not scraped, not estimated, not stale.
-              Browse, share, or embed them on your website.
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {(["economy", "real-estate", "community", "environment"] as ChartCategory[]).map((cat) => {
-              const charts = CHART_REGISTRY.filter((c) => c.category === cat);
-              const featured = charts.slice(0, 3);
-              return (
-                <Link
-                  key={cat}
-                  href={`/charts?category=${cat}`}
-                  className="group bg-card border border-card-border rounded-2xl p-5 hover:border-accent/40 transition-colors"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${CATEGORY_COLORS[cat]}`}>
-                      {CATEGORY_LABELS[cat]}
-                    </span>
-                    <span className="text-xs text-muted font-mono">{charts.length}</span>
-                  </div>
-                  <div className="space-y-2.5">
-                    {featured.map((c) => (
-                      <p
-                        key={c.id}
-                        className="text-sm text-muted group-hover:text-foreground transition-colors truncate leading-snug"
-                      >
-                        {c.title}
-                      </p>
-                    ))}
-                    {charts.length > 3 && (
-                      <p className="text-xs text-muted/50">
-                        +{charts.length - 3} more
-                      </p>
-                    )}
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-
-          <div className="text-center">
-            <Link
-              href="/charts"
-              className="inline-flex items-center gap-2 px-7 py-3.5 bg-accent text-white rounded-2xl font-semibold hover:bg-accent-hover transition-colors shadow-lg shadow-accent/20"
-            >
-              Browse the full catalogue
-              <ArrowRight size={16} />
-            </Link>
+      {/* ── Trust bar ── */}
+      <section className="relative border-y border-card-border bg-card/60 backdrop-blur-sm">
+        <div className="max-w-4xl mx-auto px-6 py-6">
+          <p className="text-center text-[11px] text-muted/60 uppercase tracking-widest font-medium mb-4">
+            100% public government data from
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm text-muted font-medium">
+            {trustSources.map((name) => (
+              <span key={name} className="flex items-center gap-1.5">
+                <Shield size={12} className="text-accent/50" />
+                {name}
+              </span>
+            ))}
+            <span className="text-muted/40">+ {dataSources.length - trustSources.length} more</span>
           </div>
         </div>
       </section>
 
-      {/* ── Section 3: For professionals ── */}
-      <section id="for-professionals" className="relative border-y border-card-border bg-card/60 backdrop-blur-sm">
+      {/* ── What you can do — tabbed section ── */}
+      <section className="relative">
         <div className="max-w-5xl mx-auto px-6 py-16 lg:py-24">
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              Purpose-built tools for your work
+              One platform, built for how you work
             </h2>
             <p className="text-base text-muted mt-3 max-w-xl mx-auto leading-relaxed">
-              The same live data, shaped for how you actually use it.
+              Whether you{"'"}re browsing trends, closing deals, or briefing council —
+              the data is already here.
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {/* EDO */}
-            <div className="bg-card border border-card-border rounded-2xl p-6 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                  <Building2 size={20} className="text-accent" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">For economic development officers</h3>
-                  <p className="text-sm text-muted">$299/mo per municipality</p>
-                </div>
-              </div>
-              <p className="text-sm text-muted leading-relaxed">
-                Automated community profiles, peer comparison across 26 indicators,
-                trend alerts, council-ready reports, and investment pitch kits — all generated from live data.
-              </p>
-              <ul className="text-sm text-muted space-y-1.5">
-                <li className="flex items-start gap-2"><span className="text-accent mt-0.5">&#10132;</span> Compare your municipality to peers</li>
-                <li className="flex items-start gap-2"><span className="text-accent mt-0.5">&#10132;</span> Get alerted when indicators shift</li>
-                <li className="flex items-start gap-2"><span className="text-accent mt-0.5">&#10132;</span> Export PDF reports for council</li>
-              </ul>
-              <Link href="/pricing" className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline">
-                Learn more <ArrowRight size={14} />
-              </Link>
-            </div>
+          <LandingTabs chartCount={chartCount} municipalityCount={liveMunicipalities.length} />
+        </div>
+      </section>
 
-            {/* Realtor */}
-            <div className="bg-card border border-card-border rounded-2xl p-6 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                  <Home size={20} className="text-accent" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">For realtors &amp; brokerages</h3>
-                  <p className="text-sm text-muted">$49/mo per seat</p>
-                </div>
-              </div>
-              <p className="text-sm text-muted leading-relaxed">
-                Market intelligence, development permit tracking, neighbourhood deep dives,
-                and branded reports you can hand to clients — built for how realtors actually work.
-              </p>
-              <ul className="text-sm text-muted space-y-1.5">
-                <li className="flex items-start gap-2"><span className="text-accent mt-0.5">&#10132;</span> Track new permits in your area</li>
-                <li className="flex items-start gap-2"><span className="text-accent mt-0.5">&#10132;</span> Neighbourhood snapshots for listings</li>
-                <li className="flex items-start gap-2"><span className="text-accent mt-0.5">&#10132;</span> Market reports in one click</li>
-              </ul>
-              <Link href="/pricing" className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline">
-                Learn more <ArrowRight size={14} />
-              </Link>
+      {/* ── Social proof / credibility ── */}
+      <section className="relative border-y border-card-border bg-card/60 backdrop-blur-sm">
+        <div className="max-w-4xl mx-auto px-6 py-12 lg:py-16">
+          <div className="grid sm:grid-cols-3 gap-8 text-center">
+            <div className="space-y-2">
+              <p className="text-3xl font-bold text-accent">{totalFeeds}+</p>
+              <p className="text-sm text-muted">Live government data feeds</p>
             </div>
+            <div className="space-y-2">
+              <p className="text-3xl font-bold text-accent">{liveMunicipalities.length}</p>
+              <p className="text-sm text-muted">Alberta municipalities</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-3xl font-bold text-accent">{chartCount}+</p>
+              <p className="text-sm text-muted">Charts you can browse right now</p>
+            </div>
+          </div>
 
-            {/* Learn */}
-            <div className="bg-card border border-card-border rounded-2xl p-6 space-y-4 sm:col-span-2 lg:col-span-1">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                  <GraduationCap size={20} className="text-accent" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Learn Alberta economics</h3>
-                  <p className="text-sm text-accent-green font-medium">Free</p>
-                </div>
-              </div>
-              <p className="text-sm text-muted leading-relaxed">
-                Eight interactive modules covering energy, housing, tax, immigration, and more —
-                with quizzes, live charts, and a certificate when you finish.
-              </p>
-              <ul className="text-sm text-muted space-y-1.5">
-                <li className="flex items-start gap-2"><span className="text-accent mt-0.5">&#10132;</span> 8 modules, 35+ lessons</li>
-                <li className="flex items-start gap-2"><span className="text-accent mt-0.5">&#10132;</span> Built on real Alberta data</li>
-                <li className="flex items-start gap-2"><span className="text-accent mt-0.5">&#10132;</span> Earn a certificate of completion</li>
-              </ul>
-              <Link href="/learn" className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline">
-                Start learning <ArrowRight size={14} />
-              </Link>
-            </div>
+          <div className="mt-10 max-w-lg mx-auto text-center">
+            <p className="text-sm text-muted leading-relaxed italic">
+              &ldquo;Every chart pulls directly from government APIs — not scraped,
+              not estimated, not stale. When the Bank of Canada updates a rate,
+              you see it here within the hour.&rdquo;
+            </p>
+            <p className="text-xs text-muted/60 mt-3 flex items-center justify-center gap-1.5">
+              <MapPin size={11} />
+              Built in Parkland County, Alberta
+              <img src="/mapleleaf.svg" alt="" width={12} height={12} className="opacity-40" />
+            </p>
           </div>
         </div>
       </section>
 
-      {/* ── Section 4: Trust bar ── */}
-      <section className="relative">
-        <div className="max-w-5xl mx-auto px-6 py-10 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-sm text-muted">
-          <div className="flex items-center gap-2.5">
-            <Shield size={16} className="text-accent-green" />
-            <span>100% government data sources</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <Activity size={16} className="text-accent" />
-            <span>Updated hourly</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <BarChart3 size={16} className="text-accent-gold" />
-            <span>{CHART_REGISTRY.length}+ live charts</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <MapPin size={16} className="text-accent" />
-            <span>Built in Parkland County, AB</span>
-            <img src="/mapleleaf.svg" alt="" width={14} height={14} className="opacity-50" />
-          </div>
-        </div>
-      </section>
-
-      {/* ── Section 5: Bottom CTA ── */}
+      {/* ── Final CTA ── */}
       <section className="relative py-16 lg:py-24">
         <div className="max-w-lg mx-auto text-center space-y-5 px-6">
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Start exploring — it{"'"}s free
           </h2>
           <p className="text-base text-muted leading-relaxed">
-            {CHART_REGISTRY.length}+ live Alberta data charts, free forever.
-            Professional tools for EDOs and realtors when you{"'"}re ready.
+            No account, no trial, no credit card.
+            Just {chartCount}+ live Alberta data charts.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
-            <Link
-              href="/charts"
-              className="flex items-center gap-2 px-7 py-3.5 bg-accent text-white rounded-2xl font-semibold hover:bg-accent-hover transition-colors shadow-lg shadow-accent/20"
-            >
-              Browse the chart catalogue
-              <ArrowRight size={16} />
-            </Link>
-            <Link
-              href="/pricing"
-              className="px-7 py-3.5 border border-card-border rounded-2xl text-foreground hover:bg-card transition-colors"
-            >
+          <Link
+            href="/charts"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-accent text-white rounded-2xl font-semibold hover:bg-accent-hover transition-colors text-lg shadow-lg shadow-accent/20"
+          >
+            Browse the chart catalogue
+            <ArrowRight size={18} />
+          </Link>
+          <p className="text-sm text-muted">
+            Professional tools?{" "}
+            <Link href="/pricing" className="text-accent hover:underline">
               See pricing
             </Link>
-          </div>
+          </p>
         </div>
       </section>
 
@@ -558,7 +332,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted/60">
           <div className="flex items-center gap-2.5">
             <Activity size={14} className="text-accent" />
-            <span>Alberta Pulse</span>
+            <span>Alberta Pulse Check</span>
             <span className="text-card-border">|</span>
             <span>Built in Parkland County, Alberta</span>
             <img src="/mapleleaf.svg" alt="" width={12} height={12} className="opacity-30" />

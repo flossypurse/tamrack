@@ -4,7 +4,7 @@ import { Activity, Check, ArrowRight, BarChart3, Building2, GraduationCap, Home 
 // 1.3.8 — 4-product pricing model
 
 const chartsFeatures = [
-  "Browse 100+ live data charts",
+  "Browse 110+ live data charts",
   "Embed any chart on your website",
   "Share via link, X, or LinkedIn",
   "Filter by category and keyword",
@@ -22,7 +22,7 @@ const edoFeatures = [
   "Priority support",
 ];
 
-const realtorFeatures = [
+const realEstateFeatures = [
   "Market intelligence dashboard",
   "Development permit tracking & alerts",
   "Neighbourhood deep-dive reports",
@@ -127,7 +127,7 @@ export default function PricingPage() {
                 Coming soon
               </span>
               <Link
-                href="/login?waitlist=edo"
+                href="/waitlist/edo"
                 className="flex items-center justify-center gap-2 px-5 py-2.5 border border-indigo-500 text-indigo-400 rounded-lg font-medium text-sm hover:bg-indigo-500/10 transition-colors"
               >
                 Join the waitlist
@@ -136,28 +136,28 @@ export default function PricingPage() {
             </div>
           </div>
 
-          {/* Pulse Realtor — $49/mo */}
+          {/* Pulse Real Estate — $49/mo */}
           <div className="bg-card border-2 border-teal-500 rounded-xl p-6 space-y-5 relative">
             <div className="absolute -top-3 left-6">
               <span className="px-3 py-1 bg-teal-500 text-white text-xs font-bold rounded-full uppercase tracking-wider">
-                For Realtors
+                For Real Estate
               </span>
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Home size={18} className="text-teal-400" />
-                <h2 className="text-lg font-bold">Pulse Realtor</h2>
+                <h2 className="text-lg font-bold">Pulse Real Estate</h2>
               </div>
               <div className="mt-2 flex items-baseline gap-1">
                 <span className="text-3xl font-bold">$49</span>
                 <span className="text-muted text-sm">/mo per seat</span>
               </div>
               <p className="text-sm text-muted mt-2">
-                Market intel, prospect tracking, and listing tools.
+                Market intelligence, development permit tracking, neighbourhood deep dives, and branded reports you can hand to clients.
               </p>
             </div>
             <ul className="space-y-2.5">
-              {realtorFeatures.map((item) => (
+              {realEstateFeatures.map((item) => (
                 <li key={item} className="flex items-start gap-2 text-sm">
                   <Check size={15} className="text-teal-400 mt-0.5 shrink-0" />
                   <span>{item}</span>
@@ -165,7 +165,7 @@ export default function PricingPage() {
               ))}
             </ul>
             <Link
-              href="/login?callbackUrl=/realtor/market&plan=realtor"
+              href="/login?callbackUrl=/subscribe?plan=realtor&plan=realtor"
               className="block text-center px-5 py-2.5 bg-teal-500 text-white rounded-lg font-medium text-sm hover:bg-teal-600 transition-colors"
             >
               Get started — $49/mo
@@ -195,17 +195,12 @@ export default function PricingPage() {
                 </li>
               ))}
             </ul>
-            <div className="space-y-2">
-              <span className="block text-center text-xs text-muted bg-muted/10 rounded-lg py-2">
-                Coming soon
-              </span>
-              <Link
-                href="/home/learn"
-                className="block text-center px-5 py-2.5 border border-card-border rounded-lg text-foreground hover:bg-card-border/30 transition-colors font-medium text-sm"
-              >
-                Preview learning hub
-              </Link>
-            </div>
+            <Link
+              href="/learn"
+              className="block text-center px-5 py-2.5 border border-card-border rounded-lg text-foreground hover:bg-card-border/30 transition-colors font-medium text-sm"
+            >
+              Start learning — free
+            </Link>
           </div>
         </div>
       </section>
@@ -222,8 +217,8 @@ export default function PricingPage() {
               a: "Yes. All charts are free to browse, embed, and share. No account needed, no trial, no catch.",
             },
             {
-              q: "When will EDO and Realtor launch?",
-              a: "Pulse Realtor is available now. Pulse EDO is in development — join the waitlist and we'll notify you when it's ready.",
+              q: "When will Pulse EDO launch?",
+              a: "Pulse EDO is in development — join the waitlist and we'll notify you when it's ready. Pulse Real Estate is available now.",
             },
             {
               q: "Can I cancel anytime?",
@@ -259,6 +254,8 @@ export default function PricingPage() {
           </div>
           <div className="flex items-center gap-4">
             <Link href="/charts" className="hover:text-foreground transition-colors">Charts</Link>
+            <Link href="/learn" className="hover:text-foreground transition-colors">Learn</Link>
+            <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
             <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
             <Link href="/login" className="hover:text-foreground transition-colors">Sign in</Link>

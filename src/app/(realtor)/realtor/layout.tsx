@@ -90,7 +90,7 @@ function RealtorTopBar() {
       <div className="flex items-center gap-3">
         <Link href="/realtor/market" className="flex items-center gap-2">
           <Activity size={18} className="text-teal-400" />
-          <span className="font-semibold text-sm">Pulse Realtor</span>
+          <span className="font-semibold text-sm">Pulse Real Estate</span>
         </Link>
         <span className="text-muted/40">|</span>
         <span className="text-sm text-muted">{areaLabel}</span>

@@ -690,7 +690,7 @@ export function ReportsDashboard({
             </div>
             <div className="text-right">
               <p className="text-sm font-semibold text-teal-600">
-                Pulse Realtor
+                Pulse Real Estate
               </p>
               <p className="text-[10px] text-gray-400">albertapulsecheck.ca</p>
             </div>

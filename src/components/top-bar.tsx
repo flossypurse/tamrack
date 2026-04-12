@@ -19,6 +19,8 @@ import {
   Wrench,
   BookOpen,
   Database,
+  Home,
+  Building2,
 } from "lucide-react";
 import { sections } from "./nav-config";
 
@@ -58,7 +60,7 @@ export function TopBar() {
       <Link href="/" className="flex items-center gap-2 mr-4 shrink-0">
         <Activity size={20} className="text-accent" />
         <span className="text-sm font-semibold tracking-tight text-foreground">
-          Alberta Pulse
+          Alberta Pulse Check
         </span>
       </Link>
 
@@ -155,6 +157,24 @@ export function TopBar() {
                     {session.user.email}
                   </p>
                 </div>
+              )}
+              {session?.user?.plan === "realtor" && session?.user?.subscriptionStatus === "active" && (
+                <Link
+                  href="/realtor/market"
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-teal-400 hover:bg-teal-500/10 transition-colors"
+                >
+                  <Home size={14} />
+                  Realtor Dashboard
+                </Link>
+              )}
+              {session?.user?.plan === "edo" && session?.user?.subscriptionStatus === "active" && (
+                <Link
+                  href="/edo"
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-indigo-400 hover:bg-indigo-500/10 transition-colors"
+                >
+                  <Building2 size={14} />
+                  EDO Dashboard
+                </Link>
               )}
               <Link
                 href="/account"

@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 Cully is a software engineer based in Parkland County, Alberta. He's building Alberta Pulse as a suite of tools:
 - Pulse Charts: Free public charts and data visualizations covering 135+ pages of Alberta data
 - Pulse EDO ($299/mo): Premium analytics for Economic Development Officers — community profiles, peer comparison, alerts, council-ready reports
-- Pulse Realtor ($49/mo): Market intelligence for realtors — neighbourhood stats, listing presentation tools
+- Pulse Real Estate ($49/mo): Market intelligence for real estate professionals — neighbourhood stats, listing presentation tools
 
 The tone should be:
 - Genuine and human — not salesy or corporate. Like a neighbour who built something useful and wants to share it.
