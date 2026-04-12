@@ -37,7 +37,7 @@ const planDetails: Record<string, {
       "Dedicated dashboard for your municipality",
       "Community profile generator (PDF export)",
       "Peer municipality comparison (2-5 at once)",
-      "Automated trend alerts (email digest)",
+      "Automated trend alerts dashboard",
       "Council-ready report templates",
       "Investment pitch kit builder",
       "Priority support",

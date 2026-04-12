@@ -50,7 +50,7 @@ const tabs = [
       { icon: MapPin, text: "Neighbourhood deep-dives for any listing" },
       { icon: FileText, text: "Client-ready PDF reports in one click" },
     ],
-    cta: { label: "Get started — $49/mo", href: "/login?callbackUrl=/subscribe?plan=realtor&plan=realtor" },
+    cta: { label: "Get started — $49/mo", href: "/login?callbackUrl=/subscribe?plan=realtor" },
     accent: "text-teal-400",
     accentBg: "bg-teal-500/10",
     accentBorder: "border-teal-500/20",
@@ -68,12 +68,11 @@ const tabs = [
       { icon: Bell, text: "Get alerted when your indicators shift" },
       { icon: FileText, text: "Export PDF reports ready for council" },
     ],
-    cta: { label: "Join the waitlist", href: "/waitlist/edo" },
+    cta: { label: "Get started", href: "/edo/onboarding" },
     accent: "text-indigo-400",
     accentBg: "bg-indigo-500/10",
     accentBorder: "border-indigo-500/20",
     price: "$299/mo per municipality",
-    comingSoon: true,
   },
   {
     id: "learn",
@@ -143,12 +142,6 @@ export function LandingTabs({ chartCount, municipalityCount }: LandingTabsProps)
             </div>
 
             <p className="text-muted leading-relaxed">{tab.description}</p>
-
-            {tab.comingSoon && (
-              <span className="inline-block text-xs font-medium text-muted bg-muted/10 rounded-full px-3 py-1">
-                Coming soon
-              </span>
-            )}
 
             <Link
               href={tab.cta.href}

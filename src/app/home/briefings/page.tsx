@@ -173,7 +173,7 @@ export default function BriefingPage() {
           They don&apos;t replace the deep-dive pages — they link into them.
         </p>
         <p className="text-[10px] text-muted/60 mt-1">
-          More roles rolling out as we wire additional datasets.
+          Briefings get richer over time as we wire additional datasets.
         </p>
       </Card>
     </main>

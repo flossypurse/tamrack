@@ -164,7 +164,7 @@ export function TopBar() {
                   className="flex items-center gap-2 px-3 py-2 text-sm text-teal-400 hover:bg-teal-500/10 transition-colors"
                 >
                   <Home size={14} />
-                  Realtor Dashboard
+                  Real Estate Dashboard
                 </Link>
               )}
               {session?.user?.plan === "edo" && session?.user?.subscriptionStatus === "active" && (

@@ -362,7 +362,7 @@ export function Nav() {
               }`}
             >
               <Home size={14} />
-              Realtor Dashboard
+              Real Estate Dashboard
             </Link>
           )}
           {session?.user?.plan === "edo" && session?.user?.subscriptionStatus === "active" && (

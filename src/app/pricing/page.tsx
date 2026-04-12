@@ -16,7 +16,7 @@ const edoFeatures = [
   "Dedicated dashboard for your municipality",
   "Community profile generator (PDF export)",
   "Peer municipality comparison (2-5 at once)",
-  "Automated trend alerts (email digest)",
+  "Automated trend alerts dashboard",
   "Council-ready report templates",
   "Investment pitch kit builder",
   "Priority support",
@@ -123,14 +123,11 @@ export default function PricingPage() {
               ))}
             </ul>
             <div className="space-y-2">
-              <span className="block text-center text-xs text-muted bg-muted/10 rounded-lg py-2">
-                Coming soon
-              </span>
               <Link
-                href="/waitlist/edo"
-                className="flex items-center justify-center gap-2 px-5 py-2.5 border border-indigo-500 text-indigo-400 rounded-lg font-medium text-sm hover:bg-indigo-500/10 transition-colors"
+                href="/edo/onboarding"
+                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-500 text-white rounded-lg font-medium text-sm hover:bg-indigo-600 transition-colors"
               >
-                Join the waitlist
+                Get started
                 <ArrowRight size={14} />
               </Link>
             </div>
@@ -165,7 +162,7 @@ export default function PricingPage() {
               ))}
             </ul>
             <Link
-              href="/login?callbackUrl=/subscribe?plan=realtor&plan=realtor"
+              href="/login?callbackUrl=/subscribe?plan=realtor"
               className="block text-center px-5 py-2.5 bg-teal-500 text-white rounded-lg font-medium text-sm hover:bg-teal-600 transition-colors"
             >
               Get started — $49/mo
@@ -217,8 +214,8 @@ export default function PricingPage() {
               a: "Yes. All charts are free to browse, embed, and share. No account needed, no trial, no catch.",
             },
             {
-              q: "When will Pulse EDO launch?",
-              a: "Pulse EDO is in development — join the waitlist and we'll notify you when it's ready. Pulse Real Estate is available now.",
+              q: "What's included in Pulse EDO?",
+              a: "Community profiles, peer comparison across 25+ indicators, trend alerts, council-ready reports, and investment pitch kits — all with PDF export. $299/mo per municipality.",
             },
             {
               q: "Can I cancel anytime?",
@@ -234,7 +231,7 @@ export default function PricingPage() {
             },
             {
               q: "Where does the data come from?",
-              a: "100% public government data from 18+ sources including Bank of Canada, Statistics Canada, Alberta Regional Dashboard, and more.",
+              a: "100% public government data from 18 providers including Bank of Canada, Statistics Canada, Alberta Regional Dashboard, and more — 185+ data feeds updated hourly.",
             },
           ].map((faq) => (
             <div key={faq.q} className="bg-card border border-card-border rounded-xl p-5 space-y-2">

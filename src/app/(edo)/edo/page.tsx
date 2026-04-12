@@ -79,7 +79,7 @@ export default async function EdoDashboardPage() {
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold">{municipalityName}</h1>
         <p className="text-muted text-sm">
-          Your economic development intelligence hub. Data is updated daily from 18 government sources.
+          Your economic development intelligence hub. Data is updated hourly from 18 government sources.
         </p>
       </div>
 
