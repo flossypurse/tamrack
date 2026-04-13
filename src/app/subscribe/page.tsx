@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Activity, Check, ArrowRight, Loader2, Home, Building2 } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { trackEvent } from "@/components/analytics";
 
 const planDetails: Record<string, {
@@ -49,7 +50,10 @@ function SubscribeForm() {
   const searchParams = useSearchParams();
   const plan = searchParams.get("plan") || "realtor";
   const details = planDetails[plan];
+  const { status: sessionStatus } = useSession();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isAuthenticated = sessionStatus === "authenticated";
 
   if (!details) {
     return (
@@ -67,6 +71,7 @@ function SubscribeForm() {
 
   async function handleSubscribe() {
     setLoading(true);
+    setError(null);
     trackEvent("begin_checkout", "conversion", "subscribe_page");
     try {
       const res = await fetch("/api/billing", {
@@ -77,8 +82,12 @@ function SubscribeForm() {
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        setError(data.error || "Something went wrong. Please try again.");
+        setLoading(false);
       }
     } catch {
+      setError("Network error. Please try again.");
       setLoading(false);
     }
   }
@@ -102,18 +111,34 @@ function SubscribeForm() {
         ))}
       </ul>
 
-      <button
-        onClick={handleSubscribe}
-        disabled={loading}
-        className={`w-full flex items-center justify-center gap-2 px-5 py-3 text-white rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 transition-colors ${isTeal ? "bg-teal-500" : "bg-indigo-500"}`}
-      >
-        {loading ? (
-          <Loader2 size={16} className="animate-spin" />
-        ) : (
+      {error && (
+        <div className="bg-red-500/10 text-red-400 text-sm px-4 py-2 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {isAuthenticated ? (
+        <button
+          onClick={handleSubscribe}
+          disabled={loading}
+          className={`w-full flex items-center justify-center gap-2 px-5 py-3 text-white rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 transition-colors ${isTeal ? "bg-teal-500" : "bg-indigo-500"}`}
+        >
+          {loading ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <ArrowRight size={16} />
+          )}
+          {loading ? "Redirecting to checkout..." : "Subscribe now"}
+        </button>
+      ) : (
+        <Link
+          href={`/login?callbackUrl=/subscribe?plan=${plan}`}
+          className={`w-full flex items-center justify-center gap-2 px-5 py-3 text-white rounded-xl font-semibold hover:opacity-90 transition-colors ${isTeal ? "bg-teal-500" : "bg-indigo-500"}`}
+        >
           <ArrowRight size={16} />
-        )}
-        {loading ? "Redirecting to checkout..." : "Subscribe now"}
-      </button>
+          Sign in to subscribe
+        </Link>
+      )}
 
       <Link
         href="/charts"

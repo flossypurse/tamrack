@@ -114,6 +114,15 @@ export async function middleware(req: NextRequest) {
     secureCookie,
   });
 
+  // Logged-in users hitting /login — skip the form, go to callbackUrl or dashboard
+  if (token && pathname === "/login") {
+    const callbackUrl = req.nextUrl.searchParams.get("callbackUrl");
+    if (callbackUrl && callbackUrl.startsWith("/")) {
+      return NextResponse.redirect(new URL(callbackUrl, req.url));
+    }
+    return NextResponse.redirect(new URL("/home/dashboard", req.url));
+  }
+
   // Plan-aware redirects for logged-in users on public pages
   if (token && pathname === "/subscribe") {
     const plan = req.nextUrl.searchParams.get("plan");

@@ -50,7 +50,7 @@ const tabs = [
       { icon: MapPin, text: "Neighbourhood deep-dives for any listing" },
       { icon: FileText, text: "Client-ready PDF reports in one click" },
     ],
-    cta: { label: "Get started — $49/mo", href: "/login?callbackUrl=/subscribe?plan=realtor" },
+    cta: { label: "Get started — $49/mo", href: "/subscribe?plan=realtor" },
     accent: "text-teal-400",
     accentBg: "bg-teal-500/10",
     accentBorder: "border-teal-500/20",

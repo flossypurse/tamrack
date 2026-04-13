@@ -162,7 +162,7 @@ export default function PricingPage() {
               ))}
             </ul>
             <Link
-              href="/login?callbackUrl=/subscribe?plan=realtor"
+              href="/subscribe?plan=realtor"
               className="block text-center px-5 py-2.5 bg-teal-500 text-white rounded-lg font-medium text-sm hover:bg-teal-600 transition-colors"
             >
               Get started — $49/mo

@@ -1,7 +1,8 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Building2, Search, Check, ArrowRight, Loader2, MapPin } from "lucide-react";
 import { Activity } from "lucide-react";
 
@@ -50,8 +51,16 @@ export default function EdoOnboardingPage() {
 function EdoOnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { update: updateSession } = useSession();
   const success = searchParams.get("success");
   const [search, setSearch] = useState("");
+
+  // After Stripe checkout, refresh the JWT so middleware sees the new plan/status
+  useEffect(() => {
+    if (success) {
+      updateSession();
+    }
+  }, [success, updateSession]);
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
