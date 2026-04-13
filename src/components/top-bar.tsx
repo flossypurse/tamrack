@@ -14,6 +14,7 @@ import {
   Moon,
   User,
   CreditCard,
+  LogIn,
   LogOut,
   Shield,
   ChevronDown,
@@ -152,89 +153,101 @@ export function TopBar() {
 
           {avatarOpen && (
             <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-card-border rounded-lg shadow-lg py-1 z-50">
-              {session?.user?.email && (
-                <div className="px-3 py-2 border-b border-card-border">
-                  <p className="text-xs text-muted truncate">
-                    {session.user.email}
-                  </p>
-                </div>
-              )}
-              {session?.user?.plan === "realtor" && session?.user?.subscriptionStatus === "active" && (
-                <Link
-                  href="/realtor/market"
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-teal-400 hover:bg-teal-500/10 transition-colors"
-                >
-                  <Home size={14} />
-                  Real Estate Dashboard
-                </Link>
-              )}
-              {session?.user?.plan === "edo" && session?.user?.subscriptionStatus === "active" && (
-                <Link
-                  href="/edo"
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-indigo-400 hover:bg-indigo-500/10 transition-colors"
-                >
-                  <Building2 size={14} />
-                  EDO Dashboard
-                </Link>
-              )}
-              <Link
-                href="/account"
-                className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
-              >
-                <User size={14} />
-                Account
-              </Link>
-              <Link
-                href="/billing"
-                className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
-              >
-                <CreditCard size={14} />
-                Billing & API Keys
-              </Link>
-              <div className="border-t border-card-border my-1" />
-              <Link
-                href="/tools"
-                className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
-              >
-                <Wrench size={14} />
-                Tools
-              </Link>
-              <Link
-                href="/tools/docs"
-                className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
-              >
-                <BookOpen size={14} />
-                API Docs
-              </Link>
-              <Link
-                href="/tools/sources"
-                className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
-              >
-                <Database size={14} />
-                Data Sources
-              </Link>
-              {isAdmin && (
+              {session?.user ? (
                 <>
-                  <div className="border-t border-card-border my-1" />
+                  {session.user.email && (
+                    <div className="px-3 py-2 border-b border-card-border">
+                      <p className="text-xs text-muted truncate">
+                        {session.user.email}
+                      </p>
+                    </div>
+                  )}
+                  {session.user.plan === "realtor" && session.user.subscriptionStatus === "active" && (
+                    <Link
+                      href="/realtor/market"
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-teal-400 hover:bg-teal-500/10 transition-colors"
+                    >
+                      <Home size={14} />
+                      Real Estate Dashboard
+                    </Link>
+                  )}
+                  {session.user.plan === "edo" && session.user.subscriptionStatus === "active" && (
+                    <Link
+                      href="/edo"
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-indigo-400 hover:bg-indigo-500/10 transition-colors"
+                    >
+                      <Building2 size={14} />
+                      EDO Dashboard
+                    </Link>
+                  )}
                   <Link
-                    href="/admin"
+                    href="/account"
                     className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
                   >
-                    <Shield size={14} />
-                    Admin
+                    <User size={14} />
+                    Account
                   </Link>
+                  <Link
+                    href="/billing"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
+                  >
+                    <CreditCard size={14} />
+                    Billing & API Keys
+                  </Link>
+                  <div className="border-t border-card-border my-1" />
+                  <Link
+                    href="/tools"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
+                  >
+                    <Wrench size={14} />
+                    Tools
+                  </Link>
+                  <Link
+                    href="/tools/docs"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
+                  >
+                    <BookOpen size={14} />
+                    API Docs
+                  </Link>
+                  <Link
+                    href="/tools/sources"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
+                  >
+                    <Database size={14} />
+                    Data Sources
+                  </Link>
+                  {isAdmin && (
+                    <>
+                      <div className="border-t border-card-border my-1" />
+                      <Link
+                        href="/admin"
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
+                      >
+                        <Shield size={14} />
+                        Admin
+                      </Link>
+                    </>
+                  )}
+                  <div className="border-t border-card-border my-1" />
+                  <form action={signOutAction}>
+                    <button
+                      type="submit"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-accent-red/70 hover:text-accent-red hover:bg-accent-red/5 transition-colors"
+                    >
+                      <LogOut size={14} />
+                      Sign out
+                    </button>
+                  </form>
                 </>
-              )}
-              <div className="border-t border-card-border my-1" />
-              <form action={signOutAction}>
-                <button
-                  type="submit"
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-accent-red/70 hover:text-accent-red hover:bg-accent-red/5 transition-colors"
+              ) : (
+                <Link
+                  href="/login"
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
                 >
-                  <LogOut size={14} />
-                  Sign out
-                </button>
-              </form>
+                  <LogIn size={14} />
+                  Sign in
+                </Link>
+              )}
             </div>
           )}
         </div>
