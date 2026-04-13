@@ -18,7 +18,9 @@ const publicRoutes = [
 const publicPrefixes = [
   "/api/auth", "/api/webhooks", "/api/waitlist", "/api/health", "/api/og", "/embed/", "/waitlist/",
   // Category pages — all public for SEO (rank for "Alberta [topic]" queries)
-  "/economy/", "/community/", "/environment/", "/governance/",
+  "/economy/", "/real-estate/", "/community/", "/environment/", "/governance/",
+  // Municipality detail pages — public for SEO (dynamic metadata + OG tags)
+  "/municipalities/",
   "/home/signals",
   // Tools
   "/tools/",

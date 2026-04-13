@@ -312,6 +312,9 @@ export const metadata: Metadata = {
   title: "Real Estate Prospect Leads — Alberta",
   description:
     "Province-wide data-driven real estate leads organized by signal strength — permit activity, assessment changes, and neighbourhood momentum.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/real-estate/prospects",
+  },
 };
 
 export default function ProspectsPage() {
@@ -433,11 +436,6 @@ export default function ProspectsPage() {
           redevelopment signals, and development stage data.
         </p>
       </Card>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8 print:hidden">
-        Alberta Pulse Check &mdash; Province-wide Prospect Leads &mdash; Built
-        for realtors
-      </footer>
     </main>
   );
 }

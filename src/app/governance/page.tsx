@@ -235,6 +235,9 @@ export const metadata: Metadata = {
   title: "Alberta Politics — Legislature, Elections, Spending & Federal Relations",
   description:
     "Alberta political data — provincial legislature, federal MPs, election history, campaign finance, government spending, and federal-provincial fiscal transfers.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/governance",
+  },
 };
 
 export default function PoliticsPage() {

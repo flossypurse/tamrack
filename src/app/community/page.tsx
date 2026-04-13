@@ -25,6 +25,9 @@ export const metadata: Metadata = {
   title: "Alberta Community — People, Health, Safety & Demographics",
   description:
     "Alberta community data — demographics, immigration, labour market, health indicators, crime, fire response, traffic, seismic activity, and emergency alerts.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/community",
+  },
 };
 
 // ============================================================

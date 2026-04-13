@@ -7,6 +7,9 @@ import { computeTimeRange } from "@/lib/time-range";
 export const metadata: Metadata = {
   title: "Alberta Agriculture & Farm Economy",
   description: "Alberta's agricultural sector data — farm cash receipts, commodity price indexes, crop vs livestock trends, and ag GDP contribution.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/economy/agriculture",
+  },
 };
 import {
   TimeSeriesAreaChart,
@@ -422,10 +425,6 @@ export default function AgriculturePage() {
           </div>
         </Card>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Agriculture &mdash; All data from free public APIs
-      </footer>
     </main>
   );
 }

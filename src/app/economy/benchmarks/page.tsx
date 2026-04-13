@@ -308,6 +308,9 @@ function LoadingCard() {
 export const metadata: Metadata = {
   title: "Alberta Municipal Benchmarks",
   description: "Side-by-side benchmark comparison of Alberta municipalities — permits, assessments, population, business activity, and economic indicators.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/economy/benchmarks",
+  },
 };
 
 export default function BenchmarksPage() {
@@ -410,10 +413,6 @@ export default function BenchmarksPage() {
           </div>
         </Card>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Municipal Benchmarks &mdash; Live data from {getLiveMunicipalities().length} municipalities
-      </footer>
     </main>
   );
 }

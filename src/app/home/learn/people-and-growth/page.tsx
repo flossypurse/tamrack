@@ -673,12 +673,6 @@ export default function PeopleAndGrowthPage() {
           label: "Safety & Prosperity",
         }}
       />
-
-      {/* Footer */}
-      <footer className="text-center text-[10px] text-muted/40 pb-8 pt-4 border-t border-card-border">
-        Alberta Pulse Check — People &amp; Growth — All data from free public
-        APIs
-      </footer>
     </div>
   );
 }

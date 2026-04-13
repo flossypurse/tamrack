@@ -7,6 +7,9 @@ import { computeTimeRange } from "@/lib/time-range";
 export const metadata: Metadata = {
   title: "Alberta Housing Development Pipeline",
   description: "CMHC housing starts, completions, and units under construction for Edmonton CMA. Track the residential development pipeline and absorption rates.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/real-estate/pipeline",
+  },
 };
 import {
   TimeSeriesAreaChart,
@@ -403,10 +406,6 @@ export default function PipelinePage() {
           </div>
         </Card>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Development Pipeline &mdash; CMHC via StatsCan 34-10-0154
-      </footer>
     </main>
   );
 }

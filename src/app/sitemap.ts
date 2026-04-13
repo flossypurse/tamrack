@@ -41,7 +41,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // Governance
     "governance/elections",
     // Tools
-    "tools/learn", "tools/docs", "tools/sources",
+    "tools/docs", "tools/sources",
   ];
   const categoryEntries: MetadataRoute.Sitemap = categoryPages.map((slug) => ({
     url: `${BASE_URL}/${slug}`,
@@ -67,5 +67,60 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  return [...publicPages, ...categoryEntries, ...municipalityEntries, ...chartEntries];
+  // Pulse Learn — free public course pages
+  const learnPages = [
+    "learn",
+    "learn/certificate",
+    // Alberta 101
+    "learn/alberta-101/geography",
+    "learn/alberta-101/regions",
+    "learn/alberta-101/people",
+    "learn/alberta-101/quiz",
+    // Energy Engine
+    "learn/energy-engine/commodities",
+    "learn/energy-engine/gdp-sectors",
+    "learn/energy-engine/jobs-shockwave",
+    "learn/energy-engine/migration",
+    "learn/energy-engine/diversification",
+    "learn/energy-engine/quiz",
+    // Housing Machine
+    "learn/housing-machine/policy-rate",
+    "learn/housing-machine/mortgage-rates",
+    "learn/housing-machine/construction",
+    "learn/housing-machine/vacancy-rent",
+    "learn/housing-machine/quiz",
+    // People & Growth
+    "learn/people-growth/demographics",
+    "learn/people-growth/immigration",
+    "learn/people-growth/labour-market",
+    "learn/people-growth/quiz",
+    // Tax Dollars
+    "learn/tax-dollars/property-tax",
+    "learn/tax-dollars/municipal-budgets",
+    "learn/tax-dollars/provincial-federal",
+    "learn/tax-dollars/quiz",
+    // Community Levers
+    "learn/community-levers/municipal-powers",
+    "learn/community-levers/zoning-development",
+    "learn/community-levers/economic-development",
+    "learn/community-levers/quiz",
+    // Safety & Prosperity
+    "learn/safety-prosperity/crime-economics",
+    "learn/safety-prosperity/health-outcomes",
+    "learn/safety-prosperity/environment-economy",
+    "learn/safety-prosperity/quiz",
+    // Reading the Signals
+    "learn/reading-signals/leading-lagging",
+    "learn/reading-signals/chain-reactions",
+    "learn/reading-signals/dashboard-reading",
+    "learn/reading-signals/quiz",
+  ];
+  const learnEntries: MetadataRoute.Sitemap = learnPages.map((slug) => ({
+    url: `${BASE_URL}/${slug}`,
+    lastModified: now,
+    changeFrequency: "monthly" as const,
+    priority: slug === "learn" ? 0.8 : 0.6,
+  }));
+
+  return [...publicPages, ...categoryEntries, ...municipalityEntries, ...chartEntries, ...learnEntries];
 }

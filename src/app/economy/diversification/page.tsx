@@ -7,6 +7,9 @@ import { Card, CardHeader, MetricCard } from "@/components/card";
 export const metadata: Metadata = {
   title: "Alberta Economic Diversification Tracker",
   description: "Is Alberta diversifying beyond oil and gas? Live GDP breakdown by industry, tech sector growth, and non-energy economic indicators.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/economy/diversification",
+  },
 };
 import {
   TimeSeriesAreaChart,
@@ -439,10 +442,6 @@ export default function DiversificationPage() {
       <section>
         <DiversificationContext />
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Diversification &mdash; All data from free public APIs
-      </footer>
     </main>
   );
 }

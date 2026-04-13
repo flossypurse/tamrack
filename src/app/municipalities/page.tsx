@@ -15,6 +15,9 @@ import { Globe, Building2, ArrowRight, MapPin } from "lucide-react";
 export const metadata = {
   title: "Alberta Municipalities — Economic Data for 22+ Communities",
   description: "Explore economic data across 22 live Alberta municipalities — building permits, property assessments, business activity, and development trends from Edmonton to Calgary and beyond.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/municipalities",
+  },
 };
 
 function MunicipalityCard({ config }: { config: MunicipalityConfig }) {
@@ -121,7 +124,7 @@ export default function MunicipalitiesPage() {
       </div>
 
       {/* Edmonton callout */}
-      <Link href="/home/dashboard" className="block group">
+      <Link href="/municipalities/edmonton" className="block group">
         <Card className="hover:border-accent/30 transition-colors bg-gradient-to-r from-card to-accent/[0.03]">
           <div className="flex items-center justify-between">
             <div>
@@ -185,10 +188,6 @@ export default function MunicipalitiesPage() {
           </p>
         </Card>
       </div>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check — Province-wide municipal data from public APIs
-      </footer>
     </main>
   );
 }

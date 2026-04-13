@@ -549,6 +549,9 @@ async function CauseAnalysisSection() {
 export const metadata: Metadata = {
   title: "Alberta Wildfire Watch",
   description: "Track active wildfires across Alberta in near real-time. Historical fire data, cause analysis, and regional wildfire risk indicators.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/environment/wildfire",
+  },
 };
 
 export default function WildfirePage() {

@@ -7,6 +7,9 @@ import { computeTimeRange } from "@/lib/time-range";
 export const metadata: Metadata = {
   title: "Alberta Rental Market Intelligence",
   description: "CMHC rental vacancy rates, average rents by unit type, and rental market trends across Edmonton and Calgary CMAs.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/real-estate/rental",
+  },
 };
 import {
   TimeSeriesAreaChart,
@@ -406,10 +409,6 @@ export default function RentalPage() {
           </div>
         </Card>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Rental Intelligence &mdash; CMHC via StatsCan 34-10-0127, 34-10-0133
-      </footer>
     </main>
   );
 }

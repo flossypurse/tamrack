@@ -24,6 +24,9 @@ export const metadata: Metadata = {
   title: "Cycle Positioning — Where Is Alberta Right Now?",
   description:
     "10-dimension economic fingerprint compared against five historical Alberta periods. See which era today most resembles and what happened next.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/economy/cycle-position",
+  },
 };
 
 // ============================================================
@@ -467,10 +470,6 @@ export default function CyclePositionPage() {
           </div>
         </Card>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Cycle Positioning &mdash; BoC + StatsCan live data
-      </footer>
     </main>
   );
 }

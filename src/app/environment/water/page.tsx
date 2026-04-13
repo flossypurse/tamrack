@@ -162,6 +162,9 @@ async function WaterLevelsTable() {
 export const metadata: Metadata = {
   title: "Alberta Water Levels & River Monitoring",
   description: "Live monitoring of Alberta's river systems, water levels, and flood risk indicators from government hydrometric stations.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/environment/water",
+  },
 };
 
 export default function WaterPage() {
@@ -328,10 +331,6 @@ export default function WaterPage() {
           </div>
         </Card>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Water &mdash; Data from ECCC Hydrometric API
-      </footer>
     </main>
   );
 }

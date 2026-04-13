@@ -420,6 +420,9 @@ async function CalgaryIncidentsSection() {
 export const metadata: Metadata = {
   title: "Alberta Highway Conditions & Traffic",
   description: "Real-time highway conditions, road closures, and traffic events across Alberta's major transportation corridors.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/community/traffic",
+  },
 };
 
 export default function TrafficPage() {
@@ -462,11 +465,6 @@ export default function TrafficPage() {
           <CalgaryIncidentsSection />
         </Suspense>
       </div>
-
-      {/* Footer */}
-      <footer className="text-center text-[10px] text-muted/60 font-mono pt-4 pb-8 border-t border-card-border">
-        Alberta Pulse Check — Traffic — Data from 511 Alberta, Edmonton Open Data, Calgary Open Data
-      </footer>
     </main>
   );
 }

@@ -7,6 +7,9 @@ import { computeTimeRange } from "@/lib/time-range";
 export const metadata: Metadata = {
   title: "Alberta Labour Market Data",
   description: "Alberta employment, unemployment rate, participation rate, weekly earnings, and workforce composition — live data from Statistics Canada.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/community/labour",
+  },
 };
 import {
   TimeSeriesAreaChart,
@@ -424,10 +427,6 @@ export default function LabourPage() {
           </div>
         </Card>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Labour &mdash; All data from free public APIs
-      </footer>
     </main>
   );
 }

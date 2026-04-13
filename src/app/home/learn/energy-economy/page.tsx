@@ -953,11 +953,6 @@ export default function EnergyEconomyLesson() {
       <Suspense fallback={<LoadingCard />}>
         <ClosingSection />
       </Suspense>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Alberta&apos;s Energy Engine &mdash; All
-        data from free public APIs
-      </footer>
     </main>
   );
 }

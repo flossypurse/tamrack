@@ -14,6 +14,9 @@ export const metadata: Metadata = {
   title: "Alberta Industrial Emissions — Facility GHG Reporting (ECCC)",
   description:
     "Track Alberta's largest industrial greenhouse gas emitters by facility and parent company. Source: Environment and Climate Change Canada GHGRP.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/environment/emissions",
+  },
 };
 
 // ============================================================

@@ -7,6 +7,9 @@ import { computeTimeRange } from "@/lib/time-range";
 export const metadata: Metadata = {
   title: "Alberta Investment Thesis",
   description: "Macro cycle position, energy outlook, rate environment, and migration momentum — should you invest in Alberta real estate right now?",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/economy/invest",
+  },
 };
 import {
   TimeSeriesAreaChart,
@@ -515,11 +518,6 @@ export default function InvestPage() {
           </p>
         </Card>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Investment Thesis &mdash; Data from Bank of
-        Canada, Statistics Canada, and CMHC via free public APIs
-      </footer>
     </main>
   );
 }

@@ -241,6 +241,9 @@ export const metadata: Metadata = {
   title: "Alberta Election History — Federal & Provincial Results",
   description:
     "Historical election results for Alberta federal and provincial ridings. Vote share, seat counts, and trends.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/governance/elections",
+  },
 };
 
 export default function ElectionsPage() {

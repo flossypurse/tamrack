@@ -178,6 +178,9 @@ async function ActiveAlertsCounts() {
 export const metadata: Metadata = {
   title: "Alberta Emergency & Weather Alerts",
   description: "Real-time emergency alerts and severe weather warnings for Alberta from the Canadian Alert Ready system.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/community/emergencies",
+  },
 };
 
 export default function EmergenciesPage() {
@@ -294,11 +297,6 @@ export default function EmergenciesPage() {
           </ul>
         </Card>
       </section>
-
-      {/* Footer */}
-      <footer className="text-center text-[10px] text-muted/50 font-mono pt-4 pb-8">
-        Alberta Pulse Check — Emergencies — Data from ECCC &amp; 511 Alberta
-      </footer>
     </main>
   );
 }

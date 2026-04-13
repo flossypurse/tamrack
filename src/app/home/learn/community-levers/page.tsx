@@ -864,11 +864,6 @@ export default function CommunityLeversLesson() {
         prev={{ href: "/home/learn/safety-and-prosperity", label: "Safety & Prosperity" }}
         next={{ href: "/home/learn", label: "Back to All Lessons" }}
       />
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; The Community Levers &mdash; All data from
-        free public APIs
-      </footer>
     </main>
   );
 }

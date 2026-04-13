@@ -34,6 +34,9 @@ export const metadata: Metadata = {
   title: "Alberta Economy — Provincial Economic Data & Indicators",
   description:
     "Track Alberta's economy in real time — energy prices, drilling activity, labour markets, migration, diversification, and agriculture. Live data from Statistics Canada, Bank of Canada, and Alberta government sources.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/economy",
+  },
 };
 
 // ============================================================

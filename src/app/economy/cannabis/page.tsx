@@ -33,6 +33,9 @@ export const metadata: Metadata = {
   title: "Alberta Cannabis Industry — Retail Sales & Market Data",
   description:
     "Live cannabis retail sales data for Alberta — monthly revenue, year-over-year growth, market share of total retail. Data from Statistics Canada.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/economy/cannabis",
+  },
 };
 
 // ============================================================
@@ -439,11 +442,6 @@ export default function CannabisPage() {
           </div>
         </Card>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Cannabis Industry &mdash; All data from free
-        public APIs
-      </footer>
     </main>
   );
 }

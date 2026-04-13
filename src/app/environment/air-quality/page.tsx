@@ -249,6 +249,9 @@ function WhatAffectsAirQuality() {
 export const metadata: Metadata = {
   title: "Alberta Air Quality Index (AQHI)",
   description: "Real-time Air Quality Health Index monitoring across Alberta stations. Track particulate matter, ozone, and nitrogen dioxide levels.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/environment/air-quality",
+  },
 };
 
 export default function AirQualityPage() {

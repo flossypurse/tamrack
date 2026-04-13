@@ -41,6 +41,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title,
     description,
+    alternates: {
+      canonical: `https://albertapulsecheck.ca/municipalities/${slug}`,
+    },
     openGraph: {
       title: `${title} | Alberta Pulse Check`,
       description,
@@ -1043,10 +1046,6 @@ export default async function MunicipalityPage({ params }: { params: Promise<{ s
           ))}
         </div>
       </Card>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check — {config.name} — Data from {config.dataSource}
-      </footer>
     </main>
   );
 }

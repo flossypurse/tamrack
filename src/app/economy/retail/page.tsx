@@ -526,10 +526,6 @@ export default function RetailPage() {
       <section>
         <RetailContext />
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Retail Trade &mdash; All data from free public APIs
-      </footer>
     </main>
   );
 }

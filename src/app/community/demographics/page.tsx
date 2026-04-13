@@ -26,6 +26,9 @@ export const metadata: Metadata = {
   title: "Alberta Health Demographics — Life Expectancy, Births & Deaths",
   description:
     "Life expectancy by municipality, births and deaths across Alberta. Data from the Alberta Regional Dashboard covering ~340 municipalities.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/community/demographics",
+  },
 };
 
 // ============================================================
@@ -383,11 +386,6 @@ export default function HealthDemographicsPage() {
 
       {/* Coming Soon */}
       <ComingSoonCard />
-
-      {/* Footer */}
-      <footer className="text-center text-[10px] text-muted/50 font-mono pt-4 pb-8">
-        Alberta Pulse Check — Health Demographics — Data from Alberta Regional Dashboard
-      </footer>
     </main>
   );
 }

@@ -239,10 +239,6 @@ export default function CoveragePage() {
           </div>
         </div>
       </Card>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check — Data Coverage Dashboard
-      </footer>
     </main>
   );
 }

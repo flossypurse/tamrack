@@ -1,5 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Activity, Check, ArrowRight, BarChart3, Building2, GraduationCap, Home } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Pricing — Alberta Pulse Check",
+  description: "Free charts and dashboards for Alberta economic data. Pro tier at $29/mo for deep-dive analysis, municipality details, and briefings. 14-day free trial.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/pricing",
+  },
+};
 
 // 1.3.8 — 4-product pricing model
 

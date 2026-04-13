@@ -891,11 +891,6 @@ export default function ReadingTheSignalsPage() {
         prev={{ href: "/home/learn/energy-economy", label: "Energy Economy" }}
         next={{ href: "/home/learn/your-tax-dollars", label: "Your Tax Dollars" }}
       />
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Reading the Signals &mdash; All data from
-        free public APIs
-      </footer>
     </main>
   );
 }

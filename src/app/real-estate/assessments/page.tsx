@@ -395,10 +395,6 @@ export default function AssessmentsPage() {
           </div>
         </Card>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Neighbourhood Assessments &mdash; UAlberta Open Data Centre
-      </footer>
     </main>
   );
 }

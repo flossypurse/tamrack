@@ -571,10 +571,6 @@ export default function BusinessesPage() {
       <section>
         <BusinessContext />
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Business Dynamics &mdash; All data from free public APIs
-      </footer>
     </main>
   );
 }

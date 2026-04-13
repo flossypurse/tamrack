@@ -354,6 +354,9 @@ function InducedSeismicityContext() {
 export const metadata: Metadata = {
   title: "Alberta Seismic Activity & Earthquakes",
   description: "Track earthquakes in Alberta including induced seismicity from oil and gas operations. Live data from Natural Resources Canada.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/community/seismic",
+  },
 };
 
 export default function EarthquakesPage() {
@@ -389,11 +392,6 @@ export default function EarthquakesPage() {
       <Suspense fallback={<LoadingCard />}>
         <RecentEarthquakesTable />
       </Suspense>
-
-      {/* Footer */}
-      <footer className="text-center text-[10px] text-muted/50 font-mono pt-4 pb-8">
-        Alberta Pulse Check — Seismic — Data from USGS Earthquake API
-      </footer>
     </main>
   );
 }

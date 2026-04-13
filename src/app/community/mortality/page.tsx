@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   title: "Alberta Leading Causes of Death — Mortality Trends",
   description:
     "Leading causes of death in Alberta with historical trends. Province-wide data from Alberta Open Data, 2001-2022.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/community/mortality",
+  },
 };
 
 // ============================================================
@@ -364,11 +367,6 @@ export default function MortalityPage() {
       <Suspense fallback={<LoadingCard />}>
         <TopCausesTrend />
       </Suspense>
-
-      {/* Footer */}
-      <footer className="text-center text-[10px] text-muted/50 font-mono pt-4 pb-8">
-        Alberta Pulse Check — Mortality — Data from Alberta Open Data (open.alberta.ca)
-      </footer>
     </main>
   );
 }

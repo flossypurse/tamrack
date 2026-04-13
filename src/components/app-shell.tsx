@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Nav } from "./nav";
 import { Breadcrumbs } from "./breadcrumbs";
+import { Footer } from "./footer";
 import { shouldShowSectionSidebar } from "./section-sidebar";
 
 const publicRoutes = ["/", "/login", "/terms", "/privacy", "/pricing"];
@@ -38,6 +39,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
         {children}
       </div>
+
+      <Footer />
 
       {/* Mobile: bottom tab bar spacer */}
       <div className="lg:hidden h-14" />

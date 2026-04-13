@@ -26,6 +26,9 @@ export const metadata: Metadata = {
     "Alberta Crime & Safety Data — Crime Severity Index & Community Crime Stats",
   description:
     "Track crime severity index across 200+ Alberta police jurisdictions. Community-level crime data for Calgary. Real-time public safety intelligence.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/community/crime",
+  },
 };
 
 // ============================================================
@@ -480,11 +483,6 @@ export default function CrimePage() {
           </div>
         </Card>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Crime &amp; Safety &mdash; All data from
-        free public APIs
-      </footer>
     </main>
   );
 }

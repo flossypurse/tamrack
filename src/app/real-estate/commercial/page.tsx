@@ -7,6 +7,9 @@ import { computeTimeRange } from "@/lib/time-range";
 export const metadata: Metadata = {
   title: "Alberta Commercial Real Estate Pulse",
   description: "Commercial property assessments, business formation trends, retail sales, and commercial zoning analysis across Alberta municipalities.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/real-estate/commercial",
+  },
 };
 import {
   TimeSeriesBarChart,
@@ -385,10 +388,6 @@ export default function CommercialPage() {
           </div>
         </Card>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Commercial Pulse &mdash; Edmonton Open Data + StatsCan 20-10-0056
-      </footer>
     </main>
   );
 }

@@ -7,6 +7,9 @@ import { computeTimeRange } from "@/lib/time-range";
 export const metadata: Metadata = {
   title: "Alberta Migration & Population Growth",
   description: "Who is moving to Alberta and why? International immigration, interprovincial migration flows, and population growth data updated quarterly.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/community/immigration",
+  },
 };
 import {
   TimeSeriesAreaChart,
@@ -436,10 +439,6 @@ export default function MigrationPage() {
       <section>
         <MigrationContext />
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Migration &mdash; All data from free public APIs
-      </footer>
     </main>
   );
 }

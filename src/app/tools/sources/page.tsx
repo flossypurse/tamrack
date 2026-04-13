@@ -940,6 +940,9 @@ const categories: Category[] = [
 export const metadata: Metadata = {
   title: "Data Sources — Alberta Pulse Check",
   description: "Complete list of government data sources powering Alberta Pulse Check — Bank of Canada, Statistics Canada, Alberta Open Data, and more.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/tools/sources",
+  },
 };
 
 export default function SourcesPage() {
@@ -1051,10 +1054,6 @@ export default function SourcesPage() {
           </div>
         </div>
       </Card>
-
-      <footer className="text-center text-xs text-muted/40 pt-6 pb-8">
-        Alberta Pulse Check v0.1 — All sources verified March 2026
-      </footer>
     </main>
   );
 }

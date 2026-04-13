@@ -398,6 +398,9 @@ function SectionLoading() {
 export const metadata: Metadata = {
   title: "Alberta Neighbourhood Micro Signals",
   description: "Neighbourhood-level intelligence from cross-analyzing permits, development activity, and assessment changes across Alberta communities.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/real-estate/neighbourhoods",
+  },
 };
 
 export default function MicroSignalsPage() {
@@ -497,11 +500,6 @@ export default function MicroSignalsPage() {
           Refreshes hourly.
         </p>
       </Card>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Micro Signals &mdash; Neighbourhood-level
-        cross-analysis
-      </footer>
     </main>
   );
 }

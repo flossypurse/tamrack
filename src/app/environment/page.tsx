@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   title: "Alberta Environment — Weather, Air, Water & Wildfire",
   description:
     "Real-time environmental monitoring for Alberta — weather conditions, air quality index, river levels, and wildfire tracking from Environment Canada and provincial sources.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/environment",
+  },
 };
 
 // ============================================================

@@ -239,8 +239,13 @@ export function Nav() {
             onClick={() => setMobileOpen(false)}
             className="mx-3 mt-2 px-3 py-2 bg-accent-amber/10 border border-accent-amber/20 rounded-lg text-xs text-accent-amber hover:bg-accent-amber/15 transition-colors shrink-0"
           >
-            {daysLeft} day{daysLeft !== 1 ? "s" : ""} left in trial &mdash;{" "}
-            <span className="font-medium">Subscribe</span>
+            <span>{daysLeft} day{daysLeft !== 1 ? "s" : ""} left in trial &mdash;{" "}
+            <span className="font-medium">Subscribe</span></span>
+            {daysLeft <= 3 && (
+              <span className="block text-[10px] text-accent-amber/70 mt-0.5">
+                Deep-dive analysis, municipality data, and briefings require a subscription
+              </span>
+            )}
           </Link>
         )}
 

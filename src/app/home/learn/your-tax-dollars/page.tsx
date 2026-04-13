@@ -689,11 +689,6 @@ export default function YourTaxDollarsPage() {
         prev={{ href: "/home/learn/reading-the-signals", label: "Reading the Signals" }}
         next={{ href: "/home/learn/people-and-growth", label: "People & Growth" }}
       />
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Your Tax Dollars &mdash; All data from free
-        public APIs
-      </footer>
     </main>
   );
 }

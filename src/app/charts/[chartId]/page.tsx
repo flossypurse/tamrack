@@ -12,6 +12,7 @@ import {
   type ChartMeta,
 } from "@/lib/chart-registry";
 import { resolveChart } from "@/lib/chart-resolver";
+import { BreadcrumbJsonLd } from "@/components/json-ld";
 import { ChartPageActions } from "./chart-actions";
 
 export const revalidate = 3600; // ISR: 1 hour
@@ -239,6 +240,15 @@ export default async function ChartDetailPage({
               ))}
             </div>
           </div>
+
+          {/* Breadcrumb structured data */}
+          <BreadcrumbJsonLd
+            items={[
+              { name: "Home", url: "https://albertapulsecheck.ca" },
+              { name: "Charts", url: "https://albertapulsecheck.ca/charts" },
+              { name: meta.title, url: `https://albertapulsecheck.ca/charts/${meta.id}` },
+            ]}
+          />
 
           {/* Structured data for SEO */}
           <script

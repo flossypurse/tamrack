@@ -5,6 +5,9 @@ import { Card, CardHeader } from "@/components/card";
 export const metadata: Metadata = {
   title: "Alberta Economic Signals & Leading Indicators",
   description: "Cross-indicator analysis of Alberta's economy. When multiple leading indicators point the same direction, it's time to pay attention.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/home/signals",
+  },
 };
 import { TimeSeriesAreaChart, TimeSeriesBarChart } from "@/components/chart";
 import { PageHeader } from "@/components/page-header";
@@ -446,11 +449,6 @@ export default function SignalsPage() {
           </Suspense>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Signals &mdash; All data from free public APIs
-      </footer>
     </main>
   );
 }

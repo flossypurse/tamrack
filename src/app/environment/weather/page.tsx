@@ -198,6 +198,9 @@ function LoadingCard() {
 export const metadata: Metadata = {
   title: "Alberta Weather Conditions",
   description: "Real-time weather conditions across Alberta — temperature, wind, humidity, and visibility from Environment Canada monitoring stations.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/environment/weather",
+  },
 };
 
 export default function WeatherPage() {
@@ -250,10 +253,6 @@ export default function WeatherPage() {
           </Suspense>
         </div>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Weather &mdash; Data from ECCC GeoMet API
-      </footer>
     </main>
   );
 }

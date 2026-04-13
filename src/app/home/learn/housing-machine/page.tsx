@@ -736,11 +736,6 @@ export default function HousingMachinePage() {
         prev={{ href: "/home/learn", label: "All Lessons" }}
         next={{ href: "/home/learn/energy-economy", label: "Energy Economy" }}
       />
-
-      {/* Footer */}
-      <footer className="text-center text-[10px] text-muted/40 pb-8 pt-4 border-t border-card-border">
-        Alberta Pulse Check — The Housing Machine — All data from free public APIs
-      </footer>
     </div>
   );
 }

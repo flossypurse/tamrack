@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   title: "Alberta Fire & Emergency Response Data",
   description:
     "Edmonton fire and EMS incident data, active wildfire tracking, and Alberta emergency alerts. Real-time public safety intelligence.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/community/fire-response",
+  },
 };
 
 // ============================================================
@@ -554,11 +557,6 @@ export default function FireResponsePage() {
           </div>
         </Card>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Fire &amp; Emergency Response &mdash; All
-        data from free public APIs
-      </footer>
     </main>
   );
 }

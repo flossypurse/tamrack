@@ -7,6 +7,9 @@ import { computeTimeRange } from "@/lib/time-range";
 export const metadata: Metadata = {
   title: "Alberta Market Risk Dashboard",
   description: "Composite risk scoring for Alberta municipalities — employment dependency, vacancy, supply pipeline, rate sensitivity, and insolvency trends.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/economy/risk",
+  },
 };
 import {
   MultiSeriesLineChart,
@@ -477,10 +480,6 @@ export default function RiskPage() {
           </div>
         </Card>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Market Risk &mdash; BoC + StatsCan + CMHC live data
-      </footer>
     </main>
   );
 }

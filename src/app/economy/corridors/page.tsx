@@ -239,6 +239,9 @@ function LoadingCard() {
 export const metadata: Metadata = {
   title: "Alberta Growth Corridors",
   description: "Alberta municipalities ranked by composite growth score — population, permits, business formation, assessment growth, and migration.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/economy/corridors",
+  },
 };
 
 export default function CorridorsPage() {
@@ -330,10 +333,6 @@ export default function CorridorsPage() {
           </div>
         </Card>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Growth Corridors &mdash; Live data from {getLiveMunicipalities().length} municipalities
-      </footer>
     </main>
   );
 }

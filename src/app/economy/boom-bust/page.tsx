@@ -7,6 +7,9 @@ import { computeTimeRange } from "@/lib/time-range";
 export const metadata: Metadata = {
   title: "Alberta Boom-Bust Cycle Tracker",
   description: "Track where Alberta is in its economic cycle. Live analysis of oil prices, employment, migration, and construction against historical boom-bust patterns.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/economy/boom-bust",
+  },
 };
 import {
   TimeSeriesAreaChart,
@@ -534,10 +537,6 @@ export default function CyclePage() {
           </div>
         </Card>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Cycle Tracker &mdash; All data from free public APIs
-      </footer>
     </main>
   );
 }

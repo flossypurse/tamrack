@@ -1265,6 +1265,9 @@ function LoadingTable() {
 export const metadata: Metadata = {
   title: "Alberta Real Estate Intelligence",
   description: "Province-wide real estate intelligence — permit hotspots, assessment trends, and teardown detection across Edmonton, Calgary, and 20+ Alberta municipalities.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/real-estate/market",
+  },
 };
 
 export default function RealEstatePage() {
@@ -1521,12 +1524,6 @@ export default function RealEstatePage() {
           </div>
         </div>
       </Card>
-
-      {/* Footer */}
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check — Real Estate Intelligence — Data refreshed hourly — All
-        sources free &amp; public
-      </footer>
     </main>
   );
 }

@@ -7,6 +7,9 @@ import { computeTimeRange } from "@/lib/time-range";
 export const metadata: Metadata = {
   title: "Alberta Drilling & Well Activity",
   description: "AER well licence data, drilling activity trends, oil and gas production volumes, and oilfield service activity across Alberta.",
+  alternates: {
+    canonical: "https://albertapulsecheck.ca/economy/drilling",
+  },
 };
 import {
   TimeSeriesAreaChart,
@@ -365,10 +368,6 @@ export default function DrillingPage() {
           </div>
         </Card>
       </section>
-
-      <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Drilling &amp; Energy &mdash; All data from free public APIs
-      </footer>
     </main>
   );
 }
