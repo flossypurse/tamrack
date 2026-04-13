@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
+import { signOutAction } from "@/app/actions/auth";
 import {
   Activity,
   ChevronDown,
@@ -417,7 +418,7 @@ export function Nav() {
             <CreditCard size={14} />
             Billing
           </Link>
-          <form action="/api/auth/sign-out" method="post">
+          <form action={signOutAction}>
             <button
               type="submit"
               className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-accent-red/70 hover:text-accent-red hover:bg-accent-red/5 transition-colors"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
+import { signOutAction } from "@/app/actions/auth";
 import { User, LogOut, Mail, Calendar } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
@@ -51,7 +52,7 @@ export default function AccountPage() {
           >
             Manage billing
           </Link>
-          <form action="/api/auth/sign-out" method="post">
+          <form action={signOutAction}>
             <button
               type="submit"
               className="flex items-center gap-2 px-4 py-2 border border-accent-red/30 rounded-lg text-sm text-accent-red hover:bg-accent-red/5 transition-colors"
