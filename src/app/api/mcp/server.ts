@@ -1,6 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { registerCatalogTool } from "./tools/catalog";
+import { registerMacroTool } from "./tools/macro";
+import { registerRegionalTool } from "./tools/regional";
 
 /**
  * Server identity advertised in `InitializeResult.serverInfo`.
@@ -29,6 +31,8 @@ export function createMcpServer(): McpServer {
   });
 
   registerCatalogTool(server);
+  registerMacroTool(server);
+  registerRegionalTool(server);
 
   return server;
 }

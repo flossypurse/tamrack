@@ -218,3 +218,106 @@ Rationale:
 
 If the registry ever becomes async-loaded (DB-backed, etc.), revisit —
 the schema would need to be regenerated when the registry changes.
+
+## D11 — Catalog ships the full 54-name regional indicator list inline
+
+**Date:** 2026-05-11
+**Parcel:** 3
+**Status:** Locked
+
+The brief left this as a judgment call: ship all 54 regional indicator
+names in the catalog payload, or surface a count plus a representative
+sample. We ship the full list.
+
+Rationale:
+
+- The catalog is one call per agent session. The full 54 names add
+  roughly 1KB to the payload — negligible against the municipalities
+  array (~30 entries with rich metadata) already in there.
+- The indicator names are the agent's input enum. Showing only a sample
+  forces a second discovery call (or, worse, guessing) to find the
+  right name. The catalog's whole purpose is to make that round trip
+  unnecessary.
+- The registry's `updateToolEntry()` accepts `indicators: string[]`
+  directly, and the regional tool already has `Object.keys(REGIONAL_INDICATORS)`
+  in hand — listing the full array adds zero maintenance cost
+  versus a curated sample (which would drift).
+
+If a future regional indicator explosion pushes the inventory past
+~200 names, revisit; until then, the full list stays inline.
+
+## D12 — Macro tool fetches a LATEST-N window and filters explicit ranges client-side
+
+**Date:** 2026-05-11
+**Parcel:** 3
+**Status:** Locked
+
+For `alberta_macro`, named `time_range` values map to a periods count
+that's passed to the substrate's LATEST-N fetcher. Explicit `{from, to}`
+ranges are NOT translated into upstream date-range queries — we ask for
+a wide-enough LATEST-N window (5y equivalent) and then filter the result
+client-side.
+
+Rationale:
+
+- BoC Valet supports date-range queries but `fetchBoCTimeSeries` only
+  exposes the LATEST-N path. Adding date-range support would mean
+  editing `src/lib/data-sources.ts`, which is explicitly out of scope
+  for Parcel 3.
+- StatsCan's vector API has even less ergonomic date-range support; the
+  substrate uses `getDataFromCubePidCoordAndLatestNPeriods` exclusively.
+- The substrate's revalidate cache is keyed on the URL, so over-asking
+  is essentially free after the first hit — and the in-flight dedup
+  cache in `fetchStatCanTimeSeries` makes concurrent requests share
+  a single fetch.
+
+If a use case surfaces where this matters (e.g., backfilling pre-2020
+data for an indicator with weekly cadence), extend the substrate fetcher
+and update this decision.
+
+## D13 — Regional tool reports served_from via csduid heuristic
+
+**Date:** 2026-05-11
+**Parcel:** 3
+**Status:** Locked
+
+`data-sources-regional.ts` already falls back to Postgres internally
+when the regional dashboard API fails. Its `dbFallback()` returns
+`RegionalDataPoint[]` with `csduid: ""` — the upstream always
+populates a real CSDUID.
+
+The regional tool uses that as a heuristic to set
+`data.served_from`:
+
+- empty result + non-empty after our second fallback try → `"fallback"`
+- non-empty result, every csduid blank → `"fallback"` (substrate fell back)
+- non-empty result, csduids populated → `"upstream"`
+- empty result + empty fallback → `"empty"`
+
+This avoids editing the substrate to expose its internal served-from
+state, while still giving the calling agent a reliable signal of
+freshness. If the substrate is ever refactored to populate CSDUID on
+fallback rows, the heuristic breaks — leave a comment at the call site
+pointing back here.
+
+## D14 — Smoke test asserts shape, not non-empty data
+
+**Date:** 2026-05-11
+**Parcel:** 3
+**Status:** Locked
+
+The Parcel 3 smoke test exercises `tools/call alberta_macro` and
+`tools/call alberta_regional` for real. But the test environment may
+have no network (CI sandbox) or no `DATABASE_URL` (no Postgres
+fallback), so the response can legitimately be empty.
+
+The smoke test therefore asserts:
+
+- The call did not error (no exception thrown, `isError !== true`).
+- The envelope shape is correct (`schema_version`, `tool`, `source`).
+- `data.served_from` is one of the three valid values.
+- `data.points` is an array (possibly empty).
+
+It does NOT assert `points.length > 0`. That assertion would belong in
+an end-to-end test run against a live deployment with a known-up
+upstream, not the in-process smoke test.

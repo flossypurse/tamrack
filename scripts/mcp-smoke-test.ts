@@ -10,10 +10,13 @@
  * surface; the HTTP/auth layer gets its own end-to-end test once Cully
  * has a dev token.
  *
- * Coverage (Parcel 2):
- *   - initialize lifecycle round-trip
- *   - tools/list returns alberta_catalog
- *   - tools/call alberta_catalog returns a well-formed catalog payload
+ * Coverage:
+ *   - Parcel 2: initialize lifecycle, tools/list returns alberta_catalog,
+ *     tools/call alberta_catalog returns a well-formed catalog payload.
+ *   - Parcel 3: tools/list returns the macro + regional tools alongside the
+ *     catalog; tools/call against alberta_macro and alberta_regional
+ *     round-trips a typed envelope (or a graceful empty envelope when
+ *     upstream is unreachable from the test env — both are acceptable).
  *
  * Run with:
  *   npx tsx scripts/mcp-smoke-test.ts
@@ -80,20 +83,38 @@ async function main(): Promise<void> {
   console.log("\n[tools/list]");
   const list = await client.listTools();
   check(
-    "tools/list returned exactly 1 tool",
-    list.tools.length === 1,
+    "tools/list returned exactly 3 tools",
+    list.tools.length === 3,
     `got ${list.tools.length}`,
   );
-  const catalogTool = list.tools[0];
+  const listedNames = list.tools.map((t) => t.name).sort();
+  const expectedListed = ["alberta_catalog", "alberta_macro", "alberta_regional"].sort();
   check(
-    "tool is named alberta_catalog",
-    catalogTool?.name === "alberta_catalog",
-    `got ${catalogTool?.name}`,
+    "tools/list names are alberta_catalog + alberta_macro + alberta_regional",
+    listedNames.join(",") === expectedListed.join(","),
+    `got ${listedNames.join(",")}`,
   );
+  const catalogTool = list.tools.find((t) => t.name === "alberta_catalog");
   check(
     "alberta_catalog has a description",
     typeof catalogTool?.description === "string" &&
-      catalogTool.description.length > 0,
+      (catalogTool.description?.length ?? 0) > 0,
+  );
+  const macroTool = list.tools.find((t) => t.name === "alberta_macro");
+  check(
+    "alberta_macro has an inputSchema with indicator + time_range",
+    macroTool != null &&
+      typeof macroTool.inputSchema === "object" &&
+      // The SDK returns the inputSchema as a JSON Schema object derived
+      // from the zod shape; assert the indicator field is present.
+      typeof (macroTool.inputSchema as Record<string, unknown>).properties === "object",
+  );
+  const regionalTool = list.tools.find((t) => t.name === "alberta_regional");
+  check(
+    "alberta_regional has an inputSchema",
+    regionalTool != null &&
+      typeof regionalTool.inputSchema === "object" &&
+      typeof (regionalTool.inputSchema as Record<string, unknown>).properties === "object",
   );
 
   // ── tools/call alberta_catalog ──────────────────────────────────────
@@ -161,6 +182,20 @@ async function main(): Promise<void> {
       "tools[] includes alberta_catalog with status=live",
       catalogEntry?.status === "live",
       `got ${catalogEntry?.status}`,
+    );
+
+    // Parcel 3 — these two flip from "planned" to "live".
+    const macroEntry = tools.find((t) => t.name === "alberta_macro");
+    check(
+      "catalog tools[] reports alberta_macro status=live",
+      macroEntry?.status === "live",
+      `got ${macroEntry?.status}`,
+    );
+    const regionalEntry = tools.find((t) => t.name === "alberta_regional");
+    check(
+      "catalog tools[] reports alberta_regional status=live",
+      regionalEntry?.status === "live",
+      `got ${regionalEntry?.status}`,
     );
 
     // All 9 v1 tools should appear.
@@ -237,6 +272,139 @@ async function main(): Promise<void> {
     );
   }
 
+  // ── tools/call alberta_macro ─────────────────────────────────────────
+  // Live upstream may be unreachable from a test env (no network, DNS, etc.)
+  // and Postgres fallback may be empty (no DATABASE_URL configured). Both
+  // are acceptable; assert envelope shape, not non-empty data.
+  console.log("\n[tools/call alberta_macro]");
+  const macroResult = await client.callTool({
+    name: "alberta_macro",
+    arguments: { indicator: "policy_rate" },
+  });
+  check(
+    "alberta_macro tools/call did not return isError",
+    macroResult.isError !== true,
+    JSON.stringify(macroResult.content),
+  );
+  const macroStructured = macroResult.structuredContent as
+    | Record<string, unknown>
+    | undefined;
+  check(
+    "alberta_macro response has structuredContent",
+    macroStructured != null && typeof macroStructured === "object",
+  );
+  if (macroStructured) {
+    check(
+      "alberta_macro envelope.schema_version is 1.0.0",
+      macroStructured.schema_version === "1.0.0",
+      `got ${String(macroStructured.schema_version)}`,
+    );
+    check(
+      "alberta_macro envelope.tool is alberta_macro",
+      macroStructured.tool === "alberta_macro",
+      `got ${String(macroStructured.tool)}`,
+    );
+    const macroData = macroStructured.data as Record<string, unknown> | undefined;
+    check(
+      "alberta_macro data.indicator echoes the request",
+      macroData?.indicator === "policy_rate",
+      `got ${String(macroData?.indicator)}`,
+    );
+    check(
+      "alberta_macro data.served_from is one of upstream|fallback|empty",
+      typeof macroData?.served_from === "string" &&
+        ["upstream", "fallback", "empty"].includes(macroData.served_from as string),
+      `got ${String(macroData?.served_from)}`,
+    );
+    check(
+      "alberta_macro data.points is an array",
+      Array.isArray(macroData?.points),
+    );
+    console.log(
+      `  info  alberta_macro served_from=${String(macroData?.served_from)} points=${
+        Array.isArray(macroData?.points) ? (macroData.points as unknown[]).length : "n/a"
+      }`,
+    );
+  }
+
+  // ── tools/call alberta_regional ──────────────────────────────────────
+  // Regional dashboard upstream is flaky and can be slow (large payloads,
+  // single-attempt retry, then Postgres fallback). Bump the request
+  // timeout for this call past the SDK default of 60s.
+  console.log("\n[tools/call alberta_regional]");
+  const regionalResult = await client.callTool(
+    {
+      name: "alberta_regional",
+      arguments: { indicator: "Population", municipality: "edmonton" },
+    },
+    undefined,
+    { timeout: 180_000 },
+  );
+  check(
+    "alberta_regional tools/call did not return isError",
+    regionalResult.isError !== true,
+    JSON.stringify(regionalResult.content),
+  );
+  const regionalStructured = regionalResult.structuredContent as
+    | Record<string, unknown>
+    | undefined;
+  check(
+    "alberta_regional response has structuredContent",
+    regionalStructured != null && typeof regionalStructured === "object",
+  );
+  if (regionalStructured) {
+    check(
+      "alberta_regional envelope.schema_version is 1.0.0",
+      regionalStructured.schema_version === "1.0.0",
+      `got ${String(regionalStructured.schema_version)}`,
+    );
+    check(
+      "alberta_regional envelope.source is regionaldashboard.alberta.ca",
+      regionalStructured.source === "regionaldashboard.alberta.ca",
+      `got ${String(regionalStructured.source)}`,
+    );
+    const regionalData = regionalStructured.data as
+      | Record<string, unknown>
+      | undefined;
+    check(
+      "alberta_regional data.indicator is 'Population'",
+      regionalData?.indicator === "Population",
+      `got ${String(regionalData?.indicator)}`,
+    );
+    const muniBlock = regionalData?.municipality as
+      | Record<string, unknown>
+      | undefined;
+    check(
+      "alberta_regional data.municipality.slug is 'edmonton'",
+      muniBlock?.slug === "edmonton",
+      `got ${String(muniBlock?.slug)}`,
+    );
+    check(
+      "alberta_regional data.municipality.name is 'Edmonton'",
+      muniBlock?.name === "Edmonton",
+      `got ${String(muniBlock?.name)}`,
+    );
+    check(
+      "alberta_regional data.served_from is one of upstream|fallback|empty",
+      typeof regionalData?.served_from === "string" &&
+        ["upstream", "fallback", "empty"].includes(
+          regionalData.served_from as string,
+        ),
+      `got ${String(regionalData?.served_from)}`,
+    );
+    check(
+      "alberta_regional data.points is an array",
+      Array.isArray(regionalData?.points),
+    );
+    console.log(
+      `  info  alberta_regional served_from=${String(regionalData?.served_from)} points=${
+        Array.isArray(regionalData?.points)
+          ? (regionalData.points as unknown[]).length
+          : "n/a"
+      }`,
+    );
+  }
+
   await client.close();
   await server.close();
 
@@ -244,7 +412,7 @@ async function main(): Promise<void> {
   console.log("");
   if (failures.length === 0) {
     console.log(
-      `PASS — initialize + tools/list + tools/call(alberta_catalog) OK (server=${
+      `PASS — initialize + tools/list + tools/call(alberta_catalog, alberta_macro, alberta_regional) OK (server=${
         info?.name
       }@${info?.version}, protocol=${LATEST_PROTOCOL_VERSION})`,
     );
