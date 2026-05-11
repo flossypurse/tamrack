@@ -124,3 +124,97 @@ exact same `McpServer` instance the route uses.
 When tool registration lands in later parcels, the smoke test extends
 naturally to `tools/list` and `tools/call` against the same in-process
 pair.
+
+## D7 — Tool registry is one Record keyed by name, statuses inline
+
+**Date:** 2026-05-11
+**Parcel:** 2
+**Status:** Locked
+
+The registry holds every v1 + v2 tool in a single `Record<string, ToolEntry>`
+with an inline `status: "live" | "planned" | "deferred"` field, rather than
+two separate maps (one for live + planned v1 tools, one for deferred v2
+tools).
+
+Rationale:
+
+- The catalog payload lists all 17 tools regardless of status. Two maps
+  would mean either two iterations or merging them on every catalog build —
+  pointless for a static metadata function.
+- Parcels 3–5 flip status fields from `"planned"` to `"live"` via
+  `updateToolEntry()`. Same callsite, same field, regardless of which
+  parcel ships the change.
+- A v2 tool moving to v1 is exactly the same operation as a v1 planned tool
+  going live — flip `status`, fill `indicators`/`parameters_summary`. The
+  two-map design would force a cross-map move for what is conceptually a
+  status change.
+
+If the v2 list grows past ~20 entries and the inline approach starts to
+read poorly, split then.
+
+## D8 — Catalog tool returns BOTH `text` and `structuredContent`
+
+**Date:** 2026-05-11
+**Parcel:** 2
+**Status:** Locked
+
+`alberta_catalog` emits its payload twice on each call:
+
+- `content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]` —
+  for clients that only render text content blocks.
+- `structuredContent: payload` — typed JSON the MCP spec carries
+  alongside the text content for callers that want the parsed object.
+
+Rationale:
+
+- MCP spec 2025-06-18 supports both fields on `CallToolResult`. Clients
+  vary in which they consume.
+- Doubling the payload bytes is fine at catalog volumes (one call per
+  agent session, payload measured in low KB).
+- All typed tools in Parcels 3–5 will follow the same pattern, so
+  callers can rely on it as a contract.
+
+If response size becomes a concern for a chatty tool, drop the text block
+on that tool only — keeping the typed structured form is the higher-value
+half.
+
+## D9 — Optional `domain?` filter on `alberta_catalog` deliberately not implemented
+
+**Date:** 2026-05-11
+**Parcel:** 2
+**Status:** Locked
+
+The build brief allowed an optional `domain?: string` filter on the
+catalog tool, with a default of "do not implement." We took the default.
+
+Rationale:
+
+- The full catalog is small (~17 tools, ~30 live municipalities, a few
+  hundred indicators worth of names). Agents can filter client-side.
+- Adding the filter would mean an enum that has to stay in sync with
+  `ToolDomain` and a partial-payload code path — added surface area for
+  no real ergonomic win at v1.
+- We can add it later without breaking callers (purely additive
+  parameter).
+
+## D10 — `MunicipalitySlugSchema` derived at module load, not lazy
+
+**Date:** 2026-05-11
+**Parcel:** 2
+**Status:** Locked
+
+`MunicipalitySlugSchema` is a `z.enum(...)` built once when
+`schemas.ts` is imported, from `getLiveMunicipalities()`. Not a function,
+not lazy.
+
+Rationale:
+
+- The municipality registry is in-process module state; reading it is
+  free.
+- Tools register at server-build time; the schema is referenced in their
+  zod input shape. Lazy evaluation buys nothing.
+- A module-load failure (empty registry) is now loud and immediate
+  rather than surfacing on the first tool call.
+
+If the registry ever becomes async-loaded (DB-backed, etc.), revisit —
+the schema would need to be regenerated when the registry changes.

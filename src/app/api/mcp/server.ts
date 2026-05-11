@@ -1,5 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
+import { registerCatalogTool } from "./tools/catalog";
+
 /**
  * Server identity advertised in `InitializeResult.serverInfo`.
  * Bumped manually with breaking schema changes (e.g. tool surface changes).
@@ -17,7 +19,7 @@ export const MCP_SERVER_INFO = {
  * request, and pairing 1:1 keeps server state isolated too. Tool registration
  * is fast (no I/O) so per-request instantiation is cheap.
  *
- * Parcel 1 ships zero tools — they land in Parcels 2–5.
+ * Parcel 2 adds `alberta_catalog`. Parcels 3–5 add the eight typed tools.
  */
 export function createMcpServer(): McpServer {
   const server = new McpServer(MCP_SERVER_INFO, {
@@ -26,7 +28,7 @@ export function createMcpServer(): McpServer {
     },
   });
 
-  // Tool registration goes here in subsequent parcels.
+  registerCatalogTool(server);
 
   return server;
 }
