@@ -17,6 +17,13 @@
  *     catalog; tools/call against alberta_macro and alberta_regional
  *     round-trips a typed envelope (or a graceful empty envelope when
  *     upstream is unreachable from the test env — both are acceptable).
+ *   - Parcel 4: tools/list adds alberta_municipality + alberta_real_estate;
+ *     tools/call against alberta_municipality(edmonton) returns the
+ *     registry summary card; tools/call against alberta_real_estate with
+ *     a valid capability returns the available envelope; and with a
+ *     known-missing capability (a muni whose capabilities[] excludes
+ *     dev_permits) returns `{ available: false, reason: ... }` instead
+ *     of throwing.
  *
  * Run with:
  *   npx tsx scripts/mcp-smoke-test.ts
@@ -83,14 +90,20 @@ async function main(): Promise<void> {
   console.log("\n[tools/list]");
   const list = await client.listTools();
   check(
-    "tools/list returned exactly 3 tools",
-    list.tools.length === 3,
+    "tools/list returned exactly 5 tools",
+    list.tools.length === 5,
     `got ${list.tools.length}`,
   );
   const listedNames = list.tools.map((t) => t.name).sort();
-  const expectedListed = ["alberta_catalog", "alberta_macro", "alberta_regional"].sort();
+  const expectedListed = [
+    "alberta_catalog",
+    "alberta_macro",
+    "alberta_municipality",
+    "alberta_real_estate",
+    "alberta_regional",
+  ].sort();
   check(
-    "tools/list names are alberta_catalog + alberta_macro + alberta_regional",
+    "tools/list names are catalog + macro + regional + municipality + real_estate",
     listedNames.join(",") === expectedListed.join(","),
     `got ${listedNames.join(",")}`,
   );
@@ -115,6 +128,26 @@ async function main(): Promise<void> {
     regionalTool != null &&
       typeof regionalTool.inputSchema === "object" &&
       typeof (regionalTool.inputSchema as Record<string, unknown>).properties === "object",
+  );
+  const municipalityTool = list.tools.find(
+    (t) => t.name === "alberta_municipality",
+  );
+  check(
+    "alberta_municipality has an inputSchema with slug",
+    municipalityTool != null &&
+      typeof municipalityTool.inputSchema === "object" &&
+      typeof (municipalityTool.inputSchema as Record<string, unknown>)
+        .properties === "object",
+  );
+  const realEstateTool = list.tools.find(
+    (t) => t.name === "alberta_real_estate",
+  );
+  check(
+    "alberta_real_estate has an inputSchema",
+    realEstateTool != null &&
+      typeof realEstateTool.inputSchema === "object" &&
+      typeof (realEstateTool.inputSchema as Record<string, unknown>)
+        .properties === "object",
   );
 
   // ── tools/call alberta_catalog ──────────────────────────────────────
@@ -196,6 +229,24 @@ async function main(): Promise<void> {
       "catalog tools[] reports alberta_regional status=live",
       regionalEntry?.status === "live",
       `got ${regionalEntry?.status}`,
+    );
+
+    // Parcel 4 — municipality + real_estate flip from "planned" to "live".
+    const municipalityEntry = tools.find(
+      (t) => t.name === "alberta_municipality",
+    );
+    check(
+      "catalog tools[] reports alberta_municipality status=live",
+      municipalityEntry?.status === "live",
+      `got ${municipalityEntry?.status}`,
+    );
+    const realEstateEntry = tools.find(
+      (t) => t.name === "alberta_real_estate",
+    );
+    check(
+      "catalog tools[] reports alberta_real_estate status=live",
+      realEstateEntry?.status === "live",
+      `got ${realEstateEntry?.status}`,
     );
 
     // All 9 v1 tools should appear.
@@ -405,6 +456,184 @@ async function main(): Promise<void> {
     );
   }
 
+  // ── tools/call alberta_municipality ──────────────────────────────────
+  // Registry-backed; the metrics block hits live endpoints but each metric
+  // is independently nullable so the envelope is shape-stable regardless.
+  console.log("\n[tools/call alberta_municipality]");
+  const muniResult = await client.callTool(
+    {
+      name: "alberta_municipality",
+      arguments: { slug: "edmonton" },
+    },
+    undefined,
+    { timeout: 180_000 },
+  );
+  check(
+    "alberta_municipality tools/call did not return isError",
+    muniResult.isError !== true,
+    JSON.stringify(muniResult.content),
+  );
+  const muniStructured = muniResult.structuredContent as
+    | Record<string, unknown>
+    | undefined;
+  check(
+    "alberta_municipality response has structuredContent",
+    muniStructured != null && typeof muniStructured === "object",
+  );
+  if (muniStructured) {
+    check(
+      "alberta_municipality envelope.schema_version is 1.0.0",
+      muniStructured.schema_version === "1.0.0",
+      `got ${String(muniStructured.schema_version)}`,
+    );
+    check(
+      "alberta_municipality envelope.tool is alberta_municipality",
+      muniStructured.tool === "alberta_municipality",
+      `got ${String(muniStructured.tool)}`,
+    );
+    check(
+      "alberta_municipality envelope.source is alberta-pulse-registry",
+      muniStructured.source === "alberta-pulse-registry",
+      `got ${String(muniStructured.source)}`,
+    );
+    const muniData = muniStructured.data as Record<string, unknown> | undefined;
+    check(
+      "alberta_municipality data.slug is 'edmonton'",
+      muniData?.slug === "edmonton",
+      `got ${String(muniData?.slug)}`,
+    );
+    check(
+      "alberta_municipality data.name is 'Edmonton'",
+      muniData?.name === "Edmonton",
+      `got ${String(muniData?.name)}`,
+    );
+    check(
+      "alberta_municipality data.capabilities is a non-empty array",
+      Array.isArray(muniData?.capabilities) &&
+        (muniData.capabilities as unknown[]).length > 0,
+    );
+    check(
+      "alberta_municipality data.available_datasets is an array",
+      Array.isArray(muniData?.available_datasets),
+    );
+    check(
+      "alberta_municipality data.metrics is an object",
+      muniData?.metrics != null && typeof muniData.metrics === "object",
+    );
+    const metricsBlock = muniData?.metrics as Record<string, unknown> | undefined;
+    console.log(
+      `  info  alberta_municipality parcel_count=${String(metricsBlock?.parcel_count)} vacant_count=${String(metricsBlock?.vacant_count)} recent_permits_count=${String(metricsBlock?.recent_permits_count)}`,
+    );
+  }
+
+  // ── tools/call alberta_real_estate (capability supported) ────────────
+  console.log("\n[tools/call alberta_real_estate edmonton/assessments]");
+  const reResult = await client.callTool(
+    {
+      name: "alberta_real_estate",
+      arguments: { municipality: "edmonton", dataset: "assessments", limit: 10 },
+    },
+    undefined,
+    { timeout: 180_000 },
+  );
+  check(
+    "alberta_real_estate(edmonton/assessments) tools/call did not return isError",
+    reResult.isError !== true,
+    JSON.stringify(reResult.content),
+  );
+  const reStructured = reResult.structuredContent as
+    | Record<string, unknown>
+    | undefined;
+  check(
+    "alberta_real_estate response has structuredContent",
+    reStructured != null && typeof reStructured === "object",
+  );
+  if (reStructured) {
+    check(
+      "alberta_real_estate envelope.schema_version is 1.0.0",
+      reStructured.schema_version === "1.0.0",
+      `got ${String(reStructured.schema_version)}`,
+    );
+    check(
+      "alberta_real_estate envelope.tool is alberta_real_estate",
+      reStructured.tool === "alberta_real_estate",
+      `got ${String(reStructured.tool)}`,
+    );
+    const reData = reStructured.data as Record<string, unknown> | undefined;
+    check(
+      "alberta_real_estate data.available is true for edmonton/assessments",
+      reData?.available === true,
+      `got ${String(reData?.available)}`,
+    );
+    const payload = reData?.payload as Record<string, unknown> | undefined;
+    check(
+      "alberta_real_estate payload.dataset is 'assessments'",
+      payload?.dataset === "assessments",
+      `got ${String(payload?.dataset)}`,
+    );
+    check(
+      "alberta_real_estate payload.by_group is an array",
+      Array.isArray(payload?.by_group),
+    );
+    check(
+      "alberta_real_estate payload.top_properties is an array",
+      Array.isArray(payload?.top_properties),
+    );
+    console.log(
+      `  info  alberta_real_estate(edmonton/assessments) by_group=${
+        Array.isArray(payload?.by_group)
+          ? (payload.by_group as unknown[]).length
+          : "n/a"
+      } top_properties=${
+        Array.isArray(payload?.top_properties)
+          ? (payload.top_properties as unknown[]).length
+          : "n/a"
+      }`,
+    );
+  }
+
+  // ── tools/call alberta_real_estate (capability MISSING) ──────────────
+  // Beaumont is `status: "live"` in the registry but has `capabilities: []`,
+  // so requesting any dataset against it must return `available: false`
+  // with a clean reason — not throw. This is the contract the brief calls
+  // out explicitly.
+  console.log("\n[tools/call alberta_real_estate beaumont/dev_permits — missing capability]");
+  const reMissingResult = await client.callTool({
+    name: "alberta_real_estate",
+    arguments: { municipality: "beaumont", dataset: "dev_permits" },
+  });
+  check(
+    "alberta_real_estate(beaumont/dev_permits) tools/call did not return isError",
+    reMissingResult.isError !== true,
+    JSON.stringify(reMissingResult.content),
+  );
+  const reMissingStructured = reMissingResult.structuredContent as
+    | Record<string, unknown>
+    | undefined;
+  check(
+    "alberta_real_estate(beaumont) response has structuredContent",
+    reMissingStructured != null && typeof reMissingStructured === "object",
+  );
+  if (reMissingStructured) {
+    const missingData = reMissingStructured.data as
+      | Record<string, unknown>
+      | undefined;
+    check(
+      "alberta_real_estate(beaumont/dev_permits) data.available is false",
+      missingData?.available === false,
+      `got ${String(missingData?.available)}`,
+    );
+    check(
+      "alberta_real_estate(beaumont/dev_permits) data.reason is a non-empty string",
+      typeof missingData?.reason === "string" &&
+        (missingData.reason as string).length > 0,
+      `got ${String(missingData?.reason)}`,
+    );
+    console.log(
+      `  info  alberta_real_estate(beaumont/dev_permits) reason="${String(missingData?.reason)}"`,
+    );
+  }
+
   await client.close();
   await server.close();
 
@@ -412,7 +641,7 @@ async function main(): Promise<void> {
   console.log("");
   if (failures.length === 0) {
     console.log(
-      `PASS — initialize + tools/list + tools/call(alberta_catalog, alberta_macro, alberta_regional) OK (server=${
+      `PASS — initialize + tools/list + tools/call(alberta_catalog, alberta_macro, alberta_regional, alberta_municipality, alberta_real_estate × {available, capability-missing}) OK (server=${
         info?.name
       }@${info?.version}, protocol=${LATEST_PROTOCOL_VERSION})`,
     );

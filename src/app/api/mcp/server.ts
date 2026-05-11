@@ -2,6 +2,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { registerCatalogTool } from "./tools/catalog";
 import { registerMacroTool } from "./tools/macro";
+import { registerMunicipalityTool } from "./tools/municipality";
+import { registerRealEstateTool } from "./tools/real-estate";
 import { registerRegionalTool } from "./tools/regional";
 
 /**
@@ -33,6 +35,8 @@ export function createMcpServer(): McpServer {
   registerCatalogTool(server);
   registerMacroTool(server);
   registerRegionalTool(server);
+  registerMunicipalityTool(server);
+  registerRealEstateTool(server);
 
   return server;
 }

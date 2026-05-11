@@ -300,6 +300,77 @@ freshness. If the substrate is ever refactored to populate CSDUID on
 fallback rows, the heuristic breaks — leave a comment at the call site
 pointing back here.
 
+## D15 — Real-estate tool uses a discriminated-union row shape for dev_permits
+
+**Date:** 2026-05-11
+**Parcel:** 4
+**Status:** Locked
+
+The three munis with the richest development-permit data (Edmonton, St.
+Albert, Strathcona) each expose a different field set in their substrate
+fetcher: Edmonton has neighbourhood + neighbourhood_classification + zoning,
+St. Albert has type + subject, Strathcona has fileNum + subdivision +
+SQUAREFOOTAGE-as-value. Lowest-common-denominator flattening would drop
+every column that isn't shared.
+
+`alberta_real_estate` returns dev_permits rows tagged with a `shape`
+discriminator (`edmonton | st-albert | strathcona | generic`). Agents
+branch on `payload.shape` (echoed at the row level) to read the fields
+that exist for that city.
+
+The `generic` shape is the fallback path for any other municipality whose
+registry entry has a `devPermits` endpoint + minimal field mappings. It
+uses the substrate's generic `fetchRecentPermits` and exposes
+type/address/date/value/description.
+
+If a fourth city graduates from `generic` to a custom shape (e.g., Calgary
+once we wire its specific fetcher), add a new variant to the
+DevPermitRowSchema discriminated union and a new branch in
+`fetchDevPermitsPayload`.
+
+## D16 — `available: false` is a structured payload, not a JSON-RPC error
+
+**Date:** 2026-05-11
+**Parcel:** 4
+**Status:** Locked
+
+The brief calls this out explicitly: when the registry says a muni
+doesn't expose a dataset's required capability, `alberta_real_estate` must
+return `{ available: false, reason: "..." }` rather than throw.
+
+We bake this into the envelope union (`AvailablePayloadSchema |
+UnavailablePayloadSchema`) so agents read the same envelope shape every
+time and branch on `data.available`. Throwing forces the agent to
+handle JSON-RPC errors out-of-band, which is fine for "the server is
+down" but wrong for "this muni doesn't have this dataset" — that's a
+known, structured shape of data, not an exception.
+
+The `unknown municipality slug` path also returns `available: false`
+defensively, even though MunicipalitySlugSchema makes it unreachable in
+practice. Two cheap lines, one fewer way for a future regression to crash
+the tool.
+
+## D17 — `alberta_municipality` metrics are best-effort, never block the envelope
+
+**Date:** 2026-05-11
+**Parcel:** 4
+**Status:** Locked
+
+`fetchParcelCount`, `fetchVacantCount`, and `fetchRecentPermits` each go
+to live ArcGIS / Socrata endpoints. Any one of them can fail (network,
+rate limit, schema drift) without invalidating the registry-backed
+summary card that's the tool's primary value.
+
+Each metric is fetched in `Promise.all` with `.catch(() => null)`, and
+each is independently nullable in the response schema. A muni with two
+out of three metrics still returns a useful envelope. The agent sees
+which metrics succeeded by reading the nulls.
+
+If a muni's metrics start consistently coming back null for a non-error
+reason (e.g., a capability flag set without a working endpoint), the
+discoverability is in `available_datasets[].endpoint_present` rather
+than the metrics block.
+
 ## D14 — Smoke test asserts shape, not non-empty data
 
 **Date:** 2026-05-11
