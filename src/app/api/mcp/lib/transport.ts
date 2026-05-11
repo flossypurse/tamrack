@@ -23,10 +23,14 @@ export async function dispatchMcpRequest(req: Request): Promise<Response> {
   const server = createMcpServer();
 
   await server.connect(transport);
-  try {
-    return await transport.handleRequest(req);
-  } finally {
-    // Best-effort cleanup; ignore close errors so they don't mask the response.
-    void server.close().catch(() => {});
-  }
+  const response = await transport.handleRequest(req);
+
+  // Stateless mode: transport + server are per-request. Do NOT close the
+  // server here — handleRequest returns a Response whose body is a
+  // ReadableStream the runtime hasn't drained yet. Closing the server before
+  // the stream is consumed kills SSE responses (initialize and tool results
+  // ride the SSE path). GC reclaims the server + transport after the response
+  // finishes streaming. In-process tests didn't catch this because
+  // InMemoryTransport doesn't use a deferred body stream.
+  return response;
 }
