@@ -20,6 +20,7 @@
     "worker": "npx tsx worker.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@react-pdf/renderer": "^4.3.2",
     "@resonatehq/sdk": "^0.9.6",
     "@types/pg": "^8.18.0",
