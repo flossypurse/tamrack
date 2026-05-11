@@ -300,6 +300,28 @@ freshness. If the substrate is ever refactored to populate CSDUID on
 fallback rows, the heuristic breaks — leave a comment at the call site
 pointing back here.
 
+## D14 — Smoke test asserts shape, not non-empty data
+
+**Date:** 2026-05-11
+**Parcel:** 3
+**Status:** Locked
+
+The Parcel 3 smoke test exercises `tools/call alberta_macro` and
+`tools/call alberta_regional` for real. But the test environment may
+have no network (CI sandbox) or no `DATABASE_URL` (no Postgres
+fallback), so the response can legitimately be empty.
+
+The smoke test therefore asserts:
+
+- The call did not error (no exception thrown, `isError !== true`).
+- The envelope shape is correct (`schema_version`, `tool`, `source`).
+- `data.served_from` is one of the three valid values.
+- `data.points` is an array (possibly empty).
+
+It does NOT assert `points.length > 0`. That assertion would belong in
+an end-to-end test run against a live deployment with a known-up
+upstream, not the in-process smoke test.
+
 ## D15 — Real-estate tool uses a discriminated-union row shape for dev_permits
 
 **Date:** 2026-05-11
@@ -483,25 +505,3 @@ Fields not in the typed envelope (e.g. `groups`, `extras`, `private`)
 are dropped — they're either internal CKAN metadata or rarely populated
 on open.alberta.ca's catalogue. If a real need surfaces, add them to
 `SearchHitSchema` as optional fields.
-
-## D14 — Smoke test asserts shape, not non-empty data
-
-**Date:** 2026-05-11
-**Parcel:** 3
-**Status:** Locked
-
-The Parcel 3 smoke test exercises `tools/call alberta_macro` and
-`tools/call alberta_regional` for real. But the test environment may
-have no network (CI sandbox) or no `DATABASE_URL` (no Postgres
-fallback), so the response can legitimately be empty.
-
-The smoke test therefore asserts:
-
-- The call did not error (no exception thrown, `isError !== true`).
-- The envelope shape is correct (`schema_version`, `tool`, `source`).
-- `data.served_from` is one of the three valid values.
-- `data.points` is an array (possibly empty).
-
-It does NOT assert `points.length > 0`. That assertion would belong in
-an end-to-end test run against a live deployment with a known-up
-upstream, not the in-process smoke test.
