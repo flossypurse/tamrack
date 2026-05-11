@@ -3,6 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerBusinessTool } from "./tools/business";
 import { registerCatalogTool } from "./tools/catalog";
 import { registerEnergyTool } from "./tools/energy";
+import { registerEntitiesTool } from "./tools/entities";
 import { registerHousingTool } from "./tools/housing";
 import { registerMacroTool } from "./tools/macro";
 import { registerMunicipalityTool } from "./tools/municipality";
@@ -28,7 +29,8 @@ export const MCP_SERVER_INFO = {
  * is fast (no I/O) so per-request instantiation is cheap.
  *
  * Parcel 2 adds `alberta_catalog`; Parcels 3–5 register the eight typed
- * tools. All 9 v1 tools are live after Parcel 5.
+ * tools; v2 adds `alberta_entities` (chamber-of-commerce-backed operator
+ * directory) — 10 tools total.
  */
 export function createMcpServer(): McpServer {
   const server = new McpServer(MCP_SERVER_INFO, {
@@ -46,6 +48,7 @@ export function createMcpServer(): McpServer {
   registerBusinessTool(server);
   registerEnergyTool(server);
   registerSearchTool(server);
+  registerEntitiesTool(server);
 
   return server;
 }

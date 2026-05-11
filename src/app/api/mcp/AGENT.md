@@ -39,9 +39,9 @@ The response includes a one-time-visible `key` field. Store it; it can't be reco
 
 To revoke: `DELETE /api/api-keys` with `{ "keyId": "..." }`.
 
-## Tools (v1)
+## Tools
 
-Nine tools. The catalog tool advertises the live schemas; descriptions below are one-line summaries.
+Ten tools live. The catalog tool advertises the live schemas; descriptions below are one-line summaries.
 
 | Tool | What it returns |
 |------|-----------------|
@@ -54,8 +54,22 @@ Nine tools. The catalog tool advertises the live schemas; descriptions below are
 | `alberta_business` | Edmonton/Calgary business licences, StatsCan business counts, GHG facilities, top emitters, WCB, retail subsectors, ecommerce, food services, business dynamics. |
 | `alberta_energy` | AESO pool price / supply-demand / forecast + CER pipeline throughput / incidents / apportionment / oil production. |
 | `alberta_search` | Alberta CKAN dataset search — long-tail escape hatch when none of the above fit. |
+| `alberta_entities` | Tri-region operator directory (~1,100 businesses from Acheson Business Association + Greater Parkland Regional Chamber). action='search' (name/category/city/source filters) \| action='get' (by id) \| action='list_categories' (taxonomy + counts). Backed by the `intel_operators` Postgres table, seeded out-of-band. Base directory only — enrichment data lives in a downstream workflow. |
 
-Eight more tools (`alberta_entities`, `alberta_safety`, `alberta_immigration`, `alberta_politics`, `alberta_fiscal`, `alberta_environment`, `alberta_health`, `alberta_signals`) are advertised in the catalog with `status: "deferred"`. They land in v2 once the corresponding substrate work is done.
+Seven more tools (`alberta_safety`, `alberta_immigration`, `alberta_politics`, `alberta_fiscal`, `alberta_environment`, `alberta_health`, `alberta_signals`) are advertised in the catalog with `status: "deferred"`. They land when the corresponding substrate work is done.
+
+## Seeding the entities table
+
+`intel_operators` is populated by a private workspace script that reads chamber-of-commerce JSON files:
+
+```
+DATABASE_URL=postgresql://... \
+  npx tsx scripts/seed-intel-operators.ts \
+    aba:/path/to/aba-raw.json \
+    gprc:/path/to/gprc-raw.json
+```
+
+Idempotent — `ON CONFLICT (source, source_member_id)` upserts on re-seed.
 
 ## Spec compliance
 

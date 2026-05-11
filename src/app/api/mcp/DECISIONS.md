@@ -505,3 +505,44 @@ Fields not in the typed envelope (e.g. `groups`, `extras`, `private`)
 are dropped — they're either internal CKAN metadata or rarely populated
 on open.alberta.ca's catalogue. If a real need surfaces, add them to
 `SearchHitSchema` as optional fields.
+
+## D23 — `alberta_entities` ships against `intel_operators` Postgres, seeded out-of-band
+
+**Date:** 2026-05-11
+**Parcel:** v2 follow-up
+**Status:** Locked
+
+The design doc deferred `alberta_entities` to v2 with a Postgres migration
+as prerequisite. That migration is now in place:
+
+- A new `intel_operators` table lives alongside the rest of the AP schema
+  (in `MIGRATION_SQL` in the db module), with stable UUIDs derived from
+  `sha1(source + ":" + member_id)` so re-seeds are idempotent via
+  `UNIQUE (source, source_member_id)`.
+- A private workspace script seeds the table from chamber-of-commerce
+  raw JSON (`aba-raw.json`, `gprc-raw.json`). The script takes
+  `<source-key>:<path>` arg pairs so the public repo never references
+  workspace-private paths.
+- A new substrate module wraps the table with `searchIntelOperators`,
+  `getIntelOperator`, and `listOperatorCategories`. The MCP tool is the
+  only consumer for now; future products read from the same substrate.
+- `alberta_entities` itself uses a discriminated `action` parameter
+  (`search` | `get` | `list_categories`) rather than three separate
+  tools. Same surface as the catalog/regional/real-estate tools that
+  already multiplex by action.
+
+Why one tool with `action` instead of three (`alberta_entities_search`,
+etc.): agents look up tools by name and the catalog stays smaller; the
+action enum is small and stable; future entity sources (intel cortex,
+other chambers) extend cleanly under the same tool.
+
+If `intel_operators` grows another data source (e.g. Stony Plain
+chamber, federal corporate registry), seed it with a new
+`<source-key>:<path>` pair. The MCP tool already accepts
+`source` as a filter — just add the new key to the enum in
+`SourceSchema` and the SDK input type updates automatically.
+
+Enrichment data (revenue, headcount, news mentions, reviews,
+ownership) is explicitly NOT in `intel_operators`. That lives in a
+downstream table written by a separate research workflow — keeps the
+base directory clean and re-seedable without losing enrichment work.

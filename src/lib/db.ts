@@ -315,6 +315,39 @@ const MIGRATION_SQL = `
     CREATE INDEX IF NOT EXISTS idx_well_licensee ON well_licences(licensee);
     CREATE INDEX IF NOT EXISTS idx_immigration ON immigration_records(year, province);
     CREATE INDEX IF NOT EXISTS idx_projects ON major_projects(snapshot_date, source);
+
+    -- Named-entity directory: tri-region operators and (later) other entity sets.
+    -- Seeded out-of-band by scripts/seed-intel-operators.ts from a private
+    -- workspace source. Read via src/lib/data-sources-intel.ts.
+    CREATE TABLE IF NOT EXISTS intel_operators (
+      id                UUID PRIMARY KEY,
+      source            TEXT NOT NULL,
+      source_member_id  TEXT,
+      source_url        TEXT,
+      name              TEXT NOT NULL,
+      description       TEXT,
+      categories        TEXT[] NOT NULL DEFAULT '{}',
+      street_address    TEXT,
+      address_line2     TEXT,
+      city              TEXT,
+      postal_code       TEXT,
+      country           TEXT,
+      region            TEXT,
+      phone             TEXT,
+      fax               TEXT,
+      email             TEXT,
+      website           TEXT,
+      hours             TEXT,
+      social            JSONB,
+      raw               JSONB,
+      created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (source, source_member_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_intel_operators_source ON intel_operators(source);
+    CREATE INDEX IF NOT EXISTS idx_intel_operators_city ON intel_operators(city);
+    CREATE INDEX IF NOT EXISTS idx_intel_operators_categories ON intel_operators USING GIN (categories);
+    CREATE INDEX IF NOT EXISTS idx_intel_operators_name ON intel_operators(LOWER(name));
 `;
 
 /**

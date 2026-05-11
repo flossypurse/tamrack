@@ -95,8 +95,8 @@ async function main(): Promise<void> {
   console.log("\n[tools/list]");
   const list = await client.listTools();
   check(
-    "tools/list returned exactly 9 tools",
-    list.tools.length === 9,
+    "tools/list returned exactly 10 tools",
+    list.tools.length === 10,
     `got ${list.tools.length}`,
   );
   const listedNames = list.tools.map((t) => t.name).sort();
@@ -104,6 +104,7 @@ async function main(): Promise<void> {
     "alberta_business",
     "alberta_catalog",
     "alberta_energy",
+    "alberta_entities",
     "alberta_housing",
     "alberta_macro",
     "alberta_municipality",
@@ -112,7 +113,7 @@ async function main(): Promise<void> {
     "alberta_search",
   ].sort();
   check(
-    "tools/list names are the 9 v1 tools",
+    "tools/list names are the 10 live tools",
     listedNames.join(",") === expectedListed.join(","),
     `got ${listedNames.join(",")}`,
   );
@@ -163,6 +164,7 @@ async function main(): Promise<void> {
     "alberta_business",
     "alberta_energy",
     "alberta_search",
+    "alberta_entities",
   ]) {
     const t = list.tools.find((x) => x.name === name);
     check(
@@ -284,6 +286,7 @@ async function main(): Promise<void> {
       "alberta_business",
       "alberta_energy",
       "alberta_search",
+      "alberta_entities",
     ];
     for (const n of v1Names) {
       const t = tools.find((x) => x.name === n);
@@ -294,9 +297,16 @@ async function main(): Promise<void> {
       );
     }
 
-    // All 8 v2-deferred tools should be advertised with status=deferred.
+    // alberta_entities was previously deferred; confirm catalog now reports live.
+    const entitiesEntry = tools.find((t) => t.name === "alberta_entities");
+    check(
+      "alberta_entities status=live in catalog",
+      entitiesEntry?.status === "live",
+      `got status=${entitiesEntry?.status}`,
+    );
+
+    // Remaining 7 v2-deferred tools should still report status=deferred.
     const deferredNames = [
-      "alberta_entities",
       "alberta_safety",
       "alberta_immigration",
       "alberta_politics",
@@ -960,6 +970,59 @@ async function main(): Promise<void> {
     );
   }
 
+  // ── tools/call alberta_entities ──────────────────────────────────────
+  // Backed by the intel_operators Postgres table. Until seeded, search
+  // returns total=0 cleanly — that's still a pass; the envelope shape is
+  // what matters here.
+  console.log("\n[tools/call alberta_entities action=list_categories]");
+  const entitiesResult = await client.callTool(
+    {
+      name: "alberta_entities",
+      arguments: { action: "list_categories" },
+    },
+    undefined,
+    { timeout: 60_000 },
+  );
+  check(
+    "alberta_entities tools/call did not return isError",
+    entitiesResult.isError !== true,
+    JSON.stringify(entitiesResult.content),
+  );
+  const entitiesStructured = entitiesResult.structuredContent as
+    | Record<string, unknown>
+    | undefined;
+  check(
+    "alberta_entities response has structuredContent",
+    entitiesStructured != null && typeof entitiesStructured === "object",
+  );
+  if (entitiesStructured) {
+    check(
+      "alberta_entities envelope.schema_version is 1.0.0",
+      entitiesStructured.schema_version === "1.0.0",
+      `got ${String(entitiesStructured.schema_version)}`,
+    );
+    check(
+      "alberta_entities envelope.source is alberta-pulse-intel-operators",
+      entitiesStructured.source === "alberta-pulse-intel-operators",
+      `got ${String(entitiesStructured.source)}`,
+    );
+    const entitiesData = entitiesStructured.data as
+      | Record<string, unknown>
+      | undefined;
+    check(
+      "alberta_entities data.action echoes list_categories",
+      entitiesData?.action === "list_categories",
+      `got ${String(entitiesData?.action)}`,
+    );
+    check(
+      "alberta_entities data.categories is an array",
+      Array.isArray(entitiesData?.categories),
+    );
+    console.log(
+      `  info  alberta_entities total_categories=${String(entitiesData?.total_categories)}`,
+    );
+  }
+
   await client.close();
   await server.close();
 
@@ -967,7 +1030,7 @@ async function main(): Promise<void> {
   console.log("");
   if (failures.length === 0) {
     console.log(
-      `PASS — initialize + tools/list + tools/call(alberta_catalog, alberta_macro, alberta_regional, alberta_municipality, alberta_real_estate × {available, capability-missing}, alberta_housing, alberta_business, alberta_energy, alberta_search) OK (server=${
+      `PASS — initialize + tools/list + tools/call(alberta_catalog, alberta_macro, alberta_regional, alberta_municipality, alberta_real_estate × {available, capability-missing}, alberta_housing, alberta_business, alberta_energy, alberta_search, alberta_entities) OK (server=${
         info?.name
       }@${info?.version}, protocol=${LATEST_PROTOCOL_VERSION})`,
     );
