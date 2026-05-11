@@ -49,6 +49,10 @@ Owner prefers to start dev servers themselves — don't auto-start.
 
 Health check: `/api/health?deep=1` — probes all upstream sources with response times and record counts.
 
+### MCP server
+
+Hosted MCP endpoint at `/api/mcp` exposes the substrate to AI agents over Streamable HTTP with Bearer auth. See [src/app/api/mcp/AGENT.md](src/app/api/mcp/AGENT.md) for registration command, token issuance, and tool list.
+
 ## Data Sources
 
 50+ live sources across 16 fetcher modules. Key upstream providers:
