@@ -24,6 +24,11 @@
  *     known-missing capability (a muni whose capabilities[] excludes
  *     dev_permits) returns `{ available: false, reason: ... }` instead
  *     of throwing.
+ *   - Parcel 5: tools/list adds alberta_housing + alberta_business +
+ *     alberta_energy + alberta_search (9 total). tools/call against one
+ *     invocation per tool round-trips a typed envelope (or a graceful
+ *     empty envelope when the upstream is unreachable — same rule as
+ *     Parcels 3+4, shape over data).
  *
  * Run with:
  *   npx tsx scripts/mcp-smoke-test.ts
@@ -90,20 +95,24 @@ async function main(): Promise<void> {
   console.log("\n[tools/list]");
   const list = await client.listTools();
   check(
-    "tools/list returned exactly 5 tools",
-    list.tools.length === 5,
+    "tools/list returned exactly 9 tools",
+    list.tools.length === 9,
     `got ${list.tools.length}`,
   );
   const listedNames = list.tools.map((t) => t.name).sort();
   const expectedListed = [
+    "alberta_business",
     "alberta_catalog",
+    "alberta_energy",
+    "alberta_housing",
     "alberta_macro",
     "alberta_municipality",
     "alberta_real_estate",
     "alberta_regional",
+    "alberta_search",
   ].sort();
   check(
-    "tools/list names are catalog + macro + regional + municipality + real_estate",
+    "tools/list names are the 9 v1 tools",
     listedNames.join(",") === expectedListed.join(","),
     `got ${listedNames.join(",")}`,
   );
@@ -149,6 +158,21 @@ async function main(): Promise<void> {
       typeof (realEstateTool.inputSchema as Record<string, unknown>)
         .properties === "object",
   );
+  for (const name of [
+    "alberta_housing",
+    "alberta_business",
+    "alberta_energy",
+    "alberta_search",
+  ]) {
+    const t = list.tools.find((x) => x.name === name);
+    check(
+      `${name} has an inputSchema`,
+      t != null &&
+        typeof t.inputSchema === "object" &&
+        typeof (t.inputSchema as Record<string, unknown>).properties ===
+          "object",
+    );
+  }
 
   // ── tools/call alberta_catalog ──────────────────────────────────────
   console.log("\n[tools/call alberta_catalog]");
@@ -634,6 +658,308 @@ async function main(): Promise<void> {
     );
   }
 
+  // ── tools/call alberta_housing ───────────────────────────────────────
+  // mortgage_rate is StatsCan-backed (Table 34-10-0145); usually available
+  // but assert envelope shape only — empty data is acceptable in the test
+  // env (no network).
+  console.log("\n[tools/call alberta_housing mortgage_rate]");
+  const housingResult = await client.callTool(
+    {
+      name: "alberta_housing",
+      arguments: { dataset: "mortgage_rate", time_range: "last_year" },
+    },
+    undefined,
+    { timeout: 180_000 },
+  );
+  check(
+    "alberta_housing(mortgage_rate) tools/call did not return isError",
+    housingResult.isError !== true,
+    JSON.stringify(housingResult.content),
+  );
+  const housingStructured = housingResult.structuredContent as
+    | Record<string, unknown>
+    | undefined;
+  check(
+    "alberta_housing response has structuredContent",
+    housingStructured != null && typeof housingStructured === "object",
+  );
+  if (housingStructured) {
+    check(
+      "alberta_housing envelope.schema_version is 1.0.0",
+      housingStructured.schema_version === "1.0.0",
+      `got ${String(housingStructured.schema_version)}`,
+    );
+    check(
+      "alberta_housing envelope.tool is alberta_housing",
+      housingStructured.tool === "alberta_housing",
+      `got ${String(housingStructured.tool)}`,
+    );
+    check(
+      "alberta_housing envelope.source is 'CMHC via StatsCan'",
+      housingStructured.source === "CMHC via StatsCan",
+      `got ${String(housingStructured.source)}`,
+    );
+    const housingData = housingStructured.data as
+      | Record<string, unknown>
+      | undefined;
+    check(
+      "alberta_housing data.dataset echoes 'mortgage_rate'",
+      housingData?.dataset === "mortgage_rate",
+      `got ${String(housingData?.dataset)}`,
+    );
+    check(
+      "alberta_housing data.served_from is one of upstream|fallback|empty",
+      typeof housingData?.served_from === "string" &&
+        ["upstream", "fallback", "empty"].includes(
+          housingData.served_from as string,
+        ),
+      `got ${String(housingData?.served_from)}`,
+    );
+    const housingPayload = housingData?.payload as
+      | Record<string, unknown>
+      | undefined;
+    check(
+      "alberta_housing payload.dataset is 'mortgage_rate'",
+      housingPayload?.dataset === "mortgage_rate",
+      `got ${String(housingPayload?.dataset)}`,
+    );
+    check(
+      "alberta_housing payload.rows is an array",
+      Array.isArray(housingPayload?.rows),
+    );
+    console.log(
+      `  info  alberta_housing served_from=${String(housingData?.served_from)} rows=${
+        Array.isArray(housingPayload?.rows)
+          ? (housingPayload.rows as unknown[]).length
+          : "n/a"
+      }`,
+    );
+  }
+
+  // ── tools/call alberta_business ──────────────────────────────────────
+  // business_count_statscan is the most reliable category (StatsCan WDS).
+  console.log("\n[tools/call alberta_business business_count_statscan]");
+  const businessResult = await client.callTool(
+    {
+      name: "alberta_business",
+      arguments: { category: "business_count_statscan" },
+    },
+    undefined,
+    { timeout: 180_000 },
+  );
+  check(
+    "alberta_business tools/call did not return isError",
+    businessResult.isError !== true,
+    JSON.stringify(businessResult.content),
+  );
+  const businessStructured = businessResult.structuredContent as
+    | Record<string, unknown>
+    | undefined;
+  check(
+    "alberta_business response has structuredContent",
+    businessStructured != null && typeof businessStructured === "object",
+  );
+  if (businessStructured) {
+    check(
+      "alberta_business envelope.schema_version is 1.0.0",
+      businessStructured.schema_version === "1.0.0",
+      `got ${String(businessStructured.schema_version)}`,
+    );
+    check(
+      "alberta_business envelope.tool is alberta_business",
+      businessStructured.tool === "alberta_business",
+      `got ${String(businessStructured.tool)}`,
+    );
+    const businessData = businessStructured.data as
+      | Record<string, unknown>
+      | undefined;
+    check(
+      "alberta_business data.category echoes 'business_count_statscan'",
+      businessData?.category === "business_count_statscan",
+      `got ${String(businessData?.category)}`,
+    );
+    check(
+      "alberta_business data.served_from is one of upstream|fallback|empty",
+      typeof businessData?.served_from === "string" &&
+        ["upstream", "fallback", "empty"].includes(
+          businessData.served_from as string,
+        ),
+      `got ${String(businessData?.served_from)}`,
+    );
+    const businessPayload = businessData?.payload as
+      | Record<string, unknown>
+      | undefined;
+    check(
+      "alberta_business payload.category matches",
+      businessPayload?.category === "business_count_statscan",
+      `got ${String(businessPayload?.category)}`,
+    );
+    check(
+      "alberta_business payload.rows is an array",
+      Array.isArray(businessPayload?.rows),
+    );
+    console.log(
+      `  info  alberta_business served_from=${String(businessData?.served_from)} rows=${
+        Array.isArray(businessPayload?.rows)
+          ? (businessPayload.rows as unknown[]).length
+          : "n/a"
+      }`,
+    );
+  }
+
+  // ── tools/call alberta_energy ────────────────────────────────────────
+  // pool_price_current is AESO; works only when AESO_API_KEY is set in
+  // the test env. Assert envelope shape; empty rows are acceptable.
+  console.log("\n[tools/call alberta_energy pool_price_current]");
+  const energyResult = await client.callTool(
+    {
+      name: "alberta_energy",
+      arguments: { dataset: "pool_price_current", time_range: "last_30d" },
+    },
+    undefined,
+    { timeout: 180_000 },
+  );
+  check(
+    "alberta_energy tools/call did not return isError",
+    energyResult.isError !== true,
+    JSON.stringify(energyResult.content),
+  );
+  const energyStructured = energyResult.structuredContent as
+    | Record<string, unknown>
+    | undefined;
+  check(
+    "alberta_energy response has structuredContent",
+    energyStructured != null && typeof energyStructured === "object",
+  );
+  if (energyStructured) {
+    check(
+      "alberta_energy envelope.schema_version is 1.0.0",
+      energyStructured.schema_version === "1.0.0",
+      `got ${String(energyStructured.schema_version)}`,
+    );
+    check(
+      "alberta_energy envelope.tool is alberta_energy",
+      energyStructured.tool === "alberta_energy",
+      `got ${String(energyStructured.tool)}`,
+    );
+    check(
+      "alberta_energy envelope.source is 'AESO'",
+      energyStructured.source === "AESO",
+      `got ${String(energyStructured.source)}`,
+    );
+    const energyData = energyStructured.data as
+      | Record<string, unknown>
+      | undefined;
+    check(
+      "alberta_energy data.dataset echoes 'pool_price_current'",
+      energyData?.dataset === "pool_price_current",
+      `got ${String(energyData?.dataset)}`,
+    );
+    check(
+      "alberta_energy data.served_from is one of upstream|fallback|empty",
+      typeof energyData?.served_from === "string" &&
+        ["upstream", "fallback", "empty"].includes(
+          energyData.served_from as string,
+        ),
+      `got ${String(energyData?.served_from)}`,
+    );
+    const energyPayload = energyData?.payload as
+      | Record<string, unknown>
+      | undefined;
+    check(
+      "alberta_energy payload.dataset matches",
+      energyPayload?.dataset === "pool_price_current",
+      `got ${String(energyPayload?.dataset)}`,
+    );
+    check(
+      "alberta_energy payload.rows is an array",
+      Array.isArray(energyPayload?.rows),
+    );
+    console.log(
+      `  info  alberta_energy served_from=${String(energyData?.served_from)} rows=${
+        Array.isArray(energyPayload?.rows)
+          ? (energyPayload.rows as unknown[]).length
+          : "n/a"
+      }`,
+    );
+  }
+
+  // ── tools/call alberta_search ────────────────────────────────────────
+  // CKAN is upstream-only; the test asserts envelope shape rather than
+  // non-empty results.
+  console.log("\n[tools/call alberta_search query=housing]");
+  const searchResult = await client.callTool(
+    {
+      name: "alberta_search",
+      arguments: { query: "housing", limit: 5 },
+    },
+    undefined,
+    { timeout: 180_000 },
+  );
+  check(
+    "alberta_search tools/call did not return isError",
+    searchResult.isError !== true,
+    JSON.stringify(searchResult.content),
+  );
+  const searchStructured = searchResult.structuredContent as
+    | Record<string, unknown>
+    | undefined;
+  check(
+    "alberta_search response has structuredContent",
+    searchStructured != null && typeof searchStructured === "object",
+  );
+  if (searchStructured) {
+    check(
+      "alberta_search envelope.schema_version is 1.0.0",
+      searchStructured.schema_version === "1.0.0",
+      `got ${String(searchStructured.schema_version)}`,
+    );
+    check(
+      "alberta_search envelope.tool is alberta_search",
+      searchStructured.tool === "alberta_search",
+      `got ${String(searchStructured.tool)}`,
+    );
+    check(
+      "alberta_search envelope.source is 'open.alberta.ca CKAN'",
+      searchStructured.source === "open.alberta.ca CKAN",
+      `got ${String(searchStructured.source)}`,
+    );
+    const searchData = searchStructured.data as
+      | Record<string, unknown>
+      | undefined;
+    check(
+      "alberta_search data.query echoes 'housing'",
+      searchData?.query === "housing",
+      `got ${String(searchData?.query)}`,
+    );
+    check(
+      "alberta_search data.served_from is one of upstream|fallback|empty",
+      typeof searchData?.served_from === "string" &&
+        ["upstream", "fallback", "empty"].includes(
+          searchData.served_from as string,
+        ),
+      `got ${String(searchData?.served_from)}`,
+    );
+    check(
+      "alberta_search data.results is an array",
+      Array.isArray(searchData?.results),
+    );
+    check(
+      "alberta_search data.count is a non-negative integer",
+      typeof searchData?.count === "number" &&
+        Number.isInteger(searchData.count) &&
+        (searchData.count as number) >= 0,
+      `got ${String(searchData?.count)}`,
+    );
+    console.log(
+      `  info  alberta_search served_from=${String(searchData?.served_from)} count=${String(searchData?.count)} results=${
+        Array.isArray(searchData?.results)
+          ? (searchData.results as unknown[]).length
+          : "n/a"
+      }`,
+    );
+  }
+
   await client.close();
   await server.close();
 
@@ -641,7 +967,7 @@ async function main(): Promise<void> {
   console.log("");
   if (failures.length === 0) {
     console.log(
-      `PASS — initialize + tools/list + tools/call(alberta_catalog, alberta_macro, alberta_regional, alberta_municipality, alberta_real_estate × {available, capability-missing}) OK (server=${
+      `PASS — initialize + tools/list + tools/call(alberta_catalog, alberta_macro, alberta_regional, alberta_municipality, alberta_real_estate × {available, capability-missing}, alberta_housing, alberta_business, alberta_energy, alberta_search) OK (server=${
         info?.name
       }@${info?.version}, protocol=${LATEST_PROTOCOL_VERSION})`,
     );

@@ -371,6 +371,119 @@ reason (e.g., a capability flag set without a working endpoint), the
 discoverability is in `available_datasets[].endpoint_present` rather
 than the metrics block.
 
+## D18 — `alberta_housing` keeps each dataset's native row shape
+
+**Date:** 2026-05-11
+**Parcel:** 5
+**Status:** Locked
+
+The CMHC substrate exposes wildly different shapes per dataset:
+`CMASeriesPoint` for starts/completions/UC/vacancy (date + edmonton +
+calgary), `RentComparisonPoint` for rents (wide by unit type), a
+`HousingSnapshot` object for the per-CMA snapshot, an `{absorbed,
+unabsorbed}` object for absorptions, and `TimeSeriesPoint` for the
+national mortgage rate. Flattening these into one common form would
+lose meaningful detail (per-unit rent columns; the explicit Edmonton vs
+Calgary split).
+
+The tool passes each shape through as the `payload` of the envelope and
+discriminates via the `dataset` literal on the payload itself. Agents
+branch on `data.payload.dataset` (echoed at the inner level too) to read
+the right fields. This matches the `alberta_real_estate` pattern (D15)
+of preferring a discriminated union over a lossy flatten.
+
+## D19 — `alberta_housing` munis silently ignored except for `snapshot`
+
+**Date:** 2026-05-11
+**Parcel:** 5
+**Status:** Locked
+
+The CMHC substrate only knows about Edmonton + Calgary CMAs. Most
+datasets return both CMAs together; only `fetchHousingSnapshot(cma)`
+takes a CMA argument. The brief explicitly allowed picking between
+"silently ignore" and "reject" — we silently ignore on every dataset
+except `snapshot`, and write a `notes` field on the envelope so the
+agent can see their input was dropped.
+
+`snapshot` requires a CMA. To keep the contract uniform we default to
+Edmonton when no muni is passed and accept any of edmonton/calgary;
+anything else falls back to Edmonton with a note explaining why.
+Returning `available: false` here would force agents to handle an
+extra branch for a parameter that's optional everywhere else.
+
+## D20 — `alberta_business` category enum excludes thin / dead substrate paths
+
+**Date:** 2026-05-11
+**Parcel:** 5
+**Status:** Locked
+
+The original brief enum named `non_profits`, `ised_corp_count`, `osfi`,
+`cra_t2`, and similar. We omitted these:
+
+- `non_profits` (flat list): the substrate parses a large XLSX with
+  hundreds of orgs. The two aggregated views (`non_profits_by_city`,
+  `non_profits_by_type`) carry the same signal at a fraction of the
+  payload; advertising the flat list would just encourage clients to
+  request a 10MB JSON they don't need.
+- `ised_corp_count`: substrate explicitly returns 0 ("ISED bulk file
+  is >500MB — not practical for real-time fetch"). Advertising a tool
+  input that always answers nothing is worse than omitting it.
+- `osfi`: substrate returns a hardcoded 7-entity list, not a live
+  query.
+- `cra_t2`: substrate tries two stale Open Canada URLs and usually
+  returns []; omitted until the substrate is updated.
+
+We also surfaced the retail substrate's categories under the same tool
+(retail_subsectors, ecommerce, food_services, business_dynamics,
+retail/food variants, edmonton_licences_*) since the brief named retail
+under the `alberta_business` umbrella and the substrate is in
+`data-sources-retail.ts` alongside `data-sources-business.ts`. The
+result is 18 categories — broader than the brief's example list, but
+every entry corresponds to a real substrate fetcher that returns data.
+
+## D21 — `alberta_energy` requires `pipeline` for `pipeline_throughput`
+
+**Date:** 2026-05-11
+**Parcel:** 5
+**Status:** Locked
+
+The CER substrate exposes throughput as one CSV per pipeline (NGTL,
+Trans-Mountain, Keystone, Enbridge Mainline, Alliance, Foothills).
+Returning one merged dataset across all six would be expensive
+(6× CSV fetches per call) and noisy. We expose a `pipeline` enum input
+and default to NGTL (Alberta's primary gas backbone) when omitted, with
+the chosen pipeline echoed on the payload.
+
+For `oil_production`, an optional `province` (default Alberta)
+parameter is exposed because the CER CSV is multi-province and the
+substrate already takes a province filter. The two parameters (`pipeline`
++ `province`) live alongside the dataset enum rather than being folded
+into the enum itself — they're dataset-specific dimensions, not
+dataset variants.
+
+## D22 — `alberta_search` normalises the CKAN payload to a stable shape
+
+**Date:** 2026-05-11
+**Parcel:** 5
+**Status:** Locked
+
+CKAN's `package_search` returns a dozen+ fields per result with wildly
+inconsistent presence. The substrate's `searchAlbertaDatasets()` returns
+the raw `res.json()` without coercion. We pick the high-signal fields
+(`id`, `name`, `title`, `notes`, `organization`, `tags`, `resources`,
+metadata dates, `license_title`, `num_resources`) and normalise each
+into a typed sub-shape so agents get a predictable envelope.
+
+The raw `count` from CKAN is kept on the envelope so agents can see
+total matches even when the result set is paged. The query string
+itself is echoed so agents working through a fan-out can stitch
+responses back to inputs.
+
+Fields not in the typed envelope (e.g. `groups`, `extras`, `private`)
+are dropped — they're either internal CKAN metadata or rarely populated
+on open.alberta.ca's catalogue. If a real need surfaces, add them to
+`SearchHitSchema` as optional fields.
+
 ## D14 — Smoke test asserts shape, not non-empty data
 
 **Date:** 2026-05-11
