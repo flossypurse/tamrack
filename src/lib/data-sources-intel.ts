@@ -30,6 +30,7 @@ export interface IntelOperator {
   website: string | null;
   hours: string | null;
   social: Record<string, string> | null;
+  detail_page_valid: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -65,6 +66,7 @@ const ROW_FIELDS = `
   website,
   hours,
   social,
+  detail_page_valid,
   created_at,
   updated_at
 `;

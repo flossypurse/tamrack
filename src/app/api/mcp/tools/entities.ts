@@ -18,6 +18,7 @@ import {
   listOperatorCategories,
   type IntelOperator,
 } from "@/lib/data-sources-intel";
+import { getCurrentProfile } from "@/lib/data-sources-intel-profiles";
 
 import { SCHEMA_VERSION, LimitSchema } from "../schemas";
 import { updateToolEntry } from "../registry";
@@ -25,7 +26,7 @@ import { updateToolEntry } from "../registry";
 const TOOL_NAME = "alberta_entities";
 
 const ActionSchema = z
-  .enum(["search", "get", "list_categories"])
+  .enum(["search", "get", "list_categories", "get_profile"])
   .default("search");
 
 const SourceSchema = z.enum(["aba", "gprc", "all"]).default("all");
@@ -97,6 +98,28 @@ const CategoriesEnvelopeSchema = z.object({
   }),
 });
 
+const ProfileEnvelopeSchema = z.object({
+  schema_version: z.literal(SCHEMA_VERSION),
+  tool: z.literal(TOOL_NAME),
+  source: z.literal("alberta-pulse-intel-operators"),
+  data: z.object({
+    action: z.literal("get_profile"),
+    operator_id: z.string(),
+    profile: z
+      .object({
+        profile_schema: z.string(),
+        researcher: z.string(),
+        researched_at: z.string(),
+        confidence: z.number(),
+        raw_profile_md: z.string(),
+        structured: z.record(z.string(), z.unknown()),
+        sources: z.array(z.object({ url: z.string() }).passthrough()),
+        data_gaps: z.array(z.string()),
+      })
+      .nullable(),
+  }),
+});
+
 function shapeOperator(op: IntelOperator): z.infer<typeof OperatorOutSchema> {
   return {
     id: op.id,
@@ -141,10 +164,10 @@ updateToolEntry(TOOL_NAME, {
     "website, and social links — base directory only; enrichment data " +
     "lives in a downstream workflow.",
   parameters_summary:
-    "action ('search' default | 'get' | 'list_categories'); for search: optional name_query, category, city, source (aba|gprc|all), has_email, has_website, limit (1-200, default 50), offset; for get: id (uuid).",
+    "action ('search' default | 'get' | 'list_categories' | 'get_profile'); for search: optional name_query, category, city, source (aba|gprc|all), has_email, has_website, limit (1-200, default 50), offset; for get + get_profile: id (uuid).",
   response_summary:
-    "Envelope with schema_version, tool, source; data shape depends on action — search returns {total, returned, offset, limit, operators[]}; get returns {operator}; list_categories returns {categories[{category, count}]}.",
-  indicators: ["search", "get", "list_categories"],
+    "Envelope with schema_version, tool, source; data shape depends on action — search returns {total, returned, offset, limit, operators[]}; get returns {operator}; list_categories returns {categories[{category, count}]}; get_profile returns {operator_id, profile: {raw_profile_md, structured, sources[], data_gaps, confidence, researched_at, …} | null}.",
+  indicators: ["search", "get", "list_categories", "get_profile"],
   example_invocations: [
     {
       description: "Find all trucking and transportation operators.",
@@ -193,6 +216,39 @@ export function registerEntitiesTool(server: McpServer): void {
           },
         };
         const parsed = GetEnvelopeSchema.parse(envelope);
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(parsed, null, 2) }],
+          structuredContent: parsed as unknown as Record<string, unknown>,
+        };
+      }
+
+      if (action === "get_profile") {
+        if (!args.id) {
+          throw new Error("alberta_entities: action='get_profile' requires id");
+        }
+        const profile = await getCurrentProfile(args.id);
+        const envelope = {
+          schema_version: SCHEMA_VERSION,
+          tool: TOOL_NAME,
+          source: "alberta-pulse-intel-operators" as const,
+          data: {
+            action: "get_profile" as const,
+            operator_id: args.id,
+            profile: profile
+              ? {
+                  profile_schema: profile.profile_schema,
+                  researcher: profile.researcher,
+                  researched_at: profile.researched_at,
+                  confidence: Number(profile.confidence),
+                  raw_profile_md: profile.raw_profile_md,
+                  structured: profile.structured,
+                  sources: profile.sources,
+                  data_gaps: profile.data_gaps,
+                }
+              : null,
+          },
+        };
+        const parsed = ProfileEnvelopeSchema.parse(envelope);
         return {
           content: [{ type: "text" as const, text: JSON.stringify(parsed, null, 2) }],
           structuredContent: parsed as unknown as Record<string, unknown>,

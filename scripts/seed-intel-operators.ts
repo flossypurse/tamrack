@@ -44,7 +44,13 @@ interface RawOperator {
   website?: unknown;
   hours?: unknown;
   social?: unknown;
+  detail_page_valid?: unknown;
   [key: string]: unknown;
+}
+
+function bool(v: unknown): boolean | null {
+  if (typeof v === "boolean") return v;
+  return null;
 }
 
 function str(v: unknown): string | null {
@@ -103,31 +109,34 @@ async function loadFile(path: string, source: string): Promise<number> {
       `INSERT INTO intel_operators (
          id, source, source_member_id, source_url, name, description,
          categories, street_address, address_line2, city, postal_code,
-         country, region, phone, fax, email, website, hours, social, raw
+         country, region, phone, fax, email, website, hours, social, raw,
+         detail_page_valid
        ) VALUES (
          $1, $2, $3, $4, $5, $6,
          $7, $8, $9, $10, $11,
-         $12, $13, $14, $15, $16, $17, $18, $19, $20
+         $12, $13, $14, $15, $16, $17, $18, $19, $20,
+         $21
        )
        ON CONFLICT (source, source_member_id) DO UPDATE SET
-         source_url       = EXCLUDED.source_url,
-         name             = EXCLUDED.name,
-         description      = EXCLUDED.description,
-         categories       = EXCLUDED.categories,
-         street_address   = EXCLUDED.street_address,
-         address_line2    = EXCLUDED.address_line2,
-         city             = EXCLUDED.city,
-         postal_code      = EXCLUDED.postal_code,
-         country          = EXCLUDED.country,
-         region           = EXCLUDED.region,
-         phone            = EXCLUDED.phone,
-         fax              = EXCLUDED.fax,
-         email            = EXCLUDED.email,
-         website          = EXCLUDED.website,
-         hours            = EXCLUDED.hours,
-         social           = EXCLUDED.social,
-         raw              = EXCLUDED.raw,
-         updated_at       = NOW()
+         source_url        = EXCLUDED.source_url,
+         name              = EXCLUDED.name,
+         description       = EXCLUDED.description,
+         categories        = EXCLUDED.categories,
+         street_address    = EXCLUDED.street_address,
+         address_line2     = EXCLUDED.address_line2,
+         city              = EXCLUDED.city,
+         postal_code       = EXCLUDED.postal_code,
+         country           = EXCLUDED.country,
+         region            = EXCLUDED.region,
+         phone             = EXCLUDED.phone,
+         fax               = EXCLUDED.fax,
+         email             = EXCLUDED.email,
+         website           = EXCLUDED.website,
+         hours             = EXCLUDED.hours,
+         social            = EXCLUDED.social,
+         raw               = EXCLUDED.raw,
+         detail_page_valid = EXCLUDED.detail_page_valid,
+         updated_at        = NOW()
        RETURNING (xmax = 0) AS inserted`,
       [
         id,
@@ -150,6 +159,7 @@ async function loadFile(path: string, source: string): Promise<number> {
         str(r.hours),
         socialObj(r.social),
         JSON.stringify(r),
+        bool(r.detail_page_valid),
       ],
     );
 

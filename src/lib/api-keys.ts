@@ -12,22 +12,29 @@ export function generateApiKey(): { key: string; id: string; prefix: string; has
   return { key, id, prefix, hash };
 }
 
-export async function createApiKey(userId: string, name: string = "Default"): Promise<{ key: string; id: string; prefix: string }> {
+export async function createApiKey(
+  userId: string,
+  name: string = "Default",
+  scopes: string[] = [],
+): Promise<{ key: string; id: string; prefix: string; scopes: string[] }> {
   const pool = await getDb();
   const { key, id, prefix, hash } = generateApiKey();
   await pool.query(
-    `INSERT INTO api_keys (id, user_id, key_hash, key_prefix, name) VALUES ($1, $2, $3, $4, $5)`,
-    [id, userId, hash, prefix, name]
+    `INSERT INTO api_keys (id, user_id, key_hash, key_prefix, name, scopes)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [id, userId, hash, prefix, name, scopes],
   );
-  return { key, id, prefix };
+  return { key, id, prefix, scopes };
 }
 
-export async function validateApiKey(key: string): Promise<{ userId: string; keyId: string } | null> {
+export async function validateApiKey(
+  key: string,
+): Promise<{ userId: string; keyId: string; scopes: string[] } | null> {
   const pool = await getDb();
   const hash = createHash("sha256").update(key).digest("hex");
   const { rows } = await pool.query(
-    `SELECT id, user_id FROM api_keys WHERE key_hash = $1 AND revoked_at IS NULL`,
-    [hash]
+    `SELECT id, user_id, scopes FROM api_keys WHERE key_hash = $1 AND revoked_at IS NULL`,
+    [hash],
   );
 
   if (!rows[0]) return null;
@@ -35,7 +42,11 @@ export async function validateApiKey(key: string): Promise<{ userId: string; key
   // Update last_used_at
   await pool.query(`UPDATE api_keys SET last_used_at = NOW() WHERE id = $1`, [rows[0].id]);
 
-  return { userId: rows[0].user_id, keyId: rows[0].id };
+  return {
+    userId: rows[0].user_id,
+    keyId: rows[0].id,
+    scopes: (rows[0].scopes as string[] | null) ?? [],
+  };
 }
 
 export async function revokeApiKey(keyId: string, userId: string): Promise<boolean> {

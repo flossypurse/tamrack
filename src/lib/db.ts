@@ -123,6 +123,11 @@ const MIGRATION_SQL = `
       revoked_at TIMESTAMPTZ
     );
 
+    -- Scope tags grant write access to specific surfaces. Read endpoints are
+    -- open; write endpoints require the matching scope on the key.
+    -- Examples: 'intel:profile:write', 'intel:research:write'.
+    ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS scopes TEXT[] NOT NULL DEFAULT '{}';
+
     CREATE TABLE IF NOT EXISTS api_usage (
       id SERIAL PRIMARY KEY,
       api_key_id TEXT REFERENCES api_keys(id),
@@ -348,6 +353,60 @@ const MIGRATION_SQL = `
     CREATE INDEX IF NOT EXISTS idx_intel_operators_city ON intel_operators(city);
     CREATE INDEX IF NOT EXISTS idx_intel_operators_categories ON intel_operators USING GIN (categories);
     CREATE INDEX IF NOT EXISTS idx_intel_operators_name ON intel_operators(LOWER(name));
+
+    -- detail_page_valid carries the upstream chamber's "detail page reachable"
+    -- flag from the raw scrape; surfaced in the dashboard as a "stale-slug"
+    -- badge. Populated by scripts/seed-intel-operators.ts.
+    ALTER TABLE intel_operators ADD COLUMN IF NOT EXISTS detail_page_valid BOOLEAN;
+
+    -- Per-operator research profiles. Append-only with current = TRUE flag;
+    -- exactly one current row per operator at any moment (partial unique idx).
+    -- Written by the research worker via PUT /api/intel/operators/:id/profile;
+    -- read by the dashboard detail page and the MCP get_profile action.
+    CREATE TABLE IF NOT EXISTS intel_operator_profiles (
+      id                   UUID PRIMARY KEY,
+      operator_id          UUID NOT NULL REFERENCES intel_operators(id) ON DELETE CASCADE,
+      profile_schema       TEXT NOT NULL,
+      researcher           TEXT NOT NULL,
+      researched_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      current              BOOLEAN NOT NULL DEFAULT TRUE,
+      raw_profile_md       TEXT NOT NULL,
+      structured           JSONB NOT NULL DEFAULT '{}'::jsonb,
+      sources              JSONB NOT NULL DEFAULT '[]'::jsonb,
+      data_gaps            TEXT[] NOT NULL DEFAULT '{}',
+      confidence           NUMERIC(4,3) NOT NULL,
+      confidence_breakdown JSONB NOT NULL DEFAULT '{}'::jsonb,
+      cost_usd             NUMERIC(8,4),
+      tokens_in            INT,
+      tokens_out           INT,
+      duration_ms          INT,
+      created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_profiles_operator_at
+      ON intel_operator_profiles(operator_id, researched_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_profiles_researcher
+      ON intel_operator_profiles(researcher, researched_at DESC);
+    CREATE UNIQUE INDEX IF NOT EXISTS uniq_profile_operator_current
+      ON intel_operator_profiles(operator_id) WHERE current = TRUE;
+
+    -- Research control plane. The worker (tools/intel-research) claims pending
+    -- rows with FOR UPDATE SKIP LOCKED, runs research, writes a profile, marks
+    -- done. Priority bucket determines order; lower = higher priority.
+    CREATE TABLE IF NOT EXISTS intel_research_queue (
+      operator_id        UUID PRIMARY KEY REFERENCES intel_operators(id) ON DELETE CASCADE,
+      priority           INT NOT NULL DEFAULT 100,
+      status             TEXT NOT NULL DEFAULT 'pending',
+      attempts           INT NOT NULL DEFAULT 0,
+      last_error         TEXT,
+      enqueued_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      started_at         TIMESTAMPTZ,
+      completed_at       TIMESTAMPTZ,
+      CONSTRAINT chk_research_status CHECK (status IN ('pending','running','done','failed'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_research_queue_pending
+      ON intel_research_queue(priority, enqueued_at) WHERE status = 'pending';
+    CREATE INDEX IF NOT EXISTS idx_research_queue_status
+      ON intel_research_queue(status);
 `;
 
 /**
