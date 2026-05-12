@@ -166,6 +166,17 @@ export async function writeProfile(
       ],
     );
 
+    // Best-effort: mark the research queue row done when a profile lands.
+    // Skipped silently if no queue row exists (manual writes outside the
+    // worker loop). The constraint check is satisfied because 'done' is in
+    // chk_research_status.
+    await client.query(
+      `UPDATE intel_research_queue
+          SET status = 'done', completed_at = NOW(), last_error = NULL
+        WHERE operator_id = $1`,
+      [operatorId],
+    );
+
     await client.query("COMMIT");
 
     return {

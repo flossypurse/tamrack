@@ -53,7 +53,9 @@ export async function GET(request: NextRequest) {
     source: parseSource(params.get("source")),
     has_email: parseBool(params.get("has_email")),
     has_website: parseBool(params.get("has_website")),
-    limit: Math.min(Math.max(parseInt0(params.get("limit"), 50), 1), 200),
+    // 2000 max because the dashboard does a single full-table fetch for
+    // jurisdiction/NAICS rollups; smaller consumers paginate via limit+offset.
+    limit: Math.min(Math.max(parseInt0(params.get("limit"), 50), 1), 2000),
     offset: Math.max(parseInt0(params.get("offset"), 0), 0),
   };
 
