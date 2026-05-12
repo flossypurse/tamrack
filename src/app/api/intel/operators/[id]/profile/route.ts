@@ -27,7 +27,10 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 const SourceSchema = z.object({
   url: z.string().url(),
-  accessed_at: z.string().datetime().optional(),
+  // accessed_at is informational metadata. Accept any string shape so a date
+  // like "2026-05-12" doesn't reject the whole profile over a missing time
+  // component. Worker-side we ISO-stamp where possible.
+  accessed_at: z.string().min(1).max(64).optional(),
   kind: z.string().min(1).max(64).optional(),
 });
 
