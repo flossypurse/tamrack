@@ -158,7 +158,7 @@ read poorly, split then.
 **Parcel:** 2
 **Status:** Locked
 
-`alberta_catalog` emits its payload twice on each call:
+`tamrack_catalog` emits its payload twice on each call:
 
 - `content: [{ type: "text", text: JSON.stringify(payload, null, 2) }]` —
   for clients that only render text content blocks.
@@ -178,7 +178,7 @@ If response size becomes a concern for a chatty tool, drop the text block
 on that tool only — keeping the typed structured form is the higher-value
 half.
 
-## D9 — Optional `domain?` filter on `alberta_catalog` deliberately not implemented
+## D9 — Optional `domain?` filter on `tamrack_catalog` deliberately not implemented
 
 **Date:** 2026-05-11
 **Parcel:** 2
@@ -252,7 +252,7 @@ If a future regional indicator explosion pushes the inventory past
 **Parcel:** 3
 **Status:** Locked
 
-For `alberta_macro`, named `time_range` values map to a periods count
+For `tamrack_macro`, named `time_range` values map to a periods count
 that's passed to the substrate's LATEST-N fetcher. Explicit `{from, to}`
 ranges are NOT translated into upstream date-range queries — we ask for
 a wide-enough LATEST-N window (5y equivalent) and then filter the result
@@ -306,8 +306,8 @@ pointing back here.
 **Parcel:** 3
 **Status:** Locked
 
-The Parcel 3 smoke test exercises `tools/call alberta_macro` and
-`tools/call alberta_regional` for real. But the test environment may
+The Parcel 3 smoke test exercises `tools/call tamrack_macro` and
+`tools/call tamrack_regional` for real. But the test environment may
 have no network (CI sandbox) or no `DATABASE_URL` (no Postgres
 fallback), so the response can legitimately be empty.
 
@@ -335,7 +335,7 @@ St. Albert has type + subject, Strathcona has fileNum + subdivision +
 SQUAREFOOTAGE-as-value. Lowest-common-denominator flattening would drop
 every column that isn't shared.
 
-`alberta_real_estate` returns dev_permits rows tagged with a `shape`
+`tamrack_real_estate` returns dev_permits rows tagged with a `shape`
 discriminator (`edmonton | st-albert | strathcona | generic`). Agents
 branch on `payload.shape` (echoed at the row level) to read the fields
 that exist for that city.
@@ -357,7 +357,7 @@ DevPermitRowSchema discriminated union and a new branch in
 **Status:** Locked
 
 The brief calls this out explicitly: when the registry says a muni
-doesn't expose a dataset's required capability, `alberta_real_estate` must
+doesn't expose a dataset's required capability, `tamrack_real_estate` must
 return `{ available: false, reason: "..." }` rather than throw.
 
 We bake this into the envelope union (`AvailablePayloadSchema |
@@ -372,7 +372,7 @@ defensively, even though MunicipalitySlugSchema makes it unreachable in
 practice. Two cheap lines, one fewer way for a future regression to crash
 the tool.
 
-## D17 — `alberta_municipality` metrics are best-effort, never block the envelope
+## D17 — `tamrack_municipality` metrics are best-effort, never block the envelope
 
 **Date:** 2026-05-11
 **Parcel:** 4
@@ -393,7 +393,7 @@ reason (e.g., a capability flag set without a working endpoint), the
 discoverability is in `available_datasets[].endpoint_present` rather
 than the metrics block.
 
-## D18 — `alberta_housing` keeps each dataset's native row shape
+## D18 — `tamrack_housing` keeps each dataset's native row shape
 
 **Date:** 2026-05-11
 **Parcel:** 5
@@ -411,10 +411,10 @@ Calgary split).
 The tool passes each shape through as the `payload` of the envelope and
 discriminates via the `dataset` literal on the payload itself. Agents
 branch on `data.payload.dataset` (echoed at the inner level too) to read
-the right fields. This matches the `alberta_real_estate` pattern (D15)
+the right fields. This matches the `tamrack_real_estate` pattern (D15)
 of preferring a discriminated union over a lossy flatten.
 
-## D19 — `alberta_housing` munis silently ignored except for `snapshot`
+## D19 — `tamrack_housing` munis silently ignored except for `snapshot`
 
 **Date:** 2026-05-11
 **Parcel:** 5
@@ -433,7 +433,7 @@ anything else falls back to Edmonton with a note explaining why.
 Returning `available: false` here would force agents to handle an
 extra branch for a parameter that's optional everywhere else.
 
-## D20 — `alberta_business` category enum excludes thin / dead substrate paths
+## D20 — `tamrack_business` category enum excludes thin / dead substrate paths
 
 **Date:** 2026-05-11
 **Parcel:** 5
@@ -458,12 +458,12 @@ The original brief enum named `non_profits`, `ised_corp_count`, `osfi`,
 We also surfaced the retail substrate's categories under the same tool
 (retail_subsectors, ecommerce, food_services, business_dynamics,
 retail/food variants, edmonton_licences_*) since the brief named retail
-under the `alberta_business` umbrella and the substrate is in
+under the `tamrack_business` umbrella and the substrate is in
 `data-sources-retail.ts` alongside `data-sources-business.ts`. The
 result is 18 categories — broader than the brief's example list, but
 every entry corresponds to a real substrate fetcher that returns data.
 
-## D21 — `alberta_energy` requires `pipeline` for `pipeline_throughput`
+## D21 — `tamrack_energy` requires `pipeline` for `pipeline_throughput`
 
 **Date:** 2026-05-11
 **Parcel:** 5
@@ -483,7 +483,7 @@ substrate already takes a province filter. The two parameters (`pipeline`
 into the enum itself — they're dataset-specific dimensions, not
 dataset variants.
 
-## D22 — `alberta_search` normalises the CKAN payload to a stable shape
+## D22 — `tamrack_search` normalises the CKAN payload to a stable shape
 
 **Date:** 2026-05-11
 **Parcel:** 5
@@ -506,13 +506,13 @@ are dropped — they're either internal CKAN metadata or rarely populated
 on open.alberta.ca's catalogue. If a real need surfaces, add them to
 `SearchHitSchema` as optional fields.
 
-## D23 — `alberta_entities` ships against `intel_operators` Postgres, seeded out-of-band
+## D23 — `tamrack_entities` ships against `intel_operators` Postgres, seeded out-of-band
 
 **Date:** 2026-05-11
 **Parcel:** v2 follow-up
 **Status:** Locked
 
-The design doc deferred `alberta_entities` to v2 with a Postgres migration
+The design doc deferred `tamrack_entities` to v2 with a Postgres migration
 as prerequisite. That migration is now in place:
 
 - A new `intel_operators` table lives alongside the rest of the AP schema
@@ -526,12 +526,12 @@ as prerequisite. That migration is now in place:
 - A new substrate module wraps the table with `searchIntelOperators`,
   `getIntelOperator`, and `listOperatorCategories`. The MCP tool is the
   only consumer for now; future products read from the same substrate.
-- `alberta_entities` itself uses a discriminated `action` parameter
+- `tamrack_entities` itself uses a discriminated `action` parameter
   (`search` | `get` | `list_categories`) rather than three separate
   tools. Same surface as the catalog/regional/real-estate tools that
   already multiplex by action.
 
-Why one tool with `action` instead of three (`alberta_entities_search`,
+Why one tool with `action` instead of three (`tamrack_entities_search`,
 etc.): agents look up tools by name and the catalog stays smaller; the
 action enum is small and stable; future entity sources (intel cortex,
 other chambers) extend cleanly under the same tool.

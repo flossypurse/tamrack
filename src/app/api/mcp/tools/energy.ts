@@ -1,5 +1,5 @@
 /**
- * `alberta_energy` tool registration.
+ * `tamrack_energy` tool registration.
  *
  * Wraps AESO + CER energy substrate behind one typed surface.
  *
@@ -82,6 +82,9 @@ import {
   type TimeRange,
 } from "../schemas";
 import { updateToolEntry } from "../registry";
+import { requireScopes } from "../lib/auth-context";
+
+const REQUIRED_SCOPES = ["tamrack:energy:read"] as const;
 
 // ---------------------------------------------------------------------------
 // Dataset enum + supporting input
@@ -385,7 +388,7 @@ const EnergyDataSchema = z.object({
 
 const EnergyEnvelopeSchema = z.object({
   schema_version: z.literal(SCHEMA_VERSION),
-  tool: z.literal("alberta_energy"),
+  tool: z.literal("tamrack_energy"),
   source: z.string(),
   data: EnergyDataSchema,
 });
@@ -463,7 +466,7 @@ const DATASET_META: Record<EnergyDataset, DatasetMeta> = {
 // Tool registration
 // ---------------------------------------------------------------------------
 
-const TOOL_NAME = "alberta_energy";
+const TOOL_NAME = "tamrack_energy";
 
 const TOOL_DESCRIPTION =
   "Alberta + Canada energy data. AESO (Alberta Electric System Operator): " +
@@ -506,17 +509,18 @@ export function registerEnergyTool(server: McpServer): void {
   server.registerTool(
     TOOL_NAME,
     {
-      title: "Alberta Pulse — Energy (AESO + CER)",
+      title: "Tamrack — Energy (AESO + CER)",
       description: TOOL_DESCRIPTION,
       inputSchema: EnergyInputShape,
       annotations: {
-        title: "Alberta Pulse — Energy (AESO + CER)",
+        title: "Tamrack — Energy (AESO + CER)",
         readOnlyHint: true,
         openWorldHint: true,
         idempotentHint: true,
       },
     },
     async (args) => {
+      requireScopes(REQUIRED_SCOPES);
       const dataset = args.dataset;
       const meta = DATASET_META[dataset];
       const timeRange = args.time_range;

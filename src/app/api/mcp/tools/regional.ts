@@ -1,5 +1,5 @@
 /**
- * `alberta_regional` tool registration.
+ * `tamrack_regional` tool registration.
  *
  * Wraps the regional dashboard fetcher in `src/lib/data-sources-regional.ts`
  * (https://regionaldashboard.alberta.ca) behind a typed MCP surface. 54
@@ -50,6 +50,9 @@ import {
   type TimeRange,
 } from "../schemas";
 import { updateToolEntry } from "../registry";
+import { requireScopes } from "../lib/auth-context";
+
+const REQUIRED_SCOPES = ["tamrack:regional:read"] as const;
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -68,7 +71,7 @@ if (REGIONAL_INDICATOR_NAMES.length === 0) {
 const RegionalIndicatorSchema = z
   .enum(REGIONAL_INDICATOR_NAMES as [string, ...string[]])
   .describe(
-    "Regional dashboard indicator name (human-readable). Use alberta_catalog.indicators_by_domain.regional for the full inventory.",
+    "Regional dashboard indicator name (human-readable). Use tamrack_catalog.indicators_by_domain.regional for the full inventory.",
   );
 
 const RegionalInputShape = {
@@ -101,7 +104,7 @@ const RegionalDataSchema = z.object({
 
 const RegionalEnvelopeSchema = z.object({
   schema_version: z.literal(SCHEMA_VERSION),
-  tool: z.literal("alberta_regional"),
+  tool: z.literal("tamrack_regional"),
   source: z.literal("regionaldashboard.alberta.ca"),
   data: RegionalDataSchema,
 });
@@ -162,7 +165,7 @@ function aggregatePoints(raw: RegionalDataPoint[]): RegionalPoint[] {
 // Tool registration
 // ---------------------------------------------------------------------------
 
-const TOOL_NAME = "alberta_regional";
+const TOOL_NAME = "tamrack_regional";
 
 const TOOL_DESCRIPTION =
   "Alberta Regional Dashboard — 54 socioeconomic indicators across all " +
@@ -212,17 +215,18 @@ export function registerRegionalTool(server: McpServer): void {
   server.registerTool(
     TOOL_NAME,
     {
-      title: "Alberta Pulse — Regional Indicators",
+      title: "Tamrack — Regional Indicators",
       description: TOOL_DESCRIPTION,
       inputSchema: RegionalInputShape,
       annotations: {
-        title: "Alberta Pulse — Regional Indicators",
+        title: "Tamrack — Regional Indicators",
         readOnlyHint: true,
         openWorldHint: true,
         idempotentHint: true,
       },
     },
     async (args) => {
+      requireScopes(REQUIRED_SCOPES);
       const indicator = args.indicator;
       const slug = args.municipality;
       const timeRange = args.time_range;
@@ -233,7 +237,7 @@ export function registerRegionalTool(server: McpServer): void {
         // the live registry at module load. Throw — the SDK turns this
         // into a JSON-RPC error response.
         throw new Error(
-          `alberta_regional: municipality slug "${slug}" missing from registry`,
+          `tamrack_regional: municipality slug "${slug}" missing from registry`,
         );
       }
 

@@ -41,12 +41,13 @@ export async function POST(req: NextRequest) {
       ).join("\n")
     : "No previous interactions.";
 
-  const systemPrompt = `You are helping Cully Wakelin write outreach emails for Alberta Pulse (albertapulsecheck.ca), a data platform that provides free interactive charts and dashboards about Alberta's economy, real estate, demographics, energy, and municipalities.
+  const systemPrompt = `You are helping Cully Wakelin write outreach emails for Tamrack (tamrack.ca), a data platform that provides free interactive charts and dashboards about Alberta's economy, real estate, demographics, energy, and municipalities.
 
-Cully is a software engineer based in Parkland County, Alberta. He's building Alberta Pulse as a suite of tools:
+Cully is a software engineer based in Parkland County, Alberta. The public surface is currently free:
 - Pulse Charts: Free public charts and data visualizations covering 135+ pages of Alberta data
-- Pulse EDO ($299/mo): Premium analytics for Economic Development Officers — community profiles, peer comparison, alerts, council-ready reports
-- Pulse Real Estate ($49/mo): Market intelligence for real estate professionals — neighbourhood stats, listing presentation tools
+- Pulse Learn: Free 8-module Alberta economics course with live charts and a certificate
+
+A paid Tamrack tier ($9/mo flat + metered overage) is on the way for API access and higher quotas, but isn't sold yet. Do not pitch sunset products (Pulse EDO, Pulse Real Estate) — they're closed to new signups.
 
 The tone should be:
 - Genuine and human — not salesy or corporate. Like a neighbour who built something useful and wants to share it.

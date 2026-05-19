@@ -1,5 +1,5 @@
 /**
- * `alberta_business` tool registration.
+ * `tamrack_business` tool registration.
  *
  * Wraps the business + retail fetchers behind one typed surface. The
  * underlying substrate is split across two modules:
@@ -23,7 +23,7 @@
  *
  * Time range:
  *   StatsCan-backed categories accept a `latestN` periods count which we
- *   derive from `time_range` the same way as `alberta_macro` (D12).
+ *   derive from `time_range` the same way as `tamrack_macro` (D12).
  *   Socrata-backed categories return rolling counts that aren't keyed by
  *   a single date; for those the `time_range` is silently ignored and a
  *   note is set on the envelope. CSV/XLSX one-shot snapshots return the
@@ -93,6 +93,9 @@ import {
   type TimeRange,
 } from "../schemas";
 import { updateToolEntry } from "../registry";
+import { requireScopes } from "../lib/auth-context";
+
+const REQUIRED_SCOPES = ["tamrack:economy:read"] as const;
 
 // ---------------------------------------------------------------------------
 // Category enum
@@ -410,7 +413,7 @@ const BusinessDataSchema = z.object({
 
 const BusinessEnvelopeSchema = z.object({
   schema_version: z.literal(SCHEMA_VERSION),
-  tool: z.literal("alberta_business"),
+  tool: z.literal("tamrack_business"),
   source: z.string(),
   data: BusinessDataSchema,
 });
@@ -524,7 +527,7 @@ const CATEGORY_META: Record<BusinessCategory, CategoryMeta> = {
 // Tool registration
 // ---------------------------------------------------------------------------
 
-const TOOL_NAME = "alberta_business";
+const TOOL_NAME = "tamrack_business";
 
 const TOOL_DESCRIPTION =
   "Business indicators for Alberta. Edmonton + Calgary business licence " +
@@ -567,17 +570,18 @@ export function registerBusinessTool(server: McpServer): void {
   server.registerTool(
     TOOL_NAME,
     {
-      title: "Alberta Pulse — Business Indicators",
+      title: "Tamrack — Business Indicators",
       description: TOOL_DESCRIPTION,
       inputSchema: BusinessInputShape,
       annotations: {
-        title: "Alberta Pulse — Business Indicators",
+        title: "Tamrack — Business Indicators",
         readOnlyHint: true,
         openWorldHint: true,
         idempotentHint: true,
       },
     },
     async (args) => {
+      requireScopes(REQUIRED_SCOPES);
       const category = args.category;
       const meta = CATEGORY_META[category];
       const municipality = args.municipality;

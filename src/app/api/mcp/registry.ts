@@ -105,7 +105,7 @@ export const TOOL_DOMAINS: DomainDescriptor[] = [
   {
     name: "discovery",
     description:
-      "Catalog + tool/indicator/municipality discovery. Call alberta_catalog first when you don't know what's available.",
+      "Catalog + tool/indicator/municipality discovery. Call tamrack_catalog first when you don't know what's available.",
   },
   {
     name: "macro",
@@ -197,7 +197,7 @@ export const TOOL_DOMAINS: DomainDescriptor[] = [
 
 /**
  * Macro indicators — the contract Parcel 3 implements. Listed here so
- * `alberta_catalog` can advertise them before `alberta_macro` is wired up.
+ * `tamrack_catalog` can advertise them before `tamrack_macro` is wired up.
  */
 export const MACRO_INDICATORS = [
   "policy_rate",
@@ -220,12 +220,12 @@ export type MacroIndicator = (typeof MACRO_INDICATORS)[number];
  */
 const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
   // ── Discovery ─────────────────────────────────────────────
-  alberta_catalog: {
-    name: "alberta_catalog",
+  tamrack_catalog: {
+    name: "tamrack_catalog",
     status: "live",
     domain: "discovery",
     description:
-      "Returns the full Alberta Pulse MCP inventory: tools, domains, indicators per domain, live municipalities, and example invocations. Call this first when you don't already know what's available — it's a single call, no parameters, no upstream fetches.",
+      "Returns the full Tamrack MCP inventory: tools, domains, indicators per domain, live municipalities, and example invocations. Call this first when you don't already know what's available — it's a single call, no parameters, no upstream fetches.",
     parameters_summary: "No parameters.",
     response_summary:
       "JSON object with schema_version, tools[], domains[], municipalities[], indicators_by_domain, and example_invocations[].",
@@ -233,7 +233,7 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     example_invocations: [
       {
         description:
-          "Discover the full Alberta Pulse MCP inventory before issuing any data query.",
+          "Discover the full Tamrack MCP inventory before issuing any data query.",
         arguments: {},
       },
     ],
@@ -241,8 +241,8 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
 
   // ── v1 typed tools (planned in Parcel 2; Parcels 3–5 flip to "live") ──
 
-  alberta_macro: {
-    name: "alberta_macro",
+  tamrack_macro: {
+    name: "tamrack_macro",
     status: "planned",
     domain: "macro",
     description:
@@ -261,8 +261,8 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     ],
   },
 
-  alberta_regional: {
-    name: "alberta_regional",
+  tamrack_regional: {
+    name: "tamrack_regional",
     status: "planned",
     domain: "regional",
     description:
@@ -286,8 +286,8 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     ],
   },
 
-  alberta_municipality: {
-    name: "alberta_municipality",
+  tamrack_municipality: {
+    name: "tamrack_municipality",
     status: "planned",
     domain: "municipality",
     description:
@@ -304,8 +304,8 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     ],
   },
 
-  alberta_real_estate: {
-    name: "alberta_real_estate",
+  tamrack_real_estate: {
+    name: "tamrack_real_estate",
     status: "planned",
     domain: "real_estate",
     description:
@@ -327,8 +327,8 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     ],
   },
 
-  alberta_housing: {
-    name: "alberta_housing",
+  tamrack_housing: {
+    name: "tamrack_housing",
     status: "planned",
     domain: "housing",
     description:
@@ -358,8 +358,8 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     ],
   },
 
-  alberta_business: {
-    name: "alberta_business",
+  tamrack_business: {
+    name: "tamrack_business",
     status: "planned",
     domain: "business",
     description:
@@ -384,8 +384,8 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     ],
   },
 
-  alberta_energy: {
-    name: "alberta_energy",
+  tamrack_energy: {
+    name: "tamrack_energy",
     status: "planned",
     domain: "energy",
     description:
@@ -411,8 +411,8 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     ],
   },
 
-  alberta_search: {
-    name: "alberta_search",
+  tamrack_search: {
+    name: "tamrack_search",
     status: "planned",
     domain: "search",
     description:
@@ -431,8 +431,8 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
 
   // ── v2-deferred tools ──────────────────────────────────────────────────
 
-  alberta_entities: {
-    name: "alberta_entities",
+  tamrack_entities: {
+    name: "tamrack_entities",
     status: "deferred",
     domain: "entities",
     description:
@@ -442,8 +442,8 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     indicators: null,
     example_invocations: [],
   },
-  alberta_safety: {
-    name: "alberta_safety",
+  tamrack_safety: {
+    name: "tamrack_safety",
     status: "deferred",
     domain: "safety",
     description:
@@ -453,8 +453,8 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     indicators: null,
     example_invocations: [],
   },
-  alberta_immigration: {
-    name: "alberta_immigration",
+  tamrack_immigration: {
+    name: "tamrack_immigration",
     status: "deferred",
     domain: "immigration",
     description:
@@ -464,8 +464,8 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     indicators: null,
     example_invocations: [],
   },
-  alberta_politics: {
-    name: "alberta_politics",
+  tamrack_politics: {
+    name: "tamrack_politics",
     status: "deferred",
     domain: "politics",
     description:
@@ -475,8 +475,8 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     indicators: null,
     example_invocations: [],
   },
-  alberta_fiscal: {
-    name: "alberta_fiscal",
+  tamrack_fiscal: {
+    name: "tamrack_fiscal",
     status: "deferred",
     domain: "fiscal",
     description:
@@ -486,8 +486,8 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     indicators: null,
     example_invocations: [],
   },
-  alberta_environment: {
-    name: "alberta_environment",
+  tamrack_environment: {
+    name: "tamrack_environment",
     status: "deferred",
     domain: "environment",
     description:
@@ -497,8 +497,8 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     indicators: null,
     example_invocations: [],
   },
-  alberta_health: {
-    name: "alberta_health",
+  tamrack_health: {
+    name: "tamrack_health",
     status: "deferred",
     domain: "health",
     description:
@@ -508,8 +508,8 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     indicators: null,
     example_invocations: [],
   },
-  alberta_signals: {
-    name: "alberta_signals",
+  tamrack_signals: {
+    name: "tamrack_signals",
     status: "deferred",
     domain: "signals",
     description:
@@ -524,23 +524,23 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
 // Stable ordering for catalog output: catalog first, then v1 typed in
 // design-doc order, then v2-deferred in design-doc order.
 const TOOL_ORDER: readonly string[] = [
-  "alberta_catalog",
-  "alberta_macro",
-  "alberta_regional",
-  "alberta_municipality",
-  "alberta_real_estate",
-  "alberta_housing",
-  "alberta_business",
-  "alberta_energy",
-  "alberta_search",
-  "alberta_entities",
-  "alberta_safety",
-  "alberta_immigration",
-  "alberta_politics",
-  "alberta_fiscal",
-  "alberta_environment",
-  "alberta_health",
-  "alberta_signals",
+  "tamrack_catalog",
+  "tamrack_macro",
+  "tamrack_regional",
+  "tamrack_municipality",
+  "tamrack_real_estate",
+  "tamrack_housing",
+  "tamrack_business",
+  "tamrack_energy",
+  "tamrack_search",
+  "tamrack_entities",
+  "tamrack_safety",
+  "tamrack_immigration",
+  "tamrack_politics",
+  "tamrack_fiscal",
+  "tamrack_environment",
+  "tamrack_health",
+  "tamrack_signals",
 ];
 
 // ---------------------------------------------------------------------------

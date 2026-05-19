@@ -52,7 +52,7 @@ if (LIVE_MUNICIPALITY_SLUGS.length === 0) {
 export const MunicipalitySlugSchema = z
   .enum(LIVE_MUNICIPALITY_SLUGS as [string, ...string[]])
   .describe(
-    "Slug of a live Alberta municipality (e.g. 'edmonton', 'calgary', 'stony-plain'). Use alberta_catalog.municipalities[] for the authoritative list.",
+    "Slug of a live Alberta municipality (e.g. 'edmonton', 'calgary', 'stony-plain'). Use tamrack_catalog.municipalities[] for the authoritative list.",
   );
 
 export type MunicipalitySlug = z.infer<typeof MunicipalitySlugSchema>;

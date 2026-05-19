@@ -1,5 +1,5 @@
 /**
- * `alberta_real_estate` tool registration.
+ * `tamrack_real_estate` tool registration.
  *
  * Per-municipality real estate datasets — assessments, permits, dev_permits —
  * keyed off the registry capability flags. v1 surfaces three datasets:
@@ -73,6 +73,9 @@ import {
   type TimeRange,
 } from "../schemas";
 import { updateToolEntry } from "../registry";
+import { requireScopes } from "../lib/auth-context";
+
+const REQUIRED_SCOPES = ["tamrack:real-estate:read"] as const;
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -235,8 +238,8 @@ const RealEstateDataSchema = z.union([
 
 const RealEstateEnvelopeSchema = z.object({
   schema_version: z.literal(SCHEMA_VERSION),
-  tool: z.literal("alberta_real_estate"),
-  source: z.literal("alberta-pulse-substrate"),
+  tool: z.literal("tamrack_real_estate"),
+  source: z.literal("tamrack-substrate"),
   data: RealEstateDataSchema,
 });
 type RealEstateEnvelope = z.infer<typeof RealEstateEnvelopeSchema>;
@@ -467,7 +470,7 @@ async function fetchDevPermitsPayload(
 // Tool registration
 // ---------------------------------------------------------------------------
 
-const TOOL_NAME = "alberta_real_estate";
+const TOOL_NAME = "tamrack_real_estate";
 
 const TOOL_DESCRIPTION =
   "Municipal real estate datasets — property assessments, building permits, " +
@@ -519,17 +522,18 @@ export function registerRealEstateTool(server: McpServer): void {
   server.registerTool(
     TOOL_NAME,
     {
-      title: "Alberta Pulse — Real Estate Datasets",
+      title: "Tamrack — Real Estate Datasets",
       description: TOOL_DESCRIPTION,
       inputSchema: RealEstateInputShape,
       annotations: {
-        title: "Alberta Pulse — Real Estate Datasets",
+        title: "Tamrack — Real Estate Datasets",
         readOnlyHint: true,
         openWorldHint: true,
         idempotentHint: true,
       },
     },
     async (args) => {
+      requireScopes(REQUIRED_SCOPES);
       const slug = args.municipality;
       const dataset = args.dataset;
       const limit = args.limit ?? 25;
@@ -540,7 +544,7 @@ export function registerRealEstateTool(server: McpServer): void {
         const envelope: RealEstateEnvelope = {
           schema_version: SCHEMA_VERSION,
           tool: TOOL_NAME,
-          source: "alberta-pulse-substrate",
+          source: "tamrack-substrate",
           data: {
             available: false,
             reason: `unknown municipality slug "${slug}"`,
@@ -560,7 +564,7 @@ export function registerRealEstateTool(server: McpServer): void {
         const envelope: RealEstateEnvelope = {
           schema_version: SCHEMA_VERSION,
           tool: TOOL_NAME,
-          source: "alberta-pulse-substrate",
+          source: "tamrack-substrate",
           data: {
             available: false,
             reason: cap.reason,
@@ -590,7 +594,7 @@ export function registerRealEstateTool(server: McpServer): void {
           envelope = {
             schema_version: SCHEMA_VERSION,
             tool: TOOL_NAME,
-            source: "alberta-pulse-substrate",
+            source: "tamrack-substrate",
             data: {
               available: true,
               municipality: muniBlock,
@@ -608,7 +612,7 @@ export function registerRealEstateTool(server: McpServer): void {
           envelope = {
             schema_version: SCHEMA_VERSION,
             tool: TOOL_NAME,
-            source: "alberta-pulse-substrate",
+            source: "tamrack-substrate",
             data: {
               available: true,
               municipality: muniBlock,
@@ -630,7 +634,7 @@ export function registerRealEstateTool(server: McpServer): void {
           envelope = {
             schema_version: SCHEMA_VERSION,
             tool: TOOL_NAME,
-            source: "alberta-pulse-substrate",
+            source: "tamrack-substrate",
             data: {
               available: true,
               municipality: muniBlock,
@@ -657,7 +661,7 @@ export function registerRealEstateTool(server: McpServer): void {
         envelope = {
           schema_version: SCHEMA_VERSION,
           tool: TOOL_NAME,
-          source: "alberta-pulse-substrate",
+          source: "tamrack-substrate",
           data: {
             available: false,
             reason: `substrate fetcher threw for ${slug}/${dataset}: ${

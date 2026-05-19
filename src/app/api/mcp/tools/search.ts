@@ -1,5 +1,5 @@
 /**
- * `alberta_search` tool registration.
+ * `tamrack_search` tool registration.
  *
  * Long-tail escape hatch over the Alberta CKAN catalogue at
  * open.alberta.ca. Wraps `searchAlbertaDatasets(query, rows)` from
@@ -28,6 +28,12 @@ import { searchAlbertaDatasets } from "@/lib/data-sources";
 
 import { SCHEMA_VERSION } from "../schemas";
 import { updateToolEntry } from "../registry";
+import { requireScopes } from "../lib/auth-context";
+
+// Search is a long-tail discovery surface over Alberta CKAN. Treated as
+// economy-domain because the bulk of CKAN packages are economy/fiscal
+// datasets; revisit if/when CKAN coverage skews elsewhere.
+const REQUIRED_SCOPES = ["tamrack:economy:read"] as const;
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -98,7 +104,7 @@ const SearchDataSchema = z.object({
 
 const SearchEnvelopeSchema = z.object({
   schema_version: z.literal(SCHEMA_VERSION),
-  tool: z.literal("alberta_search"),
+  tool: z.literal("tamrack_search"),
   source: z.literal("open.alberta.ca CKAN"),
   data: SearchDataSchema,
 });
@@ -175,14 +181,14 @@ function normaliseHit(raw: RawCkanResult): z.infer<typeof SearchHitSchema> {
 // Tool registration
 // ---------------------------------------------------------------------------
 
-const TOOL_NAME = "alberta_search";
+const TOOL_NAME = "tamrack_search";
 
 const TOOL_DESCRIPTION =
   "Long-tail escape hatch — searches the Alberta CKAN catalogue " +
-  "(open.alberta.ca) for datasets the typed Alberta Pulse tools don't " +
-  "expose. Use when none of the alberta_macro / alberta_regional / " +
-  "alberta_real_estate / alberta_housing / alberta_business / " +
-  "alberta_energy surfaces fit your need. Returns ranked dataset records " +
+  "(open.alberta.ca) for datasets the typed Tamrack tools don't " +
+  "expose. Use when none of the tamrack_macro / tamrack_regional / " +
+  "tamrack_real_estate / tamrack_housing / tamrack_business / " +
+  "tamrack_energy surfaces fit your need. Returns ranked dataset records " +
   "(id, name, title, notes, organisation, tags, resources, dates). The " +
   "raw CKAN payload is normalised into a stable typed envelope; agents " +
   "follow up by hitting the resource URLs directly. Source: " +
@@ -211,17 +217,18 @@ export function registerSearchTool(server: McpServer): void {
   server.registerTool(
     TOOL_NAME,
     {
-      title: "Alberta Pulse — CKAN Dataset Search",
+      title: "Tamrack — CKAN Dataset Search",
       description: TOOL_DESCRIPTION,
       inputSchema: SearchInputShape,
       annotations: {
-        title: "Alberta Pulse — CKAN Dataset Search",
+        title: "Tamrack — CKAN Dataset Search",
         readOnlyHint: true,
         openWorldHint: true,
         idempotentHint: true,
       },
     },
     async (args) => {
+      requireScopes(REQUIRED_SCOPES);
       const query = args.query;
       const limit = args.limit ?? 10;
 

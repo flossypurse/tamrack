@@ -1,5 +1,5 @@
 /**
- * `alberta_municipality` tool registration.
+ * `tamrack_municipality` tool registration.
  *
  * Returns a registry-backed summary card for a single Alberta municipality:
  * the registry entry's identifying fields (slug, name, region, population),
@@ -15,7 +15,7 @@
  *
  * Tool input is the registry slug. The shared `MunicipalitySlugSchema` is
  * built once from `getLiveMunicipalities()` so invalid slugs never reach the
- * tool body — same pattern Parcel 3's `alberta_regional` follows.
+ * tool body — same pattern Parcel 3's `tamrack_regional` follows.
  */
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
@@ -37,6 +37,9 @@ import {
   SCHEMA_VERSION,
 } from "../schemas";
 import { updateToolEntry } from "../registry";
+import { requireScopes } from "../lib/auth-context";
+
+const REQUIRED_SCOPES = ["tamrack:regional:read"] as const;
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -87,8 +90,8 @@ const MunicipalityDataSchema = z.object({
 
 const MunicipalityEnvelopeSchema = z.object({
   schema_version: z.literal(SCHEMA_VERSION),
-  tool: z.literal("alberta_municipality"),
-  source: z.literal("alberta-pulse-registry"),
+  tool: z.literal("tamrack_municipality"),
+  source: z.literal("tamrack-registry"),
   data: MunicipalityDataSchema,
 });
 type MunicipalityEnvelope = z.infer<typeof MunicipalityEnvelopeSchema>;
@@ -198,7 +201,7 @@ async function buildMetrics(
 // Tool registration
 // ---------------------------------------------------------------------------
 
-const TOOL_NAME = "alberta_municipality";
+const TOOL_NAME = "tamrack_municipality";
 
 const TOOL_DESCRIPTION =
   "Registry-backed summary card for a single Alberta municipality. " +
@@ -206,8 +209,8 @@ const TOOL_DESCRIPTION =
   "plus a cheap snapshot of available datasets and best-effort metric counts " +
   "(parcel_count, vacant_count, recent_permits_count). Source: " +
   "src/lib/municipality-registry.ts. Use this when you need to know what a " +
-  "municipality exposes before fanning out across alberta_real_estate or " +
-  "alberta_regional.";
+  "municipality exposes before fanning out across tamrack_real_estate or " +
+  "tamrack_regional.";
 
 updateToolEntry(TOOL_NAME, {
   status: "live",
@@ -232,17 +235,18 @@ export function registerMunicipalityTool(server: McpServer): void {
   server.registerTool(
     TOOL_NAME,
     {
-      title: "Alberta Pulse — Municipality Summary",
+      title: "Tamrack — Municipality Summary",
       description: TOOL_DESCRIPTION,
       inputSchema: MunicipalityInputShape,
       annotations: {
-        title: "Alberta Pulse — Municipality Summary",
+        title: "Tamrack — Municipality Summary",
         readOnlyHint: true,
         openWorldHint: true,
         idempotentHint: true,
       },
     },
     async (args) => {
+      requireScopes(REQUIRED_SCOPES);
       const slug = args.slug;
       const config = getMunicipality(slug);
       if (!config) {
@@ -250,7 +254,7 @@ export function registerMunicipalityTool(server: McpServer): void {
         // the SDK layer against the live registry. If we ever do hit it,
         // throw — the SDK turns this into a clean JSON-RPC error.
         throw new Error(
-          `alberta_municipality: registry has no entry for "${slug}"`,
+          `tamrack_municipality: registry has no entry for "${slug}"`,
         );
       }
 
@@ -269,7 +273,7 @@ export function registerMunicipalityTool(server: McpServer): void {
       const envelope: MunicipalityEnvelope = {
         schema_version: SCHEMA_VERSION,
         tool: TOOL_NAME,
-        source: "alberta-pulse-registry",
+        source: "tamrack-registry",
         data: {
           slug: config.slug,
           name: config.name,

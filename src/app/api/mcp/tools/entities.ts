@@ -1,5 +1,5 @@
 /**
- * `alberta_entities` MCP tool.
+ * `tamrack_entities` MCP tool.
  *
  * Reads the `intel_operators` directory built from chamber-of-commerce
  * membership data (Acheson Business Association, Greater Parkland Regional
@@ -22,8 +22,10 @@ import { getCurrentProfile } from "@/lib/data-sources-intel-profiles";
 
 import { SCHEMA_VERSION, LimitSchema } from "../schemas";
 import { updateToolEntry } from "../registry";
+import { requireScopes } from "../lib/auth-context";
 
-const TOOL_NAME = "alberta_entities";
+const TOOL_NAME = "tamrack_entities";
+const REQUIRED_SCOPES = ["tamrack:economy:read"] as const;
 
 const ActionSchema = z
   .enum(["search", "get", "list_categories", "get_profile"])
@@ -66,7 +68,7 @@ const OperatorOutSchema = z.object({
 const SearchEnvelopeSchema = z.object({
   schema_version: z.literal(SCHEMA_VERSION),
   tool: z.literal(TOOL_NAME),
-  source: z.literal("alberta-pulse-intel-operators"),
+  source: z.literal("tamrack-intel-operators"),
   data: z.object({
     action: z.literal("search"),
     total: z.number().int().min(0),
@@ -80,7 +82,7 @@ const SearchEnvelopeSchema = z.object({
 const GetEnvelopeSchema = z.object({
   schema_version: z.literal(SCHEMA_VERSION),
   tool: z.literal(TOOL_NAME),
-  source: z.literal("alberta-pulse-intel-operators"),
+  source: z.literal("tamrack-intel-operators"),
   data: z.object({
     action: z.literal("get"),
     operator: OperatorOutSchema.nullable(),
@@ -90,7 +92,7 @@ const GetEnvelopeSchema = z.object({
 const CategoriesEnvelopeSchema = z.object({
   schema_version: z.literal(SCHEMA_VERSION),
   tool: z.literal(TOOL_NAME),
-  source: z.literal("alberta-pulse-intel-operators"),
+  source: z.literal("tamrack-intel-operators"),
   data: z.object({
     action: z.literal("list_categories"),
     total_categories: z.number().int().min(0),
@@ -101,7 +103,7 @@ const CategoriesEnvelopeSchema = z.object({
 const ProfileEnvelopeSchema = z.object({
   schema_version: z.literal(SCHEMA_VERSION),
   tool: z.literal(TOOL_NAME),
-  source: z.literal("alberta-pulse-intel-operators"),
+  source: z.literal("tamrack-intel-operators"),
   data: z.object({
     action: z.literal("get_profile"),
     operator_id: z.string(),
@@ -188,28 +190,29 @@ export function registerEntitiesTool(server: McpServer): void {
   server.registerTool(
     TOOL_NAME,
     {
-      title: "Alberta Pulse — Tri-Region Operators",
+      title: "Tamrack — Tri-Region Operators",
       description: TOOL_DESCRIPTION,
       inputSchema: SearchInputShape,
       annotations: {
-        title: "Alberta Pulse — Tri-Region Operators",
+        title: "Tamrack — Tri-Region Operators",
         readOnlyHint: true,
         openWorldHint: false,
         idempotentHint: true,
       },
     },
     async (args) => {
+      requireScopes(REQUIRED_SCOPES);
       const action = args.action ?? "search";
 
       if (action === "get") {
         if (!args.id) {
-          throw new Error("alberta_entities: action='get' requires id");
+          throw new Error("tamrack_entities: action='get' requires id");
         }
         const op = await getIntelOperator(args.id);
         const envelope = {
           schema_version: SCHEMA_VERSION,
           tool: TOOL_NAME,
-          source: "alberta-pulse-intel-operators" as const,
+          source: "tamrack-intel-operators" as const,
           data: {
             action: "get" as const,
             operator: op ? shapeOperator(op) : null,
@@ -224,13 +227,13 @@ export function registerEntitiesTool(server: McpServer): void {
 
       if (action === "get_profile") {
         if (!args.id) {
-          throw new Error("alberta_entities: action='get_profile' requires id");
+          throw new Error("tamrack_entities: action='get_profile' requires id");
         }
         const profile = await getCurrentProfile(args.id);
         const envelope = {
           schema_version: SCHEMA_VERSION,
           tool: TOOL_NAME,
-          source: "alberta-pulse-intel-operators" as const,
+          source: "tamrack-intel-operators" as const,
           data: {
             action: "get_profile" as const,
             operator_id: args.id,
@@ -260,7 +263,7 @@ export function registerEntitiesTool(server: McpServer): void {
         const envelope = {
           schema_version: SCHEMA_VERSION,
           tool: TOOL_NAME,
-          source: "alberta-pulse-intel-operators" as const,
+          source: "tamrack-intel-operators" as const,
           data: {
             action: "list_categories" as const,
             total_categories: cats.length,
@@ -291,7 +294,7 @@ export function registerEntitiesTool(server: McpServer): void {
       const envelope = {
         schema_version: SCHEMA_VERSION,
         tool: TOOL_NAME,
-        source: "alberta-pulse-intel-operators" as const,
+        source: "tamrack-intel-operators" as const,
         data: {
           action: "search" as const,
           total: result.total,

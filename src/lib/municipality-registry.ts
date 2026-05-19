@@ -874,6 +874,21 @@ export function getLiveMunicipalities(): MunicipalityConfig[] {
   return MUNICIPALITY_REGISTRY.filter((m) => m.status === "live");
 }
 
+// Mirrors searchCharts() in chart-registry.ts. Matches across name, slug,
+// region label, and description so a user searching "Sherwood" or "metro"
+// still hits the right municipality. Only searches live entries so we don't
+// surface placeholders.
+export function searchMunicipalities(query: string): MunicipalityConfig[] {
+  const q = query.toLowerCase().trim();
+  if (!q) return getLiveMunicipalities();
+  const terms = q.split(/\s+/);
+  return getLiveMunicipalities().filter((m) => {
+    const regionLabel = REGION_LABELS[m.region] ?? "";
+    const haystack = `${m.name} ${m.slug} ${m.region} ${regionLabel} ${m.description}`.toLowerCase();
+    return terms.every((t) => haystack.includes(t));
+  });
+}
+
 export const REGION_LABELS: Record<MunicipalityRegion, string> = {
   "edmonton-metro": "Edmonton Metro",
   "calgary-metro": "Calgary Metro",

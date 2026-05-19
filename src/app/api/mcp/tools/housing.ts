@@ -1,5 +1,5 @@
 /**
- * `alberta_housing` tool registration.
+ * `tamrack_housing` tool registration.
  *
  * Wraps the CMHC / StatsCan housing fetchers in
  * `src/lib/data-sources-cmhc.ts` behind a single typed MCP surface. All of
@@ -34,7 +34,7 @@
  * Time range:
  *   Substrate fetchers accept a `latestN` periods count. We translate the
  *   `time_range` to a periods request and filter explicit `{from, to}`
- *   windows post-fetch, same convention as `alberta_macro` (D12).
+ *   windows post-fetch, same convention as `tamrack_macro` (D12).
  *
  * Fallback policy:
  *   The substrate fetchers all swallow upstream errors and return [];
@@ -68,6 +68,9 @@ import {
   type TimeRange,
 } from "../schemas";
 import { updateToolEntry } from "../registry";
+import { requireScopes } from "../lib/auth-context";
+
+const REQUIRED_SCOPES = ["tamrack:real-estate:read"] as const;
 
 // ---------------------------------------------------------------------------
 // Dataset enum + helpers
@@ -136,7 +139,7 @@ function periodsForRange(
     }
   }
   // Explicit { from, to }: ask for a wide enough window and filter
-  // post-fetch (same convention as alberta_macro D12).
+  // post-fetch (same convention as tamrack_macro D12).
   return Math.max(60, defaultPeriods);
 }
 
@@ -234,7 +237,7 @@ const HousingDataSchema = z.object({
 
 const HousingEnvelopeSchema = z.object({
   schema_version: z.literal(SCHEMA_VERSION),
-  tool: z.literal("alberta_housing"),
+  tool: z.literal("tamrack_housing"),
   source: z.literal("CMHC via StatsCan"),
   data: HousingDataSchema,
 });
@@ -288,7 +291,7 @@ const DATASET_META: Record<HousingDataset, DatasetMeta> = {
 // Tool registration
 // ---------------------------------------------------------------------------
 
-const TOOL_NAME = "alberta_housing";
+const TOOL_NAME = "tamrack_housing";
 
 const TOOL_DESCRIPTION =
   "CMHC Housing Market Information for Alberta — starts, completions, " +
@@ -331,17 +334,18 @@ export function registerHousingTool(server: McpServer): void {
   server.registerTool(
     TOOL_NAME,
     {
-      title: "Alberta Pulse — CMHC Housing",
+      title: "Tamrack — CMHC Housing",
       description: TOOL_DESCRIPTION,
       inputSchema: HousingInputShape,
       annotations: {
-        title: "Alberta Pulse — CMHC Housing",
+        title: "Tamrack — CMHC Housing",
         readOnlyHint: true,
         openWorldHint: true,
         idempotentHint: true,
       },
     },
     async (args) => {
+      requireScopes(REQUIRED_SCOPES);
       const dataset = args.dataset;
       const municipality = args.municipality;
       const timeRange = args.time_range;

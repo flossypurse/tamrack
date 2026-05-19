@@ -1,5 +1,5 @@
 /**
- * `alberta_macro` tool registration.
+ * `tamrack_macro` tool registration.
  *
  * Wraps the macro fetchers in `src/lib/data-sources.ts` (Bank of Canada Valet
  * + Statistics Canada WDS + Alberta Open Data) behind a single typed MCP
@@ -47,6 +47,9 @@ import {
   type TimeRange,
 } from "../schemas";
 import { updateToolEntry, MACRO_INDICATORS } from "../registry";
+import { requireScopes } from "../lib/auth-context";
+
+const REQUIRED_SCOPES = ["tamrack:macro:read"] as const;
 
 // ---------------------------------------------------------------------------
 // Indicator catalogue
@@ -180,7 +183,7 @@ const MacroDataSchema = z.object({
 
 const MacroEnvelopeSchema = z.object({
   schema_version: z.literal(SCHEMA_VERSION),
-  tool: z.literal("alberta_macro"),
+  tool: z.literal("tamrack_macro"),
   source: z.string(),
   data: MacroDataSchema,
 });
@@ -288,7 +291,7 @@ async function fetchMacro(
 // Tool registration
 // ---------------------------------------------------------------------------
 
-const TOOL_NAME = "alberta_macro";
+const TOOL_NAME = "tamrack_macro";
 
 const TOOL_DESCRIPTION =
   "Province- and country-level macro indicators for Canada and Alberta. " +
@@ -330,17 +333,18 @@ export function registerMacroTool(server: McpServer): void {
   server.registerTool(
     TOOL_NAME,
     {
-      title: "Alberta Pulse — Macro Indicators",
+      title: "Tamrack — Macro Indicators",
       description: TOOL_DESCRIPTION,
       inputSchema: MacroInputShape,
       annotations: {
-        title: "Alberta Pulse — Macro Indicators",
+        title: "Tamrack — Macro Indicators",
         readOnlyHint: true,
         openWorldHint: true,
         idempotentHint: true,
       },
     },
     async (args) => {
+      requireScopes(REQUIRED_SCOPES);
       const indicator = args.indicator;
       const timeRange = args.time_range;
       const spec = MACRO_INDICATOR_SPECS[indicator];

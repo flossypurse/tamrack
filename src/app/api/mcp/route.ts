@@ -14,8 +14,14 @@ export const dynamic = "force-dynamic";
  * hosted MCP endpoint from a browser context. Server-to-server callers
  * that don't set an Origin header are expected to use the in-process path
  * or set an allowlisted Origin explicitly.
+ *
+ * Tamrack-rebrand note: `tamrack.ca` is added below alongside the legacy
+ * `albertapulsecheck.ca` host. Both stay valid through the dual-accept
+ * window so external agents that still target the AP origin keep working
+ * until cutover comms land.
  */
 const ALLOWED_ORIGINS = new Set<string>([
+  "https://tamrack.ca",
   "https://albertapulsecheck.ca",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
@@ -89,7 +95,11 @@ export async function POST(req: NextRequest): Promise<Response> {
     headers: req.headers,
     body: JSON.stringify(body),
   });
-  return dispatchMcpRequest(forwarded);
+  return dispatchMcpRequest(forwarded, {
+    userId: auth.userId,
+    keyId: auth.keyId,
+    scopes: auth.scopes,
+  });
 }
 
 export async function GET(req: NextRequest): Promise<Response> {
@@ -104,7 +114,11 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   // GET opens the spec-defined server-initiated SSE stream. We delegate to
   // the transport so behaviour stays in sync with the SDK as the spec evolves.
-  return dispatchMcpRequest(req);
+  return dispatchMcpRequest(req, {
+    userId: auth.userId,
+    keyId: auth.keyId,
+    scopes: auth.scopes,
+  });
 }
 
 export async function DELETE(req: NextRequest): Promise<Response> {
@@ -117,7 +131,11 @@ export async function DELETE(req: NextRequest): Promise<Response> {
   const auth = await authenticateMcpRequest(req);
   if (!auth.ok) return auth.response;
 
-  return dispatchMcpRequest(req);
+  return dispatchMcpRequest(req, {
+    userId: auth.userId,
+    keyId: auth.keyId,
+    scopes: auth.scopes,
+  });
 }
 
 export function OPTIONS(): Response {

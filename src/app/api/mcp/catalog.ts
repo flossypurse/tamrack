@@ -1,7 +1,7 @@
 /**
  * Catalog payload generator for the Alberta Pulse MCP server.
  *
- * `buildCatalog()` is the single function `alberta_catalog` calls — it
+ * `buildCatalog()` is the single function `tamrack_catalog` calls — it
  * reads from `registry.ts` (tool entries + domain descriptors) and from
  * `src/lib/municipality-registry.ts` (live municipalities). Nothing
  * about tool inventory is duplicated here; adding an entry to
@@ -150,7 +150,7 @@ const CROSS_TOOL_EXAMPLES: ToolExample[] = [
   {
     description: "BoC policy rate over the last year (single macro call).",
     arguments: {
-      tool: "alberta_macro",
+      tool: "tamrack_macro",
       arguments: { indicator: "policy_rate", time_range: "last_year" },
     },
   },
@@ -158,14 +158,14 @@ const CROSS_TOOL_EXAMPLES: ToolExample[] = [
     description:
       "Edmonton population from the regional dashboard (regional indicator + municipality).",
     arguments: {
-      tool: "alberta_regional",
+      tool: "tamrack_regional",
       arguments: { indicator: "Population", municipality: "edmonton" },
     },
   },
   {
     description: "CMHC housing starts in Calgary over the last 5 years.",
     arguments: {
-      tool: "alberta_housing",
+      tool: "tamrack_housing",
       arguments: {
         indicator: "starts",
         municipality: "calgary",
