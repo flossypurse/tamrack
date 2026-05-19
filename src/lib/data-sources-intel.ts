@@ -3,7 +3,7 @@
  *
  * Reads from the `intel_operators` Postgres table, seeded out-of-band from a
  * private workspace source by `scripts/seed-intel-operators.ts`. Consumers
- * (currently the `alberta_entities` MCP tool) call the functions here; they
+ * (currently the `tamrack_entities` MCP tool) call the functions here; they
  * never reach into the seed source.
  */
 import { getDb } from "./db";
@@ -103,7 +103,7 @@ export async function searchIntelOperators(
   }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-  const limit = Math.min(Math.max(filters.limit ?? 50, 1), 200);
+  const limit = Math.min(Math.max(filters.limit ?? 50, 1), 2000);
   const offset = Math.max(filters.offset ?? 0, 0);
 
   const countParams = [...params];

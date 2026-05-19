@@ -47,6 +47,11 @@ const ProfileWriteSchema = z.object({
   tokens_in: z.number().int().nonnegative().nullable().optional(),
   tokens_out: z.number().int().nonnegative().nullable().optional(),
   duration_ms: z.number().int().nonnegative().nullable().optional(),
+  // ISO 8601 timestamp. When the patch path writes a profile derived from a
+  // v1 ancestor, it supplies that ancestor's researched_at here so freshness
+  // queries reflect actual web-research age. Omitted by fresh-research writes
+  // (writeProfile defaults to NOW() in that case).
+  intelligence_researched_at: z.string().datetime().optional(),
 });
 
 export async function GET(

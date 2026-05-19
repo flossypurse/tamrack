@@ -19,6 +19,13 @@ export interface IntelOperatorProfile {
   profile_schema: string;
   researcher: string;
   researched_at: string;
+  /**
+   * When the underlying web research was last performed. Equals
+   * researched_at for fresh-research rows; for patched-from-v1 rows it
+   * preserves the v1 ancestor's researched_at. Nullable while the backfill
+   * for pre-column rows is pending.
+   */
+  intelligence_researched_at: string | null;
   current: boolean;
   raw_profile_md: string;
   structured: Record<string, unknown>;
@@ -46,6 +53,13 @@ export interface ProfileWriteInput {
   tokens_in?: number | null;
   tokens_out?: number | null;
   duration_ms?: number | null;
+  /**
+   * ISO 8601 timestamp for when the underlying web research was performed.
+   * If omitted, the row defaults to NOW() to match researched_at semantics
+   * (fresh-research case). The patch path supplies the v1 ancestor's
+   * researched_at here so freshness queries reflect actual research age.
+   */
+  intelligence_researched_at?: string;
 }
 
 const PROFILE_FIELDS = `
@@ -54,6 +68,7 @@ const PROFILE_FIELDS = `
   profile_schema,
   researcher,
   researched_at,
+  intelligence_researched_at,
   current,
   raw_profile_md,
   structured,
@@ -135,17 +150,23 @@ export async function writeProfile(
     );
 
     const newId = randomUUID();
+    // intelligence_researched_at: COALESCE($15, NOW()) so an absent payload
+    // value defaults to the row-write moment (matching researched_at for
+    // fresh-research) while still honouring an explicit ancestor timestamp
+    // from the patch path.
     const insert = await client.query<{ researched_at: string }>(
       `INSERT INTO intel_operator_profiles (
          id, operator_id, profile_schema, researcher, current,
          raw_profile_md, structured, sources, data_gaps,
          confidence, confidence_breakdown,
-         cost_usd, tokens_in, tokens_out, duration_ms
+         cost_usd, tokens_in, tokens_out, duration_ms,
+         intelligence_researched_at
        ) VALUES (
          $1, $2, $3, $4, TRUE,
          $5, $6, $7, $8,
          $9, $10,
-         $11, $12, $13, $14
+         $11, $12, $13, $14,
+         COALESCE($15::TIMESTAMPTZ, NOW())
        )
        RETURNING researched_at`,
       [
@@ -163,6 +184,7 @@ export async function writeProfile(
         payload.tokens_in ?? null,
         payload.tokens_out ?? null,
         payload.duration_ms ?? null,
+        payload.intelligence_researched_at ?? null,
       ],
     );
 
