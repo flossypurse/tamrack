@@ -5,14 +5,10 @@ import Link from "next/link";
 import {
   ArrowRight,
   BarChart3,
-  Building2,
   GraduationCap,
-  Home,
   TrendingUp,
   FileText,
-  Bell,
   MapPin,
-  Users,
 } from "lucide-react";
 
 interface LandingTabsProps {
@@ -20,6 +16,8 @@ interface LandingTabsProps {
   municipalityCount: number;
 }
 
+// EDO + Real Estate tabs removed 2026-05-18 (sunset to new signups). Landing
+// surfaces only the free products until Tamrack ships.
 const tabs = [
   {
     id: "browse",
@@ -34,45 +32,9 @@ const tabs = [
       { icon: FileText, text: "Embed or share any chart — no account required" },
     ],
     cta: { label: "Browse charts", href: "/charts" },
-    accent: "text-accent",
-    accentBg: "bg-accent/10",
-    accentBorder: "border-accent/20",
-  },
-  {
-    id: "sell",
-    label: "Real Estate",
-    icon: Home,
-    headline: "Market intel that closes deals",
-    description:
-      "Development permits, neighbourhood snapshots, and branded market reports — built for how real estate professionals actually work.",
-    outcomes: [
-      { icon: Bell, text: "Get alerted when new permits hit your area" },
-      { icon: MapPin, text: "Neighbourhood deep-dives for any listing" },
-      { icon: FileText, text: "Client-ready PDF reports in one click" },
-    ],
-    cta: { label: "Get started — $49/mo", href: "/subscribe?plan=realtor" },
-    accent: "text-teal-400",
-    accentBg: "bg-teal-500/10",
-    accentBorder: "border-teal-500/20",
-    price: "$49/mo per seat",
-  },
-  {
-    id: "govern",
-    label: "EDOs",
-    icon: Building2,
-    headline: "Data-driven community profiles",
-    description:
-      "Peer comparison across 25+ indicators, trend alerts, council-ready reports, and investment pitch kits — generated from live data.",
-    outcomes: [
-      { icon: Users, text: "Compare your municipality against peers" },
-      { icon: Bell, text: "Get alerted when your indicators shift" },
-      { icon: FileText, text: "Export PDF reports ready for council" },
-    ],
-    cta: { label: "Get started", href: "/edo/onboarding" },
-    accent: "text-indigo-400",
-    accentBg: "bg-indigo-500/10",
-    accentBorder: "border-indigo-500/20",
-    price: "$299/mo per municipality",
+    accent: "text-[var(--ink)]",
+    accentBg: "bg-[var(--surface-elevated)]",
+    accentBorder: "border-[var(--border)]",
   },
   {
     id: "learn",
@@ -87,9 +49,9 @@ const tabs = [
       { icon: FileText, text: "Earn a shareable certificate of completion" },
     ],
     cta: { label: "Start learning — free", href: "/learn" },
-    accent: "text-accent-green",
-    accentBg: "bg-accent-green/10",
-    accentBorder: "border-accent-green/20",
+    accent: "text-[var(--counter)]",
+    accentBg: "bg-[var(--counter)]/10",
+    accentBorder: "border-[var(--counter)]/30",
   },
 ];
 
@@ -102,7 +64,7 @@ export function LandingTabs({ chartCount, municipalityCount }: LandingTabsProps)
     <div>
       {/* Tab buttons */}
       <div className="flex justify-center mb-8">
-        <div className="inline-flex bg-card border border-card-border rounded-2xl p-1 gap-1">
+        <div className="inline-flex bg-[var(--surface-elevated)] border border-[var(--border)] p-1 gap-1">
           {tabs.map((t) => {
             const Icon = t.icon;
             const isActive = t.id === active;
@@ -110,11 +72,12 @@ export function LandingTabs({ chartCount, municipalityCount }: LandingTabsProps)
               <button
                 key={t.id}
                 onClick={() => setActive(t.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-accent text-white shadow-sm"
-                    : "text-muted hover:text-foreground hover:bg-card-border/30"
+                    ? "bg-[var(--amber)] text-[var(--ink)]"
+                    : "text-[var(--mid)] hover:text-[var(--ink)] hover:bg-[var(--border)]/40"
                 }`}
+                style={{ transitionDuration: "var(--dur-instant)" }}
               >
                 <Icon size={16} />
                 <span className="hidden sm:inline">{t.label}</span>
@@ -125,31 +88,25 @@ export function LandingTabs({ chartCount, municipalityCount }: LandingTabsProps)
       </div>
 
       {/* Tab content */}
-      <div className="bg-card border border-card-border rounded-2xl p-8 sm:p-10">
+      <div className="bg-[var(--surface-elevated)] border border-[var(--border)] p-8 sm:p-10">
         <div className="grid lg:grid-cols-2 gap-8 items-center">
           {/* Left: copy */}
           <div className="space-y-5">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl ${tab.accentBg} flex items-center justify-center`}>
+              <div className={`w-10 h-10 ${tab.accentBg} border ${tab.accentBorder} flex items-center justify-center`}>
                 <TabIcon size={20} className={tab.accent} />
               </div>
               <div>
-                <h3 className="text-xl font-bold">{tab.headline}</h3>
-                {tab.price && (
-                  <p className="text-sm text-muted">{tab.price}</p>
-                )}
+                <h3 className="text-xl font-bold text-[var(--ink)]">{tab.headline}</h3>
               </div>
             </div>
 
-            <p className="text-muted leading-relaxed">{tab.description}</p>
+            <p className="text-[var(--mid)] leading-relaxed">{tab.description}</p>
 
             <Link
               href={tab.cta.href}
-              className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-colors text-sm ${
-                tab.id === "browse"
-                  ? "bg-accent text-white hover:bg-accent-hover shadow-lg shadow-accent/20"
-                  : `border ${tab.accentBorder} ${tab.accent} hover:${tab.accentBg}`
-              }`}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--ink)] text-[var(--ink-inv)] font-medium hover:bg-[var(--amber)] hover:text-[var(--ink)] transition-colors text-sm"
+              style={{ transitionDuration: "var(--dur-instant)" }}
             >
               {tab.cta.label}
               <ArrowRight size={15} />
@@ -163,18 +120,18 @@ export function LandingTabs({ chartCount, municipalityCount }: LandingTabsProps)
               return (
                 <div
                   key={i}
-                  className={`flex items-start gap-3 p-4 rounded-xl border ${tab.accentBorder} bg-background/50`}
+                  className={`flex items-start gap-3 p-4 border ${tab.accentBorder} bg-[var(--surface)]`}
                 >
                   <div className={`mt-0.5 ${tab.accent}`}>
                     <OutcomeIcon size={18} />
                   </div>
-                  <p className="text-sm leading-relaxed">{outcome.text}</p>
+                  <p className="text-sm leading-relaxed text-[var(--ink)]">{outcome.text}</p>
                 </div>
               );
             })}
 
             {tab.id === "browse" && (
-              <p className="text-xs text-muted/60 text-center pt-2">
+              <p className="text-xs text-[var(--mid)]/70 text-center pt-2">
                 {chartCount}+ charts across {municipalityCount} municipalities
               </p>
             )}

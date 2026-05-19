@@ -3,10 +3,11 @@ import Link from "next/link";
 import { Suspense } from "react";
 import {
   Activity,
-  ArrowRight,
   Shield,
   MapPin,
 } from "lucide-react";
+import { TArrowRight } from "@/components/icons/t3";
+import { Wordmark } from "@/components/brand/wordmark";
 import {
   fetchBoCTimeSeries,
   fetchBoCObservations,
@@ -20,16 +21,17 @@ import { Sparkline } from "@/components/sparkline";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { HeroVisualization } from "@/components/hero-viz";
 import { LandingTabs } from "@/components/landing-tabs";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
-  title: "Alberta Pulse Check — Live Economic Intelligence for Alberta",
+  title: "Tamrack — Live Economic Intelligence for Alberta",
   description:
     "Live economic data for the people who build, sell, and govern Alberta. Free charts, municipal intelligence, real estate market reports, and an economics learning hub — powered by 185+ government data feeds.",
-  alternates: { canonical: "https://albertapulsecheck.ca" },
+  alternates: { canonical: SITE_URL },
   openGraph: {
     images: [
       {
-        url: "/api/og?title=Alberta+Pulse+Check&subtitle=Live+economic+intelligence+for+Alberta",
+        url: "/api/og?title=Tamrack&subtitle=Live+economic+intelligence+for+Alberta",
         width: 1200,
         height: 630,
       },
@@ -98,10 +100,12 @@ async function LiveProofStrip() {
   const d = await getPulseData();
 
   const indicators = [
-    { label: "BoC Rate", value: d.policyRate, data: d.rateHistory, color: "#3b82f6" },
-    { label: "CAD/USD", value: d.cadUsd, data: d.cadHistory, color: "#10b981" },
-    { label: "AB Unemployment", value: d.unemployment, data: d.unemploymentHistory, color: "#f97316" },
-    { label: "5Y Mortgage", value: d.mortgage5y, data: d.mortgageHistory, color: "#ef4444" },
+    // T3 sparkline palette — monochrome luminance ramp, single amber for the one indicator
+    // most relevant to the dashboard story (mortgage cost as the household-pressure signal).
+    { label: "BoC Rate", value: d.policyRate, data: d.rateHistory, color: "#0E0E0E" },
+    { label: "CAD/USD", value: d.cadUsd, data: d.cadHistory, color: "#3C3C39" },
+    { label: "AB Unemployment", value: d.unemployment, data: d.unemploymentHistory, color: "#6E6E68" },
+    { label: "5Y Mortgage", value: d.mortgage5y, data: d.mortgageHistory, color: "#E0A03A" },
   ];
 
   return (
@@ -181,41 +185,52 @@ export default function LandingPage() {
       {/* Full-page animated background */}
       <HeroVisualization />
 
-      {/* ── Hero ── */}
+      {/* ── Hero (T3) ── */}
       <section className="relative">
-        <div className="relative max-w-3xl mx-auto px-6 pt-16 sm:pt-24 lg:pt-32 pb-12 text-center space-y-8">
+        <div className="relative max-w-3xl mx-auto px-6 pt-20 sm:pt-28 lg:pt-36 pb-14 space-y-10">
           <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
             <ThemeToggle />
           </div>
 
-          <div className="flex items-center justify-center gap-2.5">
-            <Activity size={28} className="text-accent" />
-            <span className="text-lg font-bold tracking-tight">Alberta Pulse Check</span>
+          {/* Section label (mono caps, letterspaced) */}
+          <p className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--mid)]">
+            tamrack · alberta data substrate · v0
+          </p>
+
+          {/* Wordmark — custom-cut, hero scale */}
+          <div className="flex items-center text-[var(--ink)]">
+            <Wordmark height={68} />
           </div>
 
-          <div className="space-y-4">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight">
-              Alberta{"'"}s economy,{" "}
-              <span className="text-accent">one place</span>
+          <div className="space-y-5">
+            {/* Tagline — mono display, the brand line */}
+            <h1 className="font-mono font-extrabold text-3xl sm:text-4xl lg:text-5xl leading-[1.0] tracking-tight text-[var(--ink)]">
+              <span className="text-[var(--amber)]">&gt;</span> the stories the data tells.
             </h1>
 
-            <p className="text-muted text-lg sm:text-xl max-w-xl mx-auto leading-relaxed">
-              {chartCount}+ live charts from {dataSources.length} government sources.
-              Free to browse. No account needed.
+            {/* Sub — Inter, man-page register */}
+            <p className="text-[var(--ink)]/85 text-lg sm:text-xl max-w-2xl leading-relaxed">
+              Alberta&apos;s data substrate. One subscription.{" "}
+              <span className="text-[var(--mid)]">
+                {chartCount}+ live charts from {dataSources.length} government sources. Free to browse,
+                no account needed.
+              </span>
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="flex flex-col sm:flex-row items-start gap-3">
             <Link
               href="/charts"
-              className="flex items-center gap-2 px-7 py-3.5 bg-accent text-white rounded-2xl font-semibold hover:bg-accent-hover transition-colors text-base shadow-lg shadow-accent/20"
+              className="flex items-center gap-2 px-6 py-3 bg-[var(--ink)] text-[var(--ink-inv)] font-medium hover:bg-[var(--amber)] hover:text-[var(--ink)] transition-colors text-sm"
+              style={{ transitionDuration: "var(--dur-instant)" }}
             >
               Explore free charts
-              <ArrowRight size={18} />
+              <TArrowRight size={16} />
             </Link>
             <Link
               href="/pricing"
-              className="px-7 py-3.5 border border-card-border rounded-2xl text-foreground hover:bg-card transition-colors text-base"
+              className="px-6 py-3 border border-[var(--ink)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--ink-inv)] transition-colors text-sm"
+              style={{ transitionDuration: "var(--dur-instant)" }}
             >
               See professional tools
             </Link>
@@ -234,31 +249,31 @@ export default function LandingPage() {
       </section>
 
       {/* ── Trust bar ── */}
-      <section className="relative border-y border-card-border bg-card/60 backdrop-blur-sm">
+      <section className="relative border-y border-[var(--border)] bg-[var(--surface-elevated)]/60 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto px-6 py-6">
-          <p className="text-center text-[11px] text-muted/60 uppercase tracking-widest font-medium mb-4">
+          <p className="text-center text-[11px] text-[var(--mid)] uppercase tracking-widest font-medium mb-4">
             100% public government data from
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm text-muted font-medium">
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm text-[var(--mid)] font-medium">
             {trustSources.map((name) => (
               <span key={name} className="flex items-center gap-1.5">
-                <Shield size={12} className="text-accent/50" />
+                <Shield size={12} className="text-[var(--mid)]/60" />
                 {name}
               </span>
             ))}
-            <span className="text-muted/40">+ {dataSources.length - trustSources.length} more</span>
+            <span className="text-[var(--mid)]/50">+ {dataSources.length - trustSources.length} more</span>
           </div>
         </div>
       </section>
 
       {/* ── What you can do — tabbed section ── */}
-      <section className="relative">
+      <section className="relative bg-[var(--surface)]">
         <div className="max-w-5xl mx-auto px-6 py-16 lg:py-24">
           <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink)]">
               One platform, built for how you work
             </h2>
-            <p className="text-base text-muted mt-3 max-w-xl mx-auto leading-relaxed">
+            <p className="text-base text-[var(--mid)] mt-3 max-w-xl mx-auto leading-relaxed">
               Whether you{"'"}re browsing trends, closing deals, or briefing council —
               the data is already here.
             </p>
@@ -269,30 +284,30 @@ export default function LandingPage() {
       </section>
 
       {/* ── Social proof / credibility ── */}
-      <section className="relative border-y border-card-border bg-card/60 backdrop-blur-sm">
+      <section className="relative border-y border-[var(--border)] bg-[var(--surface-elevated)]/60 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto px-6 py-12 lg:py-16">
           <div className="grid sm:grid-cols-3 gap-8 text-center">
             <div className="space-y-2">
-              <p className="text-3xl font-bold text-accent">{totalFeeds}+</p>
-              <p className="text-sm text-muted">Live government data feeds</p>
+              <p className="font-mono text-3xl font-bold text-[var(--ink)] tracking-tight">{totalFeeds}+</p>
+              <p className="text-sm text-[var(--mid)]">Live government data feeds</p>
             </div>
             <div className="space-y-2">
-              <p className="text-3xl font-bold text-accent">{liveMunicipalities.length}</p>
-              <p className="text-sm text-muted">Alberta municipalities</p>
+              <p className="font-mono text-3xl font-bold text-[var(--ink)] tracking-tight">{liveMunicipalities.length}</p>
+              <p className="text-sm text-[var(--mid)]">Alberta municipalities</p>
             </div>
             <div className="space-y-2">
-              <p className="text-3xl font-bold text-accent">{chartCount}+</p>
-              <p className="text-sm text-muted">Charts you can browse right now</p>
+              <p className="font-mono text-3xl font-bold text-[var(--ink)] tracking-tight">{chartCount}+</p>
+              <p className="text-sm text-[var(--mid)]">Charts you can browse right now</p>
             </div>
           </div>
 
           <div className="mt-10 max-w-lg mx-auto text-center">
-            <p className="text-sm text-muted leading-relaxed italic">
+            <p className="text-sm text-[var(--mid)] leading-relaxed italic">
               &ldquo;Every chart pulls directly from government APIs — not scraped,
               not estimated, not stale. When the Bank of Canada updates a rate,
               you see it here within the hour.&rdquo;
             </p>
-            <p className="text-xs text-muted/60 mt-3 flex items-center justify-center gap-1.5">
+            <p className="text-xs text-[var(--mid)]/70 mt-3 flex items-center justify-center gap-1.5">
               <MapPin size={11} />
               Built in Parkland County, Alberta
               <img src="/mapleleaf.svg" alt="" width={12} height={12} className="opacity-40" />
@@ -302,25 +317,26 @@ export default function LandingPage() {
       </section>
 
       {/* ── Final CTA ── */}
-      <section className="relative py-16 lg:py-24">
+      <section className="relative py-16 lg:py-24 bg-[var(--surface)]">
         <div className="max-w-lg mx-auto text-center space-y-5 px-6">
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink)]">
             Start exploring — it{"'"}s free
           </h2>
-          <p className="text-base text-muted leading-relaxed">
+          <p className="text-base text-[var(--mid)] leading-relaxed">
             No account, no trial, no credit card.
             Just {chartCount}+ live Alberta data charts.
           </p>
           <Link
             href="/charts"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-accent text-white rounded-2xl font-semibold hover:bg-accent-hover transition-colors text-lg shadow-lg shadow-accent/20"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-[var(--ink)] text-[var(--ink-inv)] font-semibold hover:bg-[var(--amber)] hover:text-[var(--ink)] transition-colors text-sm"
+            style={{ transitionDuration: "var(--dur-instant)" }}
           >
             Browse the chart catalogue
-            <ArrowRight size={18} />
+            <TArrowRight size={16} />
           </Link>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-[var(--mid)]">
             Professional tools?{" "}
-            <Link href="/pricing" className="text-accent hover:underline">
+            <Link href="/pricing" className="text-[var(--ink)] underline decoration-[var(--mid)]/40 underline-offset-4 hover:decoration-[var(--amber)]">
               See pricing
             </Link>
           </p>
@@ -328,22 +344,22 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="relative border-t border-card-border bg-card/60 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted/60">
+      <footer className="relative border-t border-[var(--border)] bg-[var(--surface-elevated)]/60 backdrop-blur-sm">
+        <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[var(--mid)]/80">
           <div className="flex items-center gap-2.5">
-            <Activity size={14} className="text-accent" />
-            <span>Alberta Pulse Check</span>
-            <span className="text-card-border">|</span>
+            <Activity size={14} className="text-[var(--amber)]" />
+            <span>Tamrack</span>
+            <span className="text-[var(--border)]">|</span>
             <span>Built in Parkland County, Alberta</span>
             <img src="/mapleleaf.svg" alt="" width={12} height={12} className="opacity-30" />
           </div>
           <div className="flex items-center gap-5">
-            <Link href="/charts" className="hover:text-foreground transition-colors">Charts</Link>
-            <Link href="/learn" className="hover:text-foreground transition-colors">Learn</Link>
-            <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
-            <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-            <Link href="/login" className="hover:text-foreground transition-colors">Sign in</Link>
+            <Link href="/charts" className="hover:text-[var(--ink)] transition-colors">Charts</Link>
+            <Link href="/learn" className="hover:text-[var(--ink)] transition-colors">Learn</Link>
+            <Link href="/pricing" className="hover:text-[var(--ink)] transition-colors">Pricing</Link>
+            <Link href="/terms" className="hover:text-[var(--ink)] transition-colors">Terms</Link>
+            <Link href="/privacy" className="hover:text-[var(--ink)] transition-colors">Privacy</Link>
+            <Link href="/login" className="hover:text-[var(--ink)] transition-colors">Sign in</Link>
           </div>
         </div>
       </footer>

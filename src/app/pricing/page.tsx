@@ -1,230 +1,109 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Activity, Check, ArrowRight, BarChart3, Building2, GraduationCap, Home } from "lucide-react";
+import { chartsFeatures, learnFeatures } from "@/lib/plans";
+import { SITE_URL } from "@/lib/constants/site";
+import { Wordmark } from "@/components/brand/wordmark";
+import { TCheck } from "@/components/icons/t3";
 
 export const metadata: Metadata = {
-  title: "Pricing — Alberta Pulse Check",
-  description: "Free charts and dashboards for Alberta economic data. Pro tier at $29/mo for deep-dive analysis, municipality details, and briefings. 14-day free trial.",
+  title: "Pricing — Tamrack",
+  description: "Free charts and dashboards for Alberta economic data. Tamrack tier coming soon.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/pricing",
+    canonical: `${SITE_URL}/pricing`,
   },
 };
 
-// 1.3.8 — 4-product pricing model
-
-const chartsFeatures = [
-  "Browse 110+ live data charts",
-  "Embed any chart on your website",
-  "Share via link, X, or LinkedIn",
-  "Filter by category and keyword",
-  "SEO-friendly permalink pages",
-  "No account required",
-];
-
-const edoFeatures = [
-  "Dedicated dashboard for your municipality",
-  "Community profile generator (PDF export)",
-  "Peer municipality comparison (2-5 at once)",
-  "Automated trend alerts dashboard",
-  "Council-ready report templates",
-  "Investment pitch kit builder",
-  "Priority support",
-];
-
-const realEstateFeatures = [
-  "Market intelligence dashboard",
-  "Development permit tracking & alerts",
-  "Neighbourhood deep-dive reports",
-  "Listing presentation data packs",
-  "Assessment trend analysis",
-  "Client-ready PDF exports",
-];
-
-const learnFeatures = [
-  "8-module Alberta economics course",
-  "Interactive quizzes with live data",
-  "Embedded Pulse Charts in every lesson",
-  "Certificate of completion",
-  "Shareable on LinkedIn",
-  "No account required to start",
-];
+// Pricing model (post-EDO/Realtor sunset, 2026-05-18):
+//   Charts (free) + Learn (free) + Tamrack ($9/mo flat + metered overage, placeholder).
+// EDO ($299/mo) and Real Estate ($49/mo) were sunset to new signups; existing
+// subscribers continue at their current tier. See /sunset for context.
 
 export default function PricingPage() {
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-[var(--surface)]">
       {/* Header */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-accent/5 via-transparent to-transparent" />
-        <div className="relative max-w-5xl mx-auto px-4 py-16 sm:py-24 text-center space-y-4">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Activity size={28} className="text-accent" />
-            <span className="text-lg font-bold">Alberta Pulse Check</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-bold">
-            Alberta data, purpose-built for how you work
+      <section className="border-b border-[var(--hairline)]">
+        <div className="max-w-5xl mx-auto px-4 py-16 sm:py-24 space-y-6">
+          <Link
+            href="/"
+            className="flex items-center text-[var(--ink)]"
+            aria-label="Tamrack — home"
+          >
+            <Wordmark height={22} />
+          </Link>
+          <p className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--mid)]">
+            pricing · v0 · stony plain · q2 2026
+          </p>
+          <h1 className="font-mono font-extrabold text-3xl sm:text-4xl leading-[1.0] tracking-tight text-[var(--ink)]">
+            <span className="text-[var(--amber)]">&gt;</span> free charts. tamrack coming soon.
           </h1>
-          <p className="text-muted text-lg max-w-xl mx-auto">
-            Free charts for everyone. Purpose-built products for professionals.
+          <p className="text-base text-[var(--ink)]/85 max-w-xl leading-relaxed">
+            Browse Alberta data for free. A paid Tamrack tier is on the way for
+            power users.
           </p>
         </div>
       </section>
 
-      {/* Products */}
-      <section className="max-w-6xl mx-auto px-4 pb-16">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Products — instrument-grid */}
+      <section className="max-w-5xl mx-auto px-4 py-16">
+        <div className="grid md:grid-cols-3 gap-px bg-[var(--hairline)] border border-[var(--hairline)]">
           {/* Pulse Charts — Free */}
-          <div className="bg-card border border-card-border rounded-xl p-6 space-y-5">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <BarChart3 size={18} className="text-accent" />
-                <h2 className="text-lg font-bold">Pulse Charts</h2>
-              </div>
-              <div className="mt-2 flex items-baseline gap-1">
-                <span className="text-3xl font-bold">$0</span>
-                <span className="text-muted text-sm">/forever</span>
-              </div>
-              <p className="text-sm text-muted mt-2">
-                Browse, share, and embed live Alberta data charts.
-              </p>
-            </div>
-            <ul className="space-y-2.5">
-              {chartsFeatures.map((item) => (
-                <li key={item} className="flex items-start gap-2 text-sm">
-                  <Check size={15} className="text-accent-green mt-0.5 shrink-0" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-            <Link
-              href="/charts"
-              className="block text-center px-5 py-2.5 bg-accent text-white rounded-lg font-medium text-sm hover:bg-accent-hover transition-colors"
-            >
-              Browse charts
-            </Link>
-          </div>
-
-          {/* Pulse EDO — $299/mo */}
-          <div className="bg-card border-2 border-indigo-500 rounded-xl p-6 space-y-5 relative">
-            <div className="absolute -top-3 left-6">
-              <span className="px-3 py-1 bg-indigo-500 text-white text-xs font-bold rounded-full uppercase tracking-wider">
-                For EDOs
-              </span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Building2 size={18} className="text-indigo-400" />
-                <h2 className="text-lg font-bold">Pulse EDO</h2>
-              </div>
-              <div className="mt-2 flex items-baseline gap-1">
-                <span className="text-3xl font-bold">$299</span>
-                <span className="text-muted text-sm">/mo per municipality</span>
-              </div>
-              <p className="text-sm text-muted mt-2">
-                Community profiles, benchmarks, and council-ready reports.
-              </p>
-            </div>
-            <ul className="space-y-2.5">
-              {edoFeatures.map((item) => (
-                <li key={item} className="flex items-start gap-2 text-sm">
-                  <Check size={15} className="text-indigo-400 mt-0.5 shrink-0" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="space-y-2">
-              <Link
-                href="/edo/onboarding"
-                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-500 text-white rounded-lg font-medium text-sm hover:bg-indigo-600 transition-colors"
-              >
-                Get started
-                <ArrowRight size={14} />
-              </Link>
-            </div>
-          </div>
-
-          {/* Pulse Real Estate — $49/mo */}
-          <div className="bg-card border-2 border-teal-500 rounded-xl p-6 space-y-5 relative">
-            <div className="absolute -top-3 left-6">
-              <span className="px-3 py-1 bg-teal-500 text-white text-xs font-bold rounded-full uppercase tracking-wider">
-                For Real Estate
-              </span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Home size={18} className="text-teal-400" />
-                <h2 className="text-lg font-bold">Pulse Real Estate</h2>
-              </div>
-              <div className="mt-2 flex items-baseline gap-1">
-                <span className="text-3xl font-bold">$49</span>
-                <span className="text-muted text-sm">/mo per seat</span>
-              </div>
-              <p className="text-sm text-muted mt-2">
-                Market intelligence, development permit tracking, neighbourhood deep dives, and branded reports you can hand to clients.
-              </p>
-            </div>
-            <ul className="space-y-2.5">
-              {realEstateFeatures.map((item) => (
-                <li key={item} className="flex items-start gap-2 text-sm">
-                  <Check size={15} className="text-teal-400 mt-0.5 shrink-0" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-            <Link
-              href="/subscribe?plan=realtor"
-              className="block text-center px-5 py-2.5 bg-teal-500 text-white rounded-lg font-medium text-sm hover:bg-teal-600 transition-colors"
-            >
-              Get started — $49/mo
-            </Link>
-          </div>
+          <PlanCard
+            label="charts · free · public · v0"
+            name="Pulse Charts"
+            price="$0"
+            cadence="forever"
+            description="Browse, share, and embed live Alberta data charts."
+            features={chartsFeatures}
+            cta={{ href: "/charts", label: "Browse charts" }}
+            primary={false}
+          />
 
           {/* Pulse Learn — Free */}
-          <div className="bg-card border border-card-border rounded-xl p-6 space-y-5">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <GraduationCap size={18} className="text-accent-green" />
-                <h2 className="text-lg font-bold">Pulse Learn</h2>
-              </div>
-              <div className="mt-2 flex items-baseline gap-1">
-                <span className="text-3xl font-bold">$0</span>
-                <span className="text-muted text-sm">/forever</span>
-              </div>
-              <p className="text-sm text-muted mt-2">
-                Learn Alberta economics with live data and earn a certificate.
-              </p>
-            </div>
-            <ul className="space-y-2.5">
-              {learnFeatures.map((item) => (
-                <li key={item} className="flex items-start gap-2 text-sm">
-                  <Check size={15} className="text-accent-green mt-0.5 shrink-0" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-            <Link
-              href="/learn"
-              className="block text-center px-5 py-2.5 border border-card-border rounded-lg text-foreground hover:bg-card-border/30 transition-colors font-medium text-sm"
-            >
-              Start learning — free
-            </Link>
-          </div>
+          <PlanCard
+            label="learn · free · 8 modules · alberta"
+            name="Pulse Learn"
+            price="$0"
+            cadence="forever"
+            description="Learn Alberta economics with live data. Earn a certificate."
+            features={learnFeatures}
+            cta={{ href: "/learn", label: "Start learning — free" }}
+            primary={false}
+          />
+
+          {/* Tamrack — placeholder, the amber tier */}
+          <PlanCard
+            label="tamrack · paid · api + mcp · alpha"
+            name="Tamrack"
+            price="$9"
+            cadence="/mo flat + metered overage"
+            description="Paid tier for API access, programmatic dashboards, and higher quotas. Pricing locks in before launch."
+            features={[
+              "50,000 included units / month",
+              "Metered overage billed via Stripe",
+              "API + MCP tool access",
+            ]}
+            cta={{ href: "#", label: "Not yet available", disabled: true }}
+            primary={true}
+            badge="coming soon"
+          />
         </div>
       </section>
 
       {/* FAQ */}
-      <section className="max-w-5xl mx-auto px-4 pb-16">
-        <h2 className="text-center text-sm font-medium text-muted uppercase tracking-wider mb-8">
-          Frequently asked questions
-        </h2>
-        <div className="grid sm:grid-cols-2 gap-6">
+      <section className="max-w-5xl mx-auto px-4 pb-16 border-t border-[var(--hairline)] pt-12">
+        <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--mid)] mb-8">
+          faq · most-asked · town hall fielding
+        </p>
+        <div className="grid sm:grid-cols-2 gap-px bg-[var(--hairline)] border border-[var(--hairline)]">
           {[
             {
               q: "Is Pulse Charts really free?",
               a: "Yes. All charts are free to browse, embed, and share. No account needed, no trial, no catch.",
             },
             {
-              q: "What's included in Pulse EDO?",
-              a: "Community profiles, peer comparison across 25+ indicators, trend alerts, council-ready reports, and investment pitch kits — all with PDF export. $299/mo per municipality.",
+              q: "What happened to Pulse EDO and Pulse Real Estate?",
+              a: "Both are closed to new signups as of May 2026. Existing subscribers continue at their current price with the same dashboards, exports, and data. See /sunset for details.",
             },
             {
               q: "Can I cancel anytime?",
@@ -235,39 +114,128 @@ export default function PricingPage() {
               a: "Visa, Mastercard, and American Express via Stripe. All prices are in Canadian dollars.",
             },
             {
-              q: "Can I add multiple municipalities to an EDO plan?",
-              a: "Each municipality is $299/mo. Contact us for volume pricing on regional districts.",
+              q: "When does Tamrack launch?",
+              a: "No public date yet. The shape is $9/mo flat with 50k included units and metered overage. Final pricing and features lock in before launch.",
             },
             {
               q: "Where does the data come from?",
               a: "100% public government data from 18 providers including Bank of Canada, Statistics Canada, Alberta Regional Dashboard, and more — 185+ data feeds updated hourly.",
             },
           ].map((faq) => (
-            <div key={faq.q} className="bg-card border border-card-border rounded-xl p-5 space-y-2">
-              <h3 className="font-semibold text-sm">{faq.q}</h3>
-              <p className="text-sm text-muted">{faq.a}</p>
+            <div
+              key={faq.q}
+              className="bg-[var(--surface-elevated)] p-5 space-y-2"
+            >
+              <h3 className="font-mono text-xs tracking-[0.06em] uppercase text-[var(--ink)] font-semibold">
+                {faq.q}
+              </h3>
+              <p className="text-sm text-[var(--ink)]/80 leading-relaxed">{faq.a}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-card-border">
-        <div className="max-w-5xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted/50">
-          <div className="flex items-center gap-2">
-            <Activity size={14} className="text-accent" />
-            <span>Alberta Pulse Check</span>
+      <footer className="border-t border-[var(--hairline)] bg-[var(--surface)]">
+        <div className="max-w-5xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-[var(--mid)]">
+            <Wordmark height={14} />
+            <span className="font-mono text-[10px] tracking-[0.14em] uppercase">
+              &copy; {new Date().getFullYear()}
+            </span>
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="/charts" className="hover:text-foreground transition-colors">Charts</Link>
-            <Link href="/learn" className="hover:text-foreground transition-colors">Learn</Link>
-            <Link href="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
-            <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-            <Link href="/login" className="hover:text-foreground transition-colors">Sign in</Link>
+          <div className="flex items-center gap-5 font-mono text-[10px] tracking-[0.14em] uppercase text-[var(--mid)]">
+            <Link href="/charts" className="hover:text-[var(--amber)] transition-colors">Charts</Link>
+            <Link href="/learn" className="hover:text-[var(--amber)] transition-colors">Learn</Link>
+            <Link href="/pricing" className="hover:text-[var(--amber)] transition-colors">Pricing</Link>
+            <Link href="/terms" className="hover:text-[var(--amber)] transition-colors">Terms</Link>
+            <Link href="/privacy" className="hover:text-[var(--amber)] transition-colors">Privacy</Link>
+            <Link href="/login" className="hover:text-[var(--amber)] transition-colors">Sign in</Link>
           </div>
         </div>
       </footer>
     </main>
+  );
+}
+
+/**
+ * A pricing tile in the instrument-grid. Border collapses with siblings
+ * via the parent's `gap-px` + `bg-[var(--hairline)]` trick.
+ */
+function PlanCard({
+  label,
+  name,
+  price,
+  cadence,
+  description,
+  features,
+  cta,
+  primary,
+  badge,
+}: {
+  label: string;
+  name: string;
+  price: string;
+  cadence: string;
+  description: string;
+  features: readonly string[];
+  cta: { href: string; label: string; disabled?: boolean };
+  primary: boolean;
+  badge?: string;
+}) {
+  return (
+    <div className="bg-[var(--surface-elevated)] p-6 space-y-5">
+      <div className="flex items-center justify-between font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--mid)] pb-2.5 border-b border-[var(--hairline)]">
+        <span className="truncate">{label}</span>
+        {badge && (
+          <span className="shrink-0 ml-2 text-[var(--amber)]">{badge}</span>
+        )}
+      </div>
+
+      <div>
+        <h2 className="font-mono text-lg font-semibold text-[var(--ink)]">
+          {name}
+        </h2>
+        <div className="mt-3 flex items-baseline gap-2">
+          <span
+            className={`font-mono font-extrabold text-4xl tracking-tight ${
+              primary ? "text-[var(--amber)]" : "text-[var(--ink)]"
+            }`}
+          >
+            {price}
+          </span>
+          <span className="font-mono text-xs text-[var(--mid)]">{cadence}</span>
+        </div>
+        <p className="text-sm text-[var(--ink)]/85 mt-3 leading-relaxed">
+          {description}
+        </p>
+      </div>
+
+      <ul className="space-y-2.5 border-t border-[var(--hairline)] pt-4">
+        {features.map((item) => (
+          <li key={item} className="flex items-start gap-2.5 text-sm text-[var(--ink)]/85">
+            <TCheck
+              size={14}
+              className={`shrink-0 mt-0.5 ${primary ? "text-[var(--amber)]" : "text-[var(--ink)]"}`}
+            />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+
+      {cta.disabled ? (
+        <div className="block text-center px-5 py-2.5 border border-[var(--hairline)] text-[var(--mid)] font-mono text-xs tracking-[0.14em] uppercase cursor-not-allowed">
+          {cta.label}
+        </div>
+      ) : (
+        <Link
+          href={cta.href}
+          className="block text-center px-5 py-2.5 bg-[var(--ink)] text-[var(--ink-inv)] hover:bg-[var(--amber)] hover:text-[var(--ink)] transition-colors text-sm font-medium"
+          style={{ transitionDuration: "var(--dur-instant)" }}
+        >
+          {cta.label}
+        </Link>
+      )}
+    </div>
   );
 }

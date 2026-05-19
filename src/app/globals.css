@@ -1,106 +1,224 @@
 @import "tailwindcss";
 
+/* ============================================================
+   Tamrack — T3 Terminal design tokens
+   Source of truth: tamrack/brand/identity/colors.md (locked 2026-05-18)
+   Amber locked at #E0A03A. Do not drift.
+   ============================================================ */
+
 /* ── Light mode (default) ── */
 :root {
-  --background: #faf8f5;
-  --foreground: #1a1a2e;
-  --card: #ffffff;
-  --card-border: #e8e5df;
-  --accent: #c06a2b;
-  --accent-hover: #a5591f;
-  --accent-gold: #c8942a;
-  --accent-green: #16803c;
-  --accent-amber: #b45309;
-  --accent-red: #dc2626;
-  --muted: #6b7280;
-  --grid: #e5e7eb;
-  --tooltip-bg: #ffffff;
-  --tooltip-border: #e2e4e9;
-  --tooltip-text: #1a1a2e;
-  --axis: #9ca3af;
+  /* Brand primitives — six colors, that's the discipline */
+  --page:     #FAFAF7;
+  --page-inv: #0B0C0E;
+  --ink:      #0E0E0E;
+  --ink-inv:  #E8E8E5;
+  --mid:      #6E6E68;
+  --amber:    #E0A03A;
+  --counter:  #3E5C5C; /* teal counter — sparing use */
 
-  /* ── Category accent colors ── */
-  --cat-overview: #c06a2b;
-  --cat-economy: #16803c;
-  --cat-realestate: #2563eb;
-  --cat-intelligence: #7c3aed;
-  --cat-environment: #0d9488;
-  --cat-safety: #b45309;
-  --cat-politics: #6366f1;
-  --cat-municipalities: #c06a2b;
-  --cat-tools: #64748b;
-  --cat-health: #dc2626;
-  --cat-learn: #0ea5e9;
+  /* Surface tokens by role (theme-swappable) */
+  --surface:          var(--page);
+  --surface-elevated: #FFFFFF;
+  --border:           #E3E3DE;
+  --hairline:         #E3E3DE;
+
+  /* Data ramp — monochrome luminance, 6 steps */
+  --data-100: #0E0E0E;
+  --data-80:  #3C3C39;
+  --data-60:  #6E6E68;
+  --data-40:  #9A9A93;
+  --data-20:  #C8C8C2;
+  --data-10:  #E3E3DE;
+
+  /* Motion tokens */
+  --ease-decisive: cubic-bezier(0.2, 0, 0, 1);
+  --ease-state:    cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-pulse:    cubic-bezier(0.45, 0, 0.55, 1);
+  --dur-instant: 80ms;
+  --dur-fast:    160ms;
+  --dur-medium:  240ms;
+  --dur-slow:    480ms;
+
+  /* Legacy compatibility shims — point old names at the T3 system.
+     These keep ~300 pages of unrelated code rendering while we sweep. */
+  --background:   var(--surface);
+  --foreground:   var(--ink);
+  --card:         var(--surface-elevated);
+  --card-border:  var(--border);
+  --accent:       var(--amber);
+  --accent-hover: #C88A2A; /* one-step luminance shift on amber */
+  --accent-gold:  var(--amber);
+  --accent-green: var(--counter);
+  --accent-amber: var(--amber);
+  --accent-red:   #C84A28; /* desaturated for the instrument register */
+  --muted:        var(--mid);
+  --grid:         var(--data-10);
+  --tooltip-bg:        var(--surface-elevated);
+  --tooltip-border:    var(--border);
+  --tooltip-text:      var(--ink);
+  --axis:              var(--mid);
+
+  /* Category accent colors — collapse to the T3 dialect.
+     Every legacy "category" reads as ink or counter; amber stays signal-only. */
+  --cat-overview:       var(--ink);
+  --cat-economy:        var(--ink);
+  --cat-realestate:     var(--ink);
+  --cat-intelligence:   var(--ink);
+  --cat-environment:    var(--ink);
+  --cat-safety:         var(--ink);
+  --cat-politics:       var(--ink);
+  --cat-municipalities: var(--ink);
+  --cat-tools:          var(--mid);
+  --cat-health:         var(--ink);
+  --cat-learn:          var(--ink);
 }
 
-/* ── Dark mode ── */
+/* ── Dark mode — class-based (next-themes attribute="class") ── */
 .dark {
-  --background: #0c0f14;
-  --foreground: #f0f1f3;
-  --card: #161a22;
-  --card-border: #252a34;
-  --accent: #d4863a;
-  --accent-hover: #e09a54;
-  --accent-gold: #d4a843;
-  --accent-green: #22c55e;
-  --accent-amber: #f59e0b;
-  --accent-red: #ef4444;
-  --muted: #8b919d;
-  --grid: #252a34;
-  --tooltip-bg: #1e2330;
-  --tooltip-border: #303848;
-  --tooltip-text: #f0f1f3;
-  --axis: #6b7280;
+  --page:     #0B0C0E;
+  --page-inv: #FAFAF7;
+  --ink:      #E8E8E5;
+  --ink-inv:  #0E0E0E;
+  /* mid / amber / counter hold across modes by design */
 
-  /* ── Category accent colors (dark) ── */
-  --cat-overview: #d4863a;
-  --cat-economy: #22c55e;
-  --cat-realestate: #60a5fa;
-  --cat-intelligence: #a78bfa;
-  --cat-environment: #2dd4bf;
-  --cat-safety: #f59e0b;
-  --cat-politics: #818cf8;
-  --cat-municipalities: #d4863a;
-  --cat-tools: #94a3b8;
-  --cat-health: #ef4444;
-  --cat-learn: #38bdf8;
+  --surface:          var(--page);
+  --surface-elevated: #131418;
+  --border:           #1A1B1E;
+  --hairline:         #1A1B1E;
+
+  --data-100: #E8E8E5;
+  --data-80:  #BFBFBA;
+  --data-60:  #6E6E68;
+  --data-40:  #4A4A47;
+  --data-20:  #2A2B2E;
+  --data-10:  #1A1B1E;
+
+  /* Legacy shims (dark) */
+  --background:   var(--surface);
+  --foreground:   var(--ink);
+  --card:         var(--surface-elevated);
+  --card-border:  var(--border);
+  --accent:       var(--amber);
+  --accent-hover: #F0B450;
+  --accent-gold:  var(--amber);
+  --accent-green: var(--counter);
+  --accent-amber: var(--amber);
+  --accent-red:   #E0644A;
+  --muted:        var(--mid);
+  --grid:         var(--data-10);
+  --tooltip-bg:   var(--surface-elevated);
+  --tooltip-border: var(--border);
+  --tooltip-text: var(--ink);
+  --axis:         var(--mid);
+
+  --cat-overview:       var(--ink);
+  --cat-economy:        var(--ink);
+  --cat-realestate:     var(--ink);
+  --cat-intelligence:   var(--ink);
+  --cat-environment:    var(--ink);
+  --cat-safety:         var(--ink);
+  --cat-politics:       var(--ink);
+  --cat-municipalities: var(--ink);
+  --cat-tools:          var(--mid);
+  --cat-health:         var(--ink);
+  --cat-learn:          var(--ink);
 }
 
+/* ── Tailwind v4 @theme: expose tokens as utility classes ── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-border: var(--card-border);
-  --color-accent: var(--accent);
-  --color-accent-hover: var(--accent-hover);
-  --color-accent-gold: var(--accent-gold);
-  --color-accent-green: var(--accent-green);
-  --color-accent-amber: var(--accent-amber);
-  --color-accent-red: var(--accent-red);
-  --color-muted: var(--muted);
-  --color-grid: var(--grid);
-  --color-cat-overview: var(--cat-overview);
-  --color-cat-economy: var(--cat-economy);
-  --color-cat-realestate: var(--cat-realestate);
-  --color-cat-intelligence: var(--cat-intelligence);
-  --color-cat-environment: var(--cat-environment);
-  --color-cat-safety: var(--cat-safety);
-  --color-cat-politics: var(--cat-politics);
+  /* T3 native tokens — use these going forward */
+  --color-page:             var(--page);
+  --color-page-inv:         var(--page-inv);
+  --color-ink:              var(--ink);
+  --color-ink-inv:          var(--ink-inv);
+  --color-mid:              var(--mid);
+  --color-amber:            var(--amber);
+  --color-counter:          var(--counter);
+  --color-surface:          var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border:           var(--border);
+  --color-hairline:         var(--hairline);
+
+  /* Legacy aliases — keep utilities like bg-card, text-muted compiling */
+  --color-background:    var(--background);
+  --color-foreground:    var(--foreground);
+  --color-card:          var(--card);
+  --color-card-border:   var(--card-border);
+  --color-accent:        var(--accent);
+  --color-accent-hover:  var(--accent-hover);
+  --color-accent-gold:   var(--accent-gold);
+  --color-accent-green:  var(--accent-green);
+  --color-accent-amber:  var(--accent-amber);
+  --color-accent-red:    var(--accent-red);
+  --color-muted:         var(--muted);
+  --color-grid:          var(--grid);
+  --color-cat-overview:       var(--cat-overview);
+  --color-cat-economy:        var(--cat-economy);
+  --color-cat-realestate:     var(--cat-realestate);
+  --color-cat-intelligence:   var(--cat-intelligence);
+  --color-cat-environment:    var(--cat-environment);
+  --color-cat-safety:         var(--cat-safety);
+  --color-cat-politics:       var(--cat-politics);
   --color-cat-municipalities: var(--cat-municipalities);
-  --color-cat-tools: var(--cat-tools);
-  --color-cat-health: var(--cat-health);
-  --color-cat-learn: var(--cat-learn);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-cat-tools:          var(--cat-tools);
+  --color-cat-health:         var(--cat-health);
+  --color-cat-learn:          var(--cat-learn);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
+/* ── Base ── */
 html {
   overflow-x: hidden;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── T3 Smart-UI signature moments (motion.md) ── */
+
+/* Live-dot pulse — 2s loop, amber, instrument-unhurried */
+@keyframes tamrack-pulse-live {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(224, 160, 58, 0.50); }
+  50%      { box-shadow: 0 0 0 6px rgba(224, 160, 58, 0.00); }
+}
+.tamrack-dot-live {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+  display: inline-block;
+  box-shadow: 0 0 0 0 rgba(224, 160, 58, 0.5);
+  animation: tamrack-pulse-live 2.0s var(--ease-pulse) infinite;
+}
+
+/* Data-fetched flash — single 400ms border ping */
+@keyframes tamrack-flash-fetched {
+  0%, 100% { border-color: rgba(110, 110, 104, 0.30); }
+  20%      { border-color: var(--amber); }
+}
+.tamrack-card-fetched {
+  animation: tamrack-flash-fetched 400ms var(--ease-state) 1;
+}
+
+/* prefers-reduced-motion — strip the signature, keep the information */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .tamrack-dot-live      { animation: none; }
+  .tamrack-card-fetched  { animation: none; }
 }

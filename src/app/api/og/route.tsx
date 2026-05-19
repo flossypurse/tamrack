@@ -2,37 +2,33 @@ import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
 
+/**
+ * OG image — T3 Terminal chrome.
+ *
+ *   - dark page (#0B0C0E), warm-ink type (#E8E8E5)
+ *   - amber wordmark, mono tagline, mono section labels
+ *   - no decorative gradients or radial glows (anti-Vercel-default discipline)
+ *   - source/place label in the corner anchors the "the docs are the brand"
+ *     register and the rooted-ness anti-drift rule
+ */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const title = searchParams.get("title");
   const subtitle = searchParams.get("subtitle") || "";
-  const type = searchParams.get("type") || "data";
 
   if (!title) {
     return new Response("Missing required query param: title", { status: 400 });
   }
 
-  const RUST = "#d4863a";
-  const BG = "#0c0f14";
-  const MUTED = "#9ca3af";
+  // Locked T3 tokens. Amber stays at #E0A03A.
+  const PAGE = "#0B0C0E";
+  const INK = "#E8E8E5";
+  const MID = "#6E6E68";
+  const AMBER = "#E0A03A";
+  const HAIRLINE = "#1A1B1E";
 
-  const mapPinSvg = (
-    <svg
-      width="28"
-      height="36"
-      viewBox="0 0 24 32"
-      fill="none"
-      style={{ marginRight: "10px" }}
-    >
-      <path
-        d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20s12-11 12-20c0-6.627-5.373-12-12-12zm0 16a4 4 0 110-8 4 4 0 010 8z"
-        fill={RUST}
-      />
-    </svg>
-  );
-
-  // Dynamic font size based on title length
-  const titleSize = title.length > 50 ? 36 : title.length > 30 ? 44 : 52;
+  // Dynamic title sizing — the mono cut is denser at large sizes
+  const titleSize = title.length > 50 ? 48 : title.length > 30 ? 60 : 72;
 
   return new ImageResponse(
     (
@@ -42,77 +38,83 @@ export async function GET(request: Request) {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
-          backgroundColor: BG,
-          padding: "60px",
-          fontFamily: "sans-serif",
+          backgroundColor: PAGE,
+          padding: "64px 72px",
+          fontFamily: "monospace",
           position: "relative",
-          overflow: "hidden",
         }}
       >
-        {/* Gradient accent line at top */}
+        {/* Top label-strip — instrument register */}
         <div
           style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: "5px",
-            background: `linear-gradient(to right, ${RUST}, ${RUST}44, transparent)`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingBottom: "20px",
+            borderBottom: `1px solid ${HAIRLINE}`,
+            fontSize: 14,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            color: MID,
           }}
-        />
+        >
+          <span>tamrack · alberta data substrate</span>
+          <span>tamrack.ca</span>
+        </div>
 
-        {/* Subtle gradient overlay in top-right corner */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            right: 0,
-            width: "500px",
-            height: "500px",
-            background: `radial-gradient(circle at top right, ${RUST}12, transparent 70%)`,
-          }}
-        />
-
-        {/* Main content */}
+        {/* Main block */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             flex: 1,
             justifyContent: "center",
+            paddingTop: "40px",
+            paddingBottom: "40px",
           }}
         >
-          {/* Title row — with optional map pin for municipality type */}
+          {/* Amber prompt + title */}
           <div
             style={{
               display: "flex",
               alignItems: "flex-start",
+              gap: "20px",
             }}
           >
-            {type === "municipality" && mapPinSvg}
-            <div
+            <span
               style={{
                 fontSize: titleSize,
-                fontWeight: 700,
-                color: "#ffffff",
-                lineHeight: 1.2,
-                maxWidth: "1000px",
+                fontWeight: 800,
+                color: AMBER,
+                lineHeight: 0.95,
+                letterSpacing: "-0.04em",
+              }}
+            >
+              &gt;
+            </span>
+            <span
+              style={{
+                fontSize: titleSize,
+                fontWeight: 800,
+                color: INK,
+                lineHeight: 0.95,
+                letterSpacing: "-0.04em",
+                maxWidth: "950px",
               }}
             >
               {title}
-            </div>
+            </span>
           </div>
 
-          {/* Subtitle */}
           {subtitle && (
             <div
               style={{
-                fontSize: 24,
-                color: MUTED,
+                fontSize: 26,
+                color: MID,
                 lineHeight: 1.4,
                 maxWidth: "900px",
-                marginTop: "16px",
+                marginTop: "32px",
+                letterSpacing: "0",
               }}
             >
               {subtitle}
@@ -120,51 +122,22 @@ export async function GET(request: Request) {
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer — source/fetched label, mono caps */}
         <div
           style={{
             display: "flex",
+            alignItems: "center",
             justifyContent: "space-between",
-            alignItems: "flex-end",
+            paddingTop: "20px",
+            borderTop: `1px solid ${HAIRLINE}`,
+            fontSize: 14,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            color: MID,
           }}
         >
-          {/* Branding bottom-left */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-            }}
-          >
-            <div
-              style={{
-                width: "12px",
-                height: "12px",
-                backgroundColor: RUST,
-                borderRadius: "2px",
-                transform: "rotate(45deg)",
-              }}
-            />
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: 600,
-                color: RUST,
-              }}
-            >
-              Alberta Pulse Check
-            </div>
-          </div>
-
-          {/* URL bottom-right */}
-          <div
-            style={{
-              fontSize: 16,
-              color: "#52525b",
-            }}
-          >
-            albertapulsecheck.ca
-          </div>
+          <span style={{ color: INK }}>the stories the data tells.</span>
+          <span>stony plain · alberta</span>
         </div>
       </div>
     ),
