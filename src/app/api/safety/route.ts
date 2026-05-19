@@ -8,7 +8,7 @@ import {
 
 // GET /api/safety?type=alerts|mlas|districts
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateApiRequest(request);
+  const authResult = await authenticateApiRequest(request, { requiredScopes: ["tamrack:economy:read"] });
   if (!authResult.authorized) return authResult.response;
 
   const { searchParams } = new URL(request.url);

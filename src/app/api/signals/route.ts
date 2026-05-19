@@ -12,7 +12,7 @@ import {
 // These are the "value-add" computations built on top of raw municipal APIs
 
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateApiRequest(request);
+  const authResult = await authenticateApiRequest(request, { requiredScopes: ["tamrack:real-estate:read"] });
   if (!authResult.authorized) return authResult.response;
 
   try {

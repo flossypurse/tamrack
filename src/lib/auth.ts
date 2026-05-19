@@ -14,9 +14,9 @@ async function sendVerificationRequest(params: {
   request: Request;
 }) {
   const { identifier: email, url } = params;
-  const domain = process.env.MAILGUN_DOMAIN || "email.albertapulsecheck.ca";
+  const domain = process.env.MAILGUN_DOMAIN || "email.tamrack.ca";
   const apiKey = process.env.MAILGUN_API_KEY;
-  const from = process.env.EMAIL_FROM || "Alberta Pulse <noreply@email.albertapulsecheck.ca>";
+  const from = process.env.EMAIL_FROM || "Tamrack <noreply@email.tamrack.ca>";
 
   if (!apiKey) {
     // Fallback: log the link for development
@@ -27,12 +27,12 @@ async function sendVerificationRequest(params: {
   const body = new FormData();
   body.append("from", from);
   body.append("to", email);
-  body.append("subject", "Sign in to Alberta Pulse Check");
+  body.append("subject", "Sign in to Tamrack");
   body.append(
     "html",
     `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">
       <div style="text-align: center; margin-bottom: 32px;">
-        <h1 style="font-size: 20px; font-weight: 600; color: #1a1a2e; margin: 0;">Alberta Pulse Check</h1>
+        <h1 style="font-size: 20px; font-weight: 600; color: #1a1a2e; margin: 0;">Tamrack</h1>
         <p style="color: #6b7280; font-size: 14px; margin-top: 4px;">Community intelligence for Alberta</p>
       </div>
       <p style="color: #374151; font-size: 15px; line-height: 1.6;">Click the button below to sign in. This link expires in 24 hours.</p>
@@ -72,7 +72,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // Server config is unused when sendVerificationRequest is provided,
       // but NextAuth requires it to be present
       server: "smtp://unused:unused@localhost:25",
-      from: process.env.EMAIL_FROM || "Alberta Pulse <noreply@email.albertapulsecheck.ca>",
+      from: process.env.EMAIL_FROM || "Tamrack <noreply@email.tamrack.ca>",
       sendVerificationRequest,
     }),
     ...(process.env.GOOGLE_CLIENT_ID
@@ -122,7 +122,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
           token.role = dbUser?.role ?? "user";
           token.subscriptionStatus = sub?.status ?? "none";
-          token.plan = sub?.plan ?? "pro";
+          // Pulse Pro was retired 2026-05-18 (phantom plan). Treat a missing
+          // or null subscription.plan as 'free' — the user has no paid tier.
+          token.plan = sub?.plan ?? "free";
           token.trialEnd = sub?.trial_end ?? null;
           token.currentPeriodEnd = sub?.current_period_end ?? null;
           token.cancelAtPeriodEnd = sub?.cancel_at_period_end === 1;

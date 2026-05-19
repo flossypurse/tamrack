@@ -5,7 +5,7 @@ import { fetchWildfireHistorical } from "@/lib/data-sources-infrastructure";
 // GET /api/wildfire
 
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateApiRequest(request);
+  const authResult = await authenticateApiRequest(request, { requiredScopes: ["tamrack:economy:read"] });
   if (!authResult.authorized) return authResult.response;
 
   try {

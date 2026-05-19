@@ -3,7 +3,7 @@
  *
  * Search + filter + paginate the tri-region operator directory. Reads the
  * `intel_operators` Postgres table via `searchIntelOperators`. Same data the
- * `alberta_entities` MCP tool serves, exposed as REST for HTTP consumers.
+ * `tamrack_entities` MCP tool serves, exposed as REST for HTTP consumers.
  *
  * Query params:
  *   - name_query   (substring, case-insensitive)

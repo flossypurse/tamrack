@@ -9,7 +9,7 @@ import {
 // Returns rental market data for Edmonton and Calgary CMAs
 
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateApiRequest(request);
+  const authResult = await authenticateApiRequest(request, { requiredScopes: ["tamrack:real-estate:read"] });
   if (!authResult.authorized) return authResult.response;
 
   try {

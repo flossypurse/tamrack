@@ -12,7 +12,7 @@ import {
 // If no municipality, return all municipalities for that indicator
 
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateApiRequest(request);
+  const authResult = await authenticateApiRequest(request, { requiredScopes: ["tamrack:regional:read"] });
   if (!authResult.authorized) return authResult.response;
 
   const indicator = request.nextUrl.searchParams.get("indicator");

@@ -1,9 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { authenticateApiRequest } from "@/lib/api-auth";
 import { computeCyclePosition } from "@/lib/cycle-engine";
 
 export const revalidate = 3600; // Cache for 1 hour
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authResult = await authenticateApiRequest(request, { requiredScopes: ["tamrack:macro:read"] });
+  if (!authResult.authorized) return authResult.response;
+
   try {
     const result = await computeCyclePosition();
 

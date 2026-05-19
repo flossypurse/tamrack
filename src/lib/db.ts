@@ -69,6 +69,52 @@ const MIGRATION_SQL = `
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
 
+    -- ─── Tamrack rebrand additions ───────────────────────────────
+    -- Plan tier lives on users (per Tamrack charter), not on api_keys.
+    -- One user → many keys → one quota. Charter values:
+    --   "free"     — no paid plan, free static dashboards only
+    --   "tamrack"  — $9/mo flat, 50k included units
+    --   "founder"  — grandfathered Pulse customers (no metering disruption)
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'free';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_units_used INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_units_resets_at TIMESTAMPTZ;
+
+    -- Early-access charter additions (2026-05-18).
+    -- comp = hand-picked free comp (Cully grants this; bypasses Stripe).
+    -- early_access = account was created via invite-redemption flow
+    --   (informational; not used for any gating today).
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS comp BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS early_access BOOLEAN NOT NULL DEFAULT FALSE;
+
+    -- Invite tokens issued by admins. token_hash is sha256 of the
+    -- plaintext token (plaintext is shown ONCE at creation). Atomic
+    -- conditional UPDATE on (redeemed_at IS NULL) prevents double-redeem.
+    CREATE TABLE IF NOT EXISTS invites (
+      id TEXT PRIMARY KEY,
+      token_hash TEXT UNIQUE NOT NULL,
+      created_by TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      email_hint TEXT,
+      redeemed_at TIMESTAMPTZ,
+      redeemed_by_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_invites_created_by ON invites(created_by, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_invites_pending ON invites(expires_at) WHERE redeemed_at IS NULL;
+
+    -- Backfill: every existing user (anyone with an api_key, an active
+    -- subscription, or otherwise pre-Tamrack) gets the founder plan so
+    -- the rebrand doesn't blow up paying customers' quotas. New rows
+    -- default to free via the column default above.
+    UPDATE users
+       SET plan = 'founder'
+     WHERE plan = 'free'
+       AND id IN (
+         SELECT DISTINCT user_id FROM api_keys
+         UNION
+         SELECT DISTINCT user_id FROM subscriptions WHERE status IN ('active','trialing','past_due')
+       );
+
     CREATE TABLE IF NOT EXISTS accounts (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -102,7 +148,11 @@ const MIGRATION_SQL = `
       user_id TEXT UNIQUE NOT NULL REFERENCES users(id),
       stripe_customer_id TEXT UNIQUE,
       status TEXT NOT NULL DEFAULT 'trialing',
-      plan TEXT DEFAULT 'pro',
+      -- Default 'free' as of 2026-05-18. 'pro' was a phantom plan that never
+      -- shipped (no Stripe product, no checkout flow, no Pulse Pro tier exists
+      -- as a paying surface). Real plans assigned via Stripe webhook are
+      -- 'edo' (sunset to new signups) or 'realtor' (sunset to new signups).
+      plan TEXT DEFAULT 'free',
       trial_start TIMESTAMPTZ,
       trial_end TIMESTAMPTZ,
       current_period_start TIMESTAMPTZ,
@@ -111,6 +161,13 @@ const MIGRATION_SQL = `
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    -- Idempotent migration: subscriptions.plan default flipped from 'pro' to
+    -- 'free' 2026-05-18 (Pulse Pro dead-code cleanup). The column default
+    -- only affects new INSERTs; for existing rows that fell into 'pro' under
+    -- the old default, normalize to 'free'. Safe to run repeatedly.
+    ALTER TABLE subscriptions ALTER COLUMN plan SET DEFAULT 'free';
+    UPDATE subscriptions SET plan = 'free' WHERE plan = 'pro';
 
     CREATE TABLE IF NOT EXISTS api_keys (
       id TEXT PRIMARY KEY,
@@ -136,6 +193,14 @@ const MIGRATION_SQL = `
       timestamp TIMESTAMPTZ DEFAULT NOW(),
       response_status INTEGER
     );
+
+    -- Tamrack metering columns. cost_units defaults to 1 (1 endpoint or 1
+    -- MCP tool call = 1 unit per charter); Smart UI dashboard generation
+    -- writes 25 when that surface ships. counted_toward_plan is FALSE when
+    -- the request was inside the plan's included quota; TRUE when it
+    -- overflowed and got billed via Stripe Meters.
+    ALTER TABLE api_usage ADD COLUMN IF NOT EXISTS cost_units INTEGER NOT NULL DEFAULT 1;
+    ALTER TABLE api_usage ADD COLUMN IF NOT EXISTS counted_toward_plan BOOLEAN NOT NULL DEFAULT TRUE;
 
     CREATE INDEX IF NOT EXISTS idx_api_usage_key ON api_usage(api_key_id, timestamp);
     CREATE INDEX IF NOT EXISTS idx_api_usage_user ON api_usage(user_id, timestamp);
@@ -389,6 +454,19 @@ const MIGRATION_SQL = `
     CREATE UNIQUE INDEX IF NOT EXISTS uniq_profile_operator_current
       ON intel_operator_profiles(operator_id) WHERE current = TRUE;
 
+    -- intelligence_researched_at tracks when the underlying WEB RESEARCH was
+    -- last performed. For fresh-research rows this equals researched_at; for
+    -- patched-from-v1 rows (src/patch-structured-fields.ts) it preserves the
+    -- v1 ancestor's researched_at so freshness queries don't get fooled by
+    -- the patch path's "now" row-write timestamp. Nullable to keep existing
+    -- rows valid; backfilled separately. Adding a nullable column with no
+    -- default is a metadata-only change (no table rewrite, no long lock),
+    -- safe to apply while inserts are in flight.
+    ALTER TABLE intel_operator_profiles
+      ADD COLUMN IF NOT EXISTS intelligence_researched_at TIMESTAMPTZ NULL;
+    CREATE INDEX IF NOT EXISTS idx_intel_profiles_intelligence_researched_at
+      ON intel_operator_profiles (intelligence_researched_at DESC);
+
     -- Research control plane. The worker (tools/intel-research) claims pending
     -- rows with FOR UPDATE SKIP LOCKED, runs research, writes a profile, marks
     -- done. Priority bucket determines order; lower = higher priority.
@@ -407,6 +485,57 @@ const MIGRATION_SQL = `
       ON intel_research_queue(priority, enqueued_at) WHERE status = 'pending';
     CREATE INDEX IF NOT EXISTS idx_research_queue_status
       ON intel_research_queue(status);
+
+    -- ============================================================
+    -- Smart UI v1.1 persistence (2026-05-18)
+    -- ============================================================
+
+    -- A saved Smart UI dashboard. The slug is a short base62 id used in
+    -- shareable /d/<slug> URLs. We store the planner output (plan + tool
+    -- args) and the composer output (config) so a /d/<slug> render can
+    -- re-execute the tool calls (replay-not-snapshot) and re-render the
+    -- composed config. query_hash lets us dedupe identical questions.
+    CREATE TABLE IF NOT EXISTS smart_dashboards (
+      id TEXT PRIMARY KEY,
+      slug TEXT UNIQUE NOT NULL,
+      user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+      query TEXT NOT NULL,
+      query_hash TEXT NOT NULL,
+      plan JSONB NOT NULL,
+      config JSONB NOT NULL,
+      tool_args JSONB NOT NULL,
+      cost_cents INTEGER NOT NULL DEFAULT 0,
+      view_count INTEGER NOT NULL DEFAULT 0,
+      parent_id TEXT REFERENCES smart_dashboards(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      last_viewed TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS idx_smart_dashboards_user
+      ON smart_dashboards(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_smart_dashboards_query_hash
+      ON smart_dashboards(query_hash);
+
+    -- Telemetry. One row per Smart UI query, regardless of outcome. The
+    -- query goes through planner → tool calls → composer; we record token
+    -- usage on both LLM passes and the final monetary cost in cents.
+    CREATE TABLE IF NOT EXISTS smart_query_events (
+      id SERIAL PRIMARY KEY,
+      dashboard_id TEXT REFERENCES smart_dashboards(id) ON DELETE SET NULL,
+      user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      query_text TEXT NOT NULL,
+      query_hash TEXT NOT NULL,
+      planner_input_tokens INTEGER DEFAULT 0,
+      planner_output_tokens INTEGER DEFAULT 0,
+      composer_input_tokens INTEGER DEFAULT 0,
+      composer_output_tokens INTEGER DEFAULT 0,
+      total_cost_cents INTEGER DEFAULT 0,
+      outcome TEXT NOT NULL DEFAULT 'ok'
+    );
+    CREATE INDEX IF NOT EXISTS idx_smart_query_events_user
+      ON smart_query_events(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_smart_query_events_dashboard
+      ON smart_query_events(dashboard_id);
 `;
 
 /**

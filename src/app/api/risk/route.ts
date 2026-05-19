@@ -11,7 +11,7 @@ import {
 // Returns risk indicators: unemployment, vacancy, housing starts, policy rate, energy index
 
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateApiRequest(request);
+  const authResult = await authenticateApiRequest(request, { requiredScopes: ["tamrack:macro:read"] });
   if (!authResult.authorized) return authResult.response;
 
   try {

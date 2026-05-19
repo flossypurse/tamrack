@@ -6,7 +6,7 @@ import { fetchStatCanTimeSeries, STATSCAN_SERIES } from "@/lib/data-sources";
 // Returns housing starts, completions, and under construction for Edmonton CMA
 
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateApiRequest(request);
+  const authResult = await authenticateApiRequest(request, { requiredScopes: ["tamrack:real-estate:read"] });
   if (!authResult.authorized) return authResult.response;
 
   try {

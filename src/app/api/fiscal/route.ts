@@ -10,7 +10,7 @@ import {
 // GET /api/fiscal?type=grants|transfers|contracts|federal-grants
 
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateApiRequest(request);
+  const authResult = await authenticateApiRequest(request, { requiredScopes: ["tamrack:economy:read"] });
   if (!authResult.authorized) return authResult.response;
 
   const type = request.nextUrl.searchParams.get("type");

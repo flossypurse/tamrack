@@ -9,7 +9,7 @@ import {
 
 // GET /api/environment?type=water|wildfires|earthquakes
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateApiRequest(request);
+  const authResult = await authenticateApiRequest(request, { requiredScopes: ["tamrack:economy:read"] });
   if (!authResult.authorized) return authResult.response;
 
   const { searchParams } = new URL(request.url);

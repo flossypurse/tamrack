@@ -8,7 +8,7 @@ import {
 
 // GET /api/weather?type=current|aqhi|climate&station=3012216
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateApiRequest(request);
+  const authResult = await authenticateApiRequest(request, { requiredScopes: ["tamrack:economy:read"] });
   if (!authResult.authorized) return authResult.response;
 
   const { searchParams } = new URL(request.url);

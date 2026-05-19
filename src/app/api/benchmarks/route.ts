@@ -7,7 +7,7 @@ import { getLiveMunicipalities } from "@/lib/municipality-registry";
 // Query param: ?municipalities=slug1,slug2,slug3 (optional, defaults to all live)
 
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateApiRequest(request);
+  const authResult = await authenticateApiRequest(request, { requiredScopes: ["tamrack:macro:read"] });
   if (!authResult.authorized) return authResult.response;
 
   try {

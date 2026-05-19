@@ -5,16 +5,24 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-02-25.clover",
 });
 
-// Plan-specific Stripe price IDs
+// Plan-specific Stripe price IDs.
+// `pro` was a phantom plan (never had a Stripe product); removed 2026-05-18.
+// EDO and Realtor are sunset to new signups but the price IDs stay defined
+// so the billing portal can still manage existing subscriptions.
 const PLAN_PRICE_IDS: Record<string, string | undefined> = {
-  pro: process.env.STRIPE_PRICE_ID,
   edo: process.env.STRIPE_EDO_PRICE_ID,
   realtor: process.env.STRIPE_REALTOR_PRICE_ID,
 };
 
-export async function createCheckoutSession(userId: string, email: string, plan: string = "pro") {
+export async function createCheckoutSession(userId: string, email: string, plan: string) {
+  if (!plan) {
+    throw new Error("createCheckoutSession requires an explicit plan");
+  }
+  const priceId = PLAN_PRICE_IDS[plan];
+  if (!priceId) {
+    throw new Error(`No Stripe price ID configured for plan: ${plan}`);
+  }
   const pool = await getDb();
-  const priceId = PLAN_PRICE_IDS[plan] || process.env.STRIPE_PRICE_ID!;
 
   const { rows } = await pool.query(
     `SELECT stripe_customer_id FROM subscriptions WHERE user_id = $1`,
@@ -81,11 +89,13 @@ export async function createPortalSession(userId: string) {
 export async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const pool = await getDb();
   const userId = session.metadata?.userId;
-  const plan = session.metadata?.plan || "pro";
+  // Plan is set by createCheckoutSession via metadata — no longer falls back to
+  // 'pro' (phantom plan retired 2026-05-18). If metadata is missing, bail.
+  const plan = session.metadata?.plan;
   const subscriptionId = session.subscription as string;
   const customerId = session.customer as string;
 
-  if (!userId) return;
+  if (!userId || !plan) return;
 
   await pool.query(
     `UPDATE subscriptions SET id = $1, stripe_customer_id = $2, status = 'active', plan = $3, updated_at = NOW() WHERE user_id = $4`,

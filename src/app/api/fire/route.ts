@@ -17,7 +17,7 @@ import {
 // GET /api/fire?type=alerts
 
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateApiRequest(request);
+  const authResult = await authenticateApiRequest(request, { requiredScopes: ["tamrack:economy:read"] });
   if (!authResult.authorized) return authResult.response;
 
   const type = request.nextUrl.searchParams.get("type");

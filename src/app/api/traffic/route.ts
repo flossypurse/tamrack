@@ -10,7 +10,7 @@ import {
 
 // GET /api/traffic?type=roads|events|alerts|edmonton|calgary|all
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateApiRequest(request);
+  const authResult = await authenticateApiRequest(request, { requiredScopes: ["tamrack:economy:read"] });
   if (!authResult.authorized) return authResult.response;
 
   const { searchParams } = new URL(request.url);

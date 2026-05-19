@@ -13,7 +13,7 @@ import {
 // Returns normalized assessment data across all municipalities
 
 export async function GET(request: NextRequest) {
-  const authResult = await authenticateApiRequest(request);
+  const authResult = await authenticateApiRequest(request, { requiredScopes: ["tamrack:real-estate:read"] });
   if (!authResult.authorized) return authResult.response;
 
   const municipality = request.nextUrl.searchParams.get("municipality");
