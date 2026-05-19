@@ -14,13 +14,16 @@ function earlyAccessOn(): boolean {
 
 // Strict allow-list while invite wall is on. Anything not in this list and
 // not /invite/<token> requires authentication.
-const EARLY_ACCESS_PUBLIC_ROUTES = ["/", "/sunset", "/login"];
+const EARLY_ACCESS_PUBLIC_ROUTES = ["/", "/sunset", "/login", "/charts"];
 const EARLY_ACCESS_PUBLIC_PREFIXES = [
   "/api/auth/",
   "/api/health",
   "/api/og",
   // Invite redemption surface — token in the path, validated by the page.
   "/invite/",
+  // Chart catalogue — only public/free surface during early access.
+  "/charts/",
+  "/embed/",
 ];
 
 // Tamrack-era surfaces that handle their own access gating internally
