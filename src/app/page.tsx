@@ -224,11 +224,11 @@ export default function LandingPage() {
               <TArrowRight size={16} />
             </Link>
             <Link
-              href="/pricing"
+              href="/access-request"
               className="px-6 py-3 border border-[var(--ink)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--ink-inv)] transition-colors text-sm"
               style={{ transitionDuration: "var(--dur-instant)" }}
             >
-              See professional tools
+              Request access
             </Link>
           </div>
         </div>
@@ -332,8 +332,8 @@ export default function LandingPage() {
           </Link>
           <p className="text-sm text-[var(--mid)]">
             Professional tools?{" "}
-            <Link href="/pricing" className="text-[var(--ink)] underline decoration-[var(--mid)]/40 underline-offset-4 hover:decoration-[var(--amber)]">
-              See pricing
+            <Link href="/access-request" className="text-[var(--ink)] underline decoration-[var(--mid)]/40 underline-offset-4 hover:decoration-[var(--amber)]">
+              Request access
             </Link>
           </p>
         </div>
@@ -352,7 +352,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-5">
             <Link href="/charts" className="hover:text-[var(--ink)] transition-colors">Charts</Link>
             <Link href="/learn" className="hover:text-[var(--ink)] transition-colors">Learn</Link>
-            <Link href="/pricing" className="hover:text-[var(--ink)] transition-colors">Pricing</Link>
+            <Link href="/access-request" className="hover:text-[var(--ink)] transition-colors">Request access</Link>
             <Link href="/terms" className="hover:text-[var(--ink)] transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-[var(--ink)] transition-colors">Privacy</Link>
             <Link href="/login" className="hover:text-[var(--ink)] transition-colors">Sign in</Link>

@@ -14,11 +14,12 @@ function earlyAccessOn(): boolean {
 
 // Strict allow-list while invite wall is on. Anything not in this list and
 // not /invite/<token> requires authentication.
-const EARLY_ACCESS_PUBLIC_ROUTES = ["/", "/sunset", "/login", "/charts"];
+const EARLY_ACCESS_PUBLIC_ROUTES = ["/", "/sunset", "/login", "/charts", "/access-request"];
 const EARLY_ACCESS_PUBLIC_PREFIXES = [
   "/api/auth/",
   "/api/health",
   "/api/og",
+  "/api/access-request",
   // Invite redemption surface — token in the path, validated by the page.
   "/invite/",
   // Chart catalogue — only public/free surface during early access.
@@ -44,7 +45,7 @@ const TAMRACK_SELF_GATED_PREFIXES = [
 // SEO strategy: macro pages are public to be indexed by Google.
 // Users see value → hit paywall on deep-dives → sign up.
 const publicRoutes = [
-  "/", "/login", "/subscribe", "/terms", "/privacy", "/pricing",
+  "/", "/login", "/subscribe", "/terms", "/privacy", "/access-request",
   "/sunset",
   "/home/dashboard", "/municipalities",
   "/municipalities/coverage",
@@ -56,7 +57,7 @@ const publicRoutes = [
   "/learn",
 ];
 const publicPrefixes = [
-  "/api/auth", "/api/webhooks", "/api/waitlist", "/api/health", "/api/og", "/embed/", "/waitlist/",
+  "/api/auth", "/api/webhooks", "/api/waitlist", "/api/access-request", "/api/health", "/api/og", "/embed/", "/waitlist/",
   // Category pages — all public for SEO (rank for "Alberta [topic]" queries)
   "/economy/", "/real-estate/", "/community/", "/environment/", "/governance/",
   // Municipality detail pages — public for SEO (dynamic metadata + OG tags)

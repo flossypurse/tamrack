@@ -6,7 +6,7 @@ import { Breadcrumbs } from "./breadcrumbs";
 import { Footer } from "./footer";
 import { shouldShowSectionSidebar } from "./section-sidebar";
 
-const publicRoutes = ["/", "/login", "/terms", "/privacy", "/pricing"];
+const publicRoutes = ["/", "/login", "/terms", "/privacy", "/access-request"];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
