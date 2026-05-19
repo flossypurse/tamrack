@@ -9,7 +9,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
-import { PageHeader } from "@/components/page-header";
+import { AccountSubnav } from "@/components/account-subnav";
 import { ONCE_KEY_COOKIE } from "@/lib/invites";
 import { KeyOnceCard } from "@/components/key-once-card";
 import { TKey } from "@/components/icons/t3";
@@ -18,6 +18,10 @@ export const dynamic = "force-dynamic";
 
 async function clearOnceKey(): Promise<void> {
   "use server";
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect("/login?callbackUrl=/account/keys");
+  }
   const jar = await cookies();
   jar.delete(ONCE_KEY_COOKIE);
   redirect("/account/keys");
@@ -38,8 +42,22 @@ export default async function ApiKeysPage({
   const oncePlaintext = jar.get(ONCE_KEY_COOKIE)?.value ?? null;
 
   return (
-    <main className="min-h-screen p-4 sm:p-6 max-w-3xl mx-auto space-y-6">
-      <PageHeader title="API keys" category="tools" />
+    <main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
+      <AccountSubnav active="keys" />
+
+      <header className="flex flex-col gap-2">
+        <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--mid)]">
+          api key · http · bearer token
+        </p>
+        <h1 className="font-mono text-2xl font-semibold text-[var(--ink)]">
+          API key
+        </h1>
+        <p className="text-sm leading-relaxed text-[var(--ink)]/85">
+          A Bearer token for calling the Tamrack HTTP API directly. Same
+          namespace as the MCP token; different name so usage logs read
+          cleanly.
+        </p>
+      </header>
 
       {invite_redeemed === "1" && oncePlaintext && (
         <div className="border border-[var(--amber)]/40 bg-[var(--amber)]/5 p-4">

@@ -16,7 +16,11 @@ function LoginForm() {
   const [error, setError] = useState("");
   const searchParams = useSearchParams();
   const plan = searchParams.get("plan");
-  const rawCallbackUrl = searchParams.get("callbackUrl") || "/home/dashboard";
+  const rawParam = searchParams.get("callbackUrl");
+  // Same-origin relative paths only — reject `//evil.com/x` and `/\evil.com`
+  // that would escape via signIn()'s callback handling.
+  const isSafe = (v: string | null): v is string => !!v && /^\/(?![/\\])/.test(v);
+  const rawCallbackUrl = isSafe(rawParam) ? rawParam : "/account";
   const callbackUrl = plan && !rawCallbackUrl.includes("plan=")
     ? `${rawCallbackUrl}${rawCallbackUrl.includes("?") ? "&" : "?"}plan=${plan}`
     : rawCallbackUrl;

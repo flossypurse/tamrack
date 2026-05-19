@@ -29,6 +29,11 @@ import { getDb } from "./db";
 // non-route exports from route.ts.
 export const ONCE_KEY_COOKIE = "tk_once";
 
+// Same one-shot pattern, scoped to the /account/mcp page where the MCP
+// agent token is issued + displayed. Different cookie so the two pages
+// can't accidentally read each other's secret.
+export const MCP_ONCE_KEY_COOKIE = "tk_mcp_once";
+
 /** Days before an unredeemed invite expires. */
 const INVITE_TTL_DAYS = 30;
 
