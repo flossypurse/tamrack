@@ -19,13 +19,10 @@ import {
   LogOut,
   Shield,
   ChevronDown,
-  Wrench,
-  BookOpen,
-  Database,
-  Home,
-  Building2,
+  Sparkles,
+  Key,
+  Terminal,
 } from "lucide-react";
-import { sections } from "./nav-config";
 import { Wordmark } from "./brand/wordmark";
 import { TSearch, TSun, TMoon } from "./icons/t3";
 
@@ -56,9 +53,6 @@ export function TopBar() {
 
   const isAdmin = session?.user?.role === "admin";
 
-  const isSectionActive = (prefixes: string[]) =>
-    prefixes.some((p) => pathname.startsWith(p));
-
   return (
     <header className="hidden lg:flex fixed top-0 left-0 right-0 z-40 h-12 bg-[var(--surface)] border-b border-[var(--hairline)] items-center px-4 gap-1">
       {/* Wordmark — T3 custom-cut SVG, not type-set */}
@@ -70,28 +64,10 @@ export function TopBar() {
         <Wordmark height={18} />
       </Link>
 
-      {/* Section links */}
+      {/* Top-level nav — free product (Charts) + invited product (Chat). The
+          old dashboard sections live on at their URLs but are no longer fronted
+          here; the agent at /account/chat is the way in. */}
       <nav className="flex items-center gap-0.5 flex-1 min-w-0">
-        {sections.map((section) => {
-          const Icon = section.icon;
-          const active = isSectionActive(section.matchPrefixes);
-          return (
-            <Link
-              key={section.key}
-              href={section.href}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors whitespace-nowrap ${
-                active
-                  ? "text-[var(--amber)] font-medium"
-                  : "text-[var(--mid)] hover:text-[var(--ink)]"
-              }`}
-              style={{ transitionDuration: "var(--dur-instant)" }}
-            >
-              <Icon size={15} className="shrink-0" />
-              {section.label}
-            </Link>
-          );
-        })}
-        {/* Chart catalogue link */}
         <Link
           href="/charts"
           className={`flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors whitespace-nowrap ${
@@ -104,6 +80,20 @@ export function TopBar() {
           <BarChart3 size={15} className="shrink-0" />
           Charts
         </Link>
+        {session?.user && (
+          <Link
+            href="/account/chat"
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors whitespace-nowrap ${
+              pathname.startsWith("/account/chat")
+                ? "text-[var(--amber)] font-medium"
+                : "text-[var(--mid)] hover:text-[var(--ink)]"
+            }`}
+            style={{ transitionDuration: "var(--dur-instant)" }}
+          >
+            <Sparkles size={15} className="shrink-0" />
+            Ask
+          </Link>
+        )}
       </nav>
 
       {/* Right side: search, theme, avatar */}
@@ -171,59 +161,33 @@ export function TopBar() {
                       </p>
                     </div>
                   )}
-                  {session.user.plan === "realtor" && session.user.subscriptionStatus === "active" && (
-                    <Link
-                      href="/realtor/market"
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-teal-400 hover:bg-teal-500/10 transition-colors"
-                    >
-                      <Home size={14} />
-                      Real Estate Dashboard
-                    </Link>
-                  )}
-                  {session.user.plan === "edo" && session.user.subscriptionStatus === "active" && (
-                    <Link
-                      href="/edo"
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-indigo-400 hover:bg-indigo-500/10 transition-colors"
-                    >
-                      <Building2 size={14} />
-                      EDO Dashboard
-                    </Link>
-                  )}
                   <Link
-                    href="/account"
+                    href="/account/chat"
                     className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
                   >
-                    <User size={14} />
-                    Account
+                    <Sparkles size={14} />
+                    Ask
+                  </Link>
+                  <Link
+                    href="/account/keys"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
+                  >
+                    <Key size={14} />
+                    API key
+                  </Link>
+                  <Link
+                    href="/account/mcp"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
+                  >
+                    <Terminal size={14} />
+                    MCP token
                   </Link>
                   <Link
                     href="/billing"
                     className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
                   >
                     <CreditCard size={14} />
-                    Billing & API Keys
-                  </Link>
-                  <div className="border-t border-card-border my-1" />
-                  <Link
-                    href="/tools"
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
-                  >
-                    <Wrench size={14} />
-                    Tools
-                  </Link>
-                  <Link
-                    href="/tools/docs"
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
-                  >
-                    <BookOpen size={14} />
-                    API Docs
-                  </Link>
-                  <Link
-                    href="/tools/sources"
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
-                  >
-                    <Database size={14} />
-                    Data Sources
+                    Billing
                   </Link>
                   {isAdmin && (
                     <>

@@ -35,10 +35,9 @@ const EARLY_ACCESS_PUBLIC_PREFIXES = [
 // would otherwise punt them to /billing.
 const TAMRACK_SELF_GATED_PREFIXES = [
   "/d/",         // saved Smart UI dashboards
-  "/ask",        // Smart UI query landing
   "/docs",       // Tamrack docs surface (Fumadocs)
   "/api/smart/", // Smart UI streaming + persistence APIs
-  "/account",    // user account + key display
+  "/account",    // user account + chat + keys + mcp token (post-login home)
 ];
 
 // Routes that don't require auth (public-launch mode).
@@ -172,13 +171,17 @@ export async function middleware(req: NextRequest) {
     secureCookie,
   });
 
-  // Logged-in users hitting /login — skip the form, go to callbackUrl or dashboard
+  // Logged-in users hitting /login — skip the form, go to callbackUrl or
+  // /account (the post-login home: chat / api key / mcp token).
   if (token && pathname === "/login") {
     const callbackUrl = req.nextUrl.searchParams.get("callbackUrl");
-    if (callbackUrl && callbackUrl.startsWith("/")) {
+    // Reject protocol-relative (`//evil.com/x`) and backslash variants that
+    // resolve off-site through new URL(). Only same-origin relative paths
+    // beginning with a single forward slash are allowed.
+    if (callbackUrl && /^\/(?![/\\])/.test(callbackUrl)) {
       return NextResponse.redirect(new URL(callbackUrl, req.url));
     }
-    return NextResponse.redirect(new URL("/home/dashboard", req.url));
+    return NextResponse.redirect(new URL("/account", req.url));
   }
 
   // Plan-aware redirects for logged-in users on public pages
@@ -189,7 +192,7 @@ export async function middleware(req: NextRequest) {
     const trialEnd = token.trialEnd as string | null | undefined;
 
     if (plan && plan === userPlan && isActiveSubscription(status, trialEnd)) {
-      const dest = plan === "realtor" ? "/realtor/market" : plan === "edo" ? "/edo" : "/home/dashboard";
+      const dest = plan === "realtor" ? "/realtor/market" : plan === "edo" ? "/edo" : "/account";
       return NextResponse.redirect(new URL(dest, req.url));
     }
   }
@@ -228,7 +231,7 @@ export async function middleware(req: NextRequest) {
   // Admin routes — check role
   if (isAdminRoute(pathname)) {
     if (token.role !== "admin") {
-      return NextResponse.redirect(new URL("/home/dashboard", req.url));
+      return NextResponse.redirect(new URL("/account", req.url));
     }
     return NextResponse.next();
   }
