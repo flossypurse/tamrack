@@ -1,11 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-// Routes that don't require auth
+// ── Early-access invite wall (2026-05-18) ──────────────────────────────
+// While EARLY_ACCESS != "false", only the routes below are public.
+// Everything else requires authenticated session OR valid Bearer key.
+// API routes additionally enforce scope checks in their route handlers.
+//
+// Flip EARLY_ACCESS=false at public launch — the broader publicRoutes /
+// publicPrefixes lists kick back in then.
+function earlyAccessOn(): boolean {
+  return (process.env.EARLY_ACCESS ?? "true").toLowerCase() !== "false";
+}
+
+// Strict allow-list while invite wall is on. Anything not in this list and
+// not /invite/<token> requires authentication.
+const EARLY_ACCESS_PUBLIC_ROUTES = ["/", "/sunset", "/login"];
+const EARLY_ACCESS_PUBLIC_PREFIXES = [
+  "/api/auth/",
+  "/api/health",
+  "/api/og",
+  // Invite redemption surface — token in the path, validated by the page.
+  "/invite/",
+];
+
+// Tamrack-era surfaces that handle their own access gating internally
+// (early_access flag + plan check via userHasTamrackAccess). Middleware
+// passes any logged-in user through; the page/route handler does the
+// real authorization check. Necessary because invitees on plan='founder'
+// have NO Stripe subscription, so the legacy subscription check below
+// would otherwise punt them to /billing.
+const TAMRACK_SELF_GATED_PREFIXES = [
+  "/d/",         // saved Smart UI dashboards
+  "/ask",        // Smart UI query landing
+  "/docs",       // Tamrack docs surface (Fumadocs)
+  "/api/smart/", // Smart UI streaming + persistence APIs
+  "/account",    // user account + key display
+];
+
+// Routes that don't require auth (public-launch mode).
 // SEO strategy: macro pages are public to be indexed by Google.
 // Users see value → hit paywall on deep-dives → sign up.
 const publicRoutes = [
   "/", "/login", "/subscribe", "/terms", "/privacy", "/pricing",
+  "/sunset",
   "/home/dashboard", "/municipalities",
   "/municipalities/coverage",
   // Category overview pages — rich SEO landing pages, no gated data
@@ -54,7 +91,18 @@ const freePrefixes = [
 // Pages where only exact match is free (sub-routes require subscription)
 const freePagesExactOnly = new Set(["/home/briefings"]);
 
+function isTamrackSelfGated(pathname: string): boolean {
+  return TAMRACK_SELF_GATED_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p.endsWith("/") ? p : p + "/"),
+  );
+}
+
 function isPublicRoute(pathname: string) {
+  if (earlyAccessOn()) {
+    // Strict allow-list while invite wall is on.
+    if (EARLY_ACCESS_PUBLIC_ROUTES.includes(pathname)) return true;
+    return EARLY_ACCESS_PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
+  }
   if (publicRoutes.includes(pathname)) return true;
   return publicPrefixes.some((p) => pathname.startsWith(p));
 }
@@ -98,10 +146,14 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // API routes — check for API key header (validation happens in route handler)
+  // API routes — check for API key header (validation happens in route handler).
+  // Accept tk_* (Tamrack) and ap_* (legacy dual-accept window).
   if (isApiRoute(pathname)) {
     const authHeader = req.headers.get("authorization");
-    if (authHeader?.startsWith("Bearer ap_")) {
+    if (
+      authHeader?.startsWith("Bearer tk_") ||
+      authHeader?.startsWith("Bearer ap_")
+    ) {
       return NextResponse.next();
     }
   }
@@ -177,21 +229,21 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // EDO routes — require EDO plan + active subscription
+  // EDO routes — require EDO plan + active subscription.
+  // EDO is closed to new signups (2026-05-18); non-EDO users hitting these
+  // routes go to /sunset, NOT /subscribe?plan=edo. Grandfathered EDO users
+  // flow through unchanged.
   if (isEdoRoute(pathname)) {
     const plan = token.plan as string | undefined;
     const status = token.subscriptionStatus as string | undefined;
     const trialEnd = token.trialEnd as string | null | undefined;
 
     if (plan !== "edo" || !isActiveSubscription(status, trialEnd)) {
-      // Allow onboarding page for EDO trialing users who haven't picked a municipality yet
-      if (pathname === "/edo/onboarding" && plan === "edo") {
-        return NextResponse.next();
-      }
-      return NextResponse.redirect(new URL("/subscribe?plan=edo", req.url));
+      return NextResponse.redirect(new URL("/sunset", req.url));
     }
 
     // EDO users without a municipality binding get redirected to onboarding
+    // (which now shows a sunset notice; pre-existing users have municipality_id set)
     const municipalityId = token.municipalityId as string | null | undefined;
     if (!municipalityId && pathname !== "/edo/onboarding" && pathname !== "/edo/settings") {
       return NextResponse.redirect(new URL("/edo/onboarding", req.url));
@@ -200,26 +252,32 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Realtor routes — require realtor plan + active subscription
+  // Realtor routes — require realtor plan + active subscription.
+  // Real Estate is closed to new signups (2026-05-18); non-realtor users
+  // hitting these routes go to /sunset. Grandfathered realtor users flow
+  // through unchanged.
   if (isRealtorRoute(pathname)) {
     const plan = token.plan as string | undefined;
     const status = token.subscriptionStatus as string | undefined;
     const trialEnd = token.trialEnd as string | null | undefined;
 
     if (plan !== "realtor" || !isActiveSubscription(status, trialEnd)) {
-      // Allow onboarding page for realtor users who haven't picked an area yet
-      if (pathname === "/realtor/onboarding" && plan === "realtor") {
-        return NextResponse.next();
-      }
-      return NextResponse.redirect(new URL("/subscribe?plan=realtor", req.url));
+      return NextResponse.redirect(new URL("/sunset", req.url));
     }
 
     // Realtor users without an operating area get redirected to onboarding
+    // (which now shows a sunset notice; pre-existing users have operating_area set)
     const operatingArea = token.operatingArea as string[] | null | undefined;
     if ((!operatingArea || operatingArea.length === 0) && pathname !== "/realtor/onboarding" && pathname !== "/realtor/settings") {
       return NextResponse.redirect(new URL("/realtor/onboarding", req.url));
     }
 
+    return NextResponse.next();
+  }
+
+  // Tamrack self-gated surfaces — pass any logged-in user through; the
+  // page/route handler enforces the actual early_access/plan check.
+  if (isTamrackSelfGated(pathname)) {
     return NextResponse.next();
   }
 
