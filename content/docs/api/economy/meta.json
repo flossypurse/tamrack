@@ -1,0 +1,19 @@
+{
+  "title": "Economy",
+  "pages": [
+    "business",
+    "retail",
+    "projects",
+    "immigration",
+    "fiscal",
+    "politics",
+    "health-data",
+    "crime",
+    "fire",
+    "wildfire",
+    "environment",
+    "safety",
+    "traffic",
+    "weather"
+  ]
+}

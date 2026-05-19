@@ -1,0 +1,16 @@
+{
+  "title": "Tamrack",
+  "pages": [
+    "index",
+    "---Get started---",
+    "start",
+    "---Reference---",
+    "api",
+    "mcp",
+    "---Surfaces---",
+    "smart-ui",
+    "---Cookbook---",
+    "recipes",
+    "changelog"
+  ]
+}

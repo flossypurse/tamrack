@@ -1,0 +1,5 @@
+# Tamrack — full agent-readable docs corpus
+
+# TODO: this file is auto-regenerated from MDX in Phase A3 (concatenated
+# rendered docs, with frontmatter stripped). Leaving as a placeholder
+# until the copy pass + build hook are in place.

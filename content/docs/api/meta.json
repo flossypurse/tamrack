@@ -1,0 +1,20 @@
+{
+  "title": "HTTP API",
+  "pages": [
+    "---Macro---",
+    "macro",
+    "risk",
+    "cycle",
+    "benchmarks",
+    "corridors",
+    "---Regional---",
+    "regional",
+    "---Real estate---",
+    "real-estate",
+    "---Energy---",
+    "energy",
+    "electricity",
+    "---Economy---",
+    "economy"
+  ]
+}

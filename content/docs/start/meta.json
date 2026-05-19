@@ -1,0 +1,17 @@
+{
+  "title": "Get started",
+  "pages": [
+    "overview",
+    "---Quickstarts---",
+    "quickstart-curl",
+    "quickstart-typescript",
+    "quickstart-python",
+    "quickstart-mcp",
+    "---Auth & limits---",
+    "auth",
+    "scopes",
+    "pricing-and-metering",
+    "rate-limits",
+    "errors"
+  ]
+}

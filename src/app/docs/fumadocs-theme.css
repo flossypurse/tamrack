@@ -1,0 +1,23 @@
+/* ─────────────────────────────────────────────────────────────────
+ * Fumadocs theme integration — Tamrack docs
+ *
+ * Threads the existing terracotta accent (`#c06a2b` from `globals.css`)
+ * through Fumadocs' `--color-fd-primary` token so links, headings, and
+ * accent affordances match the marketing site.
+ *
+ * Fumadocs ships its own OKLCH-based palette in `fumadocs-ui/style.css`.
+ * We override the primary slot only — surface/foreground stay neutral so
+ * the docs reading surface stays calm against the dense API content.
+ * ──────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Tamrack terracotta — matches `--accent` in src/app/globals.css */
+  --color-fd-primary: 28 75% 46%; /* #c06a2b in HSL */
+  --color-fd-ring: 28 75% 46%;
+}
+
+.dark {
+  /* Tamrack terracotta — matches `.dark --accent` in src/app/globals.css */
+  --color-fd-primary: 28 64% 53%; /* #d4863a in HSL */
+  --color-fd-ring: 28 64% 53%;
+}
