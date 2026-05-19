@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { signOutAction } from "@/app/actions/auth";
+import { SunsetBanner } from "@/components/sunset-banner";
 import {
   Building2,
   GitCompare,
@@ -151,6 +152,16 @@ function EdoMobileNav() {
   );
 }
 
+function EdoSunsetBanner() {
+  // Middleware already enforces plan === "edo" for /edo/* routes (2026-05-18
+  // sunset), so users reaching this layout are by definition grandfathered.
+  // Guard on session.user.plan anyway so the banner stays correct if the
+  // middleware guard ever shifts.
+  const { data: session } = useSession();
+  if (session?.user?.plan !== "edo") return null;
+  return <SunsetBanner product="edo" />;
+}
+
 export default function EdoLayout({ children }: { children: ReactNode }) {
   return (
     <>
@@ -163,6 +174,7 @@ export default function EdoLayout({ children }: { children: ReactNode }) {
 
       {/* Content area */}
       <div className="lg:pl-56 transition-[padding-left] duration-200">
+        <EdoSunsetBanner />
         {children}
       </div>
 

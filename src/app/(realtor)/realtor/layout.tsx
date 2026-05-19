@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { signOutAction } from "@/app/actions/auth";
+import { SunsetBanner } from "@/components/sunset-banner";
 import {
   TrendingUp,
   Users,
@@ -144,6 +145,15 @@ function RealtorMobileNav() {
   );
 }
 
+function RealtorSunsetBanner() {
+  // Middleware enforces plan === "realtor" for /realtor/* routes (2026-05-18
+  // sunset), so users reaching this layout are grandfathered. Guard on
+  // session.user.plan defensively.
+  const { data: session } = useSession();
+  if (session?.user?.plan !== "realtor") return null;
+  return <SunsetBanner product="realtor" />;
+}
+
 export default function RealtorLayout({ children }: { children: ReactNode }) {
   return (
     <>
@@ -156,6 +166,7 @@ export default function RealtorLayout({ children }: { children: ReactNode }) {
 
       {/* Content area */}
       <div className="lg:pl-56 transition-[padding-left] duration-200">
+        <RealtorSunsetBanner />
         {children}
       </div>
 

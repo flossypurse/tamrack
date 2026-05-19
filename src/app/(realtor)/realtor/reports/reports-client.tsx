@@ -692,7 +692,7 @@ export function ReportsDashboard({
               <p className="text-sm font-semibold text-teal-600">
                 Pulse Real Estate
               </p>
-              <p className="text-[10px] text-gray-400">albertapulsecheck.ca</p>
+              <p className="text-[10px] text-gray-400">tamrack.ca</p>
             </div>
           </div>
         </div>
