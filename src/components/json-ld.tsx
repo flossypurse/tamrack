@@ -1,9 +1,11 @@
+import { SITE_URL } from "@/lib/constants/site";
+
 export function OrganizationJsonLd() {
   const data = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "Alberta Pulse Check",
-    url: "https://albertapulsecheck.ca",
+    name: "Tamrack",
+    url: SITE_URL,
     description:
       "Real-time economic intelligence dashboard for Alberta — live data from 8+ government sources across 22 municipalities.",
     foundingDate: "2026",
@@ -26,16 +28,15 @@ export function WebsiteJsonLd() {
   const data = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "Alberta Pulse Check",
-    url: "https://albertapulsecheck.ca",
+    name: "Tamrack",
+    url: SITE_URL,
     description:
       "Real-time economic, real estate, and municipal data for Alberta.",
     potentialAction: {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate:
-          "https://albertapulsecheck.ca/municipalities?q={search_term_string}",
+        urlTemplate: `${SITE_URL}/municipalities?q={search_term_string}`,
       },
       "query-input": "required name=search_term_string",
     },
@@ -67,11 +68,11 @@ export function DatasetJsonLd({
     description,
     url,
     keywords,
-    license: "https://albertapulsecheck.ca/terms",
+    license: `${SITE_URL}/terms`,
     creator: {
       "@type": "Organization",
-      name: "Alberta Pulse Check",
-      url: "https://albertapulsecheck.ca",
+      name: "Tamrack",
+      url: SITE_URL,
     },
     spatialCoverage: {
       "@type": "Place",
@@ -81,7 +82,7 @@ export function DatasetJsonLd({
     distribution: {
       "@type": "DataDownload",
       encodingFormat: "application/json",
-      contentUrl: "https://albertapulsecheck.ca/api",
+      contentUrl: `${SITE_URL}/api`,
     },
   };
 
@@ -121,10 +122,10 @@ export function SoftwareApplicationJsonLd() {
   const data = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "Alberta Pulse Check",
+    name: "Tamrack",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
-    url: "https://albertapulsecheck.ca",
+    url: SITE_URL,
     description:
       "Community intelligence dashboard for Alberta — real-time data on permits, assessments, energy, labour, migration, and more.",
     offers: [

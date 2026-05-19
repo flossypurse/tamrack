@@ -481,7 +481,7 @@ export default function MunicipalBudgetsPage() {
       <LessonCompleteButton moduleSlug="tax-dollars" lessonSlug="municipal-budgets" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Municipal Budgets &mdash; All data from free
+        Tamrack &mdash; Municipal Budgets &mdash; All data from free
         public APIs
       </footer>
     </main>

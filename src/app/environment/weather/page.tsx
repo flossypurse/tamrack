@@ -17,6 +17,7 @@ import {
   type CurrentWeather,
   type TimeSeriesPoint,
 } from "@/lib/data-sources";
+import { SITE_URL } from "@/lib/constants/site";
 
 // ============================================================
 // Server-side data fetching
@@ -199,7 +200,7 @@ export const metadata: Metadata = {
   title: "Alberta Weather Conditions",
   description: "Real-time weather conditions across Alberta — temperature, wind, humidity, and visibility from Environment Canada monitoring stations.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/environment/weather",
+    canonical: `${SITE_URL}/environment/weather`,
   },
 };
 

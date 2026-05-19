@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card, MetricCard } from "@/components/card";
@@ -19,7 +20,9 @@ import {
   PieChart,
   CloudSun,
   Globe,
+  ArrowRight,
 } from "lucide-react";
+import { auth } from "@/lib/auth";
 import {
   fetchBoCObservations,
   fetchStatCanTimeSeries,
@@ -28,7 +31,7 @@ import {
 } from "@/lib/data-sources";
 
 export const metadata: Metadata = {
-  title: "Alberta Pulse Check — Home",
+  title: "Tamrack — Home",
   description:
     "Your starting point for Alberta economic data — dashboard, signals, briefings, and learning resources.",
 };
@@ -217,15 +220,52 @@ const sectionLinks: HubCardItem[] = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await auth();
+  const status = session?.user?.subscriptionStatus;
+  const trialEnd = session?.user?.trialEnd;
+  const trialEndDate = trialEnd ? new Date(trialEnd) : null;
+  const trialExpired =
+    status === "trialing" && trialEndDate !== null && trialEndDate <= new Date();
+  const subscriptionEnded =
+    !!session && (status === "canceled" || status === "incomplete_expired" || status === "unpaid" || trialExpired);
+
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
       <PageHeader
-        title="Alberta Pulse Check"
+        title="Tamrack"
         category="overview"
         icon={<Activity size={22} />}
         description="Your starting point for Alberta economic data. Live indicators, signals, briefings, and learning resources."
       />
+
+      {/* Trial-expired banner */}
+      {subscriptionEnded && (
+        <div className="rounded-xl border border-accent-amber/30 bg-accent-amber/10 p-4 flex items-start gap-3">
+          <div className="shrink-0 mt-0.5">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-accent-amber/20 text-accent-amber text-xs font-bold">
+              !
+            </span>
+          </div>
+          <div className="flex-1 space-y-1">
+            <p className="text-sm font-semibold text-foreground">
+              Your trial has ended
+            </p>
+            <p className="text-xs text-muted">
+              Browse the hub and public dashboards below. Upgrade to unlock
+              municipality deep-dives, prospect leads, and the full chart
+              catalogue.
+            </p>
+          </div>
+          <Link
+            href="/pricing"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-white rounded-lg text-xs font-medium hover:bg-accent/90 transition-colors shrink-0"
+          >
+            See plans
+            <ArrowRight size={12} />
+          </Link>
+        </div>
+      )}
 
       {/* Quick metrics */}
       <Suspense fallback={<MetricsLoading />}>

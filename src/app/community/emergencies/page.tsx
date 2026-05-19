@@ -15,6 +15,7 @@ import {
   fetchTrafficAlerts,
   type EmergencyAlert,
 } from "@/lib/data-sources";
+import { SITE_URL } from "@/lib/constants/site";
 
 // ============================================================
 // Loading fallback
@@ -179,7 +180,7 @@ export const metadata: Metadata = {
   title: "Alberta Emergency & Weather Alerts",
   description: "Real-time emergency alerts and severe weather warnings for Alberta from the Canadian Alert Ready system.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/community/emergencies",
+    canonical: `${SITE_URL}/community/emergencies`,
   },
 };
 

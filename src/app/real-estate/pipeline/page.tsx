@@ -3,12 +3,13 @@ import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
 import { computeTimeRange } from "@/lib/time-range";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Alberta Housing Development Pipeline",
   description: "CMHC housing starts, completions, and units under construction for Edmonton CMA. Track the residential development pipeline and absorption rates.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/real-estate/pipeline",
+    canonical: `${SITE_URL}/real-estate/pipeline`,
   },
 };
 import {

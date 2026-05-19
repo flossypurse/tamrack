@@ -357,7 +357,7 @@ export default function EnvironmentEconomyPage() {
       <LessonCompleteButton moduleSlug="safety-prosperity" lessonSlug="environment-economy" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Environment &amp; Economy &mdash; All data
+        Tamrack &mdash; Environment &amp; Economy &mdash; All data
         from free public APIs
       </footer>
     </main>

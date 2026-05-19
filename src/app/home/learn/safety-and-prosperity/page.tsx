@@ -38,7 +38,7 @@ import { Shield, HeartPulse, TrendingUp, AlertTriangle, Users, DollarSign } from
 // ============================================================
 
 export const metadata: Metadata = {
-  title: "Safety & Prosperity — Learn — Alberta Pulse Check",
+  title: "Safety & Prosperity — Learn — Tamrack",
   description:
     "How crime, health, and economic conditions move together with predictable time lags. Live data from StatsCan, Alberta Regional Dashboard, and Bank of Canada.",
 };

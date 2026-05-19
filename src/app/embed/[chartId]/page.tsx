@@ -10,10 +10,10 @@ export const revalidate = 3600; // ISR: refresh embed data hourly
 export async function generateMetadata({ params }: { params: Promise<{ chartId: string }> }) {
   const { chartId } = await params;
   const chart = resolveChart(chartId);
-  const title = chart?.title || "Chart — Alberta Pulse Check";
+  const title = chart?.title || "Chart — Tamrack";
   return {
     title,
-    description: `Embeddable chart: ${title}. Live Alberta economic data powered by Alberta Pulse Check.`,
+    description: `Embeddable chart: ${title}. Live Alberta economic data powered by Tamrack.`,
     robots: { index: true, follow: true },
   };
 }
@@ -42,12 +42,12 @@ export default async function EmbedPage({ params }: { params: Promise<{ chartId:
       <div className="flex items-center justify-between mt-3 pt-2 border-t border-card-border">
         <span className="text-[9px] text-muted/60">{chart.source}</span>
         <a
-          href="https://albertapulsecheck.ca"
+          href="https://tamrack.ca"
           target="_blank"
           rel="noopener noreferrer"
           className="text-[9px] text-accent/60 hover:text-accent transition-colors"
         >
-          Powered by Alberta Pulse Check
+          Powered by Tamrack
         </a>
       </div>
     </div>

@@ -28,7 +28,7 @@ import {
 import { Home } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "The Housing Machine — Learn — Alberta Pulse Check",
+  title: "The Housing Machine — Learn — Tamrack",
   description:
     "Trace how a Bank of Canada rate decision flows through mortgage rates, building permits, construction starts, vacancy rates, all the way to your rent.",
 };

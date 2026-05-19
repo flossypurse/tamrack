@@ -18,7 +18,7 @@ export default function SafetyProsperityQuizPage() {
       <ModuleQuiz moduleSlug="safety-prosperity" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Safety &amp; Prosperity Quiz
+        Tamrack &mdash; Safety &amp; Prosperity Quiz
       </footer>
     </main>
   );

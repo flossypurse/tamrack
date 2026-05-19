@@ -461,7 +461,7 @@ export default function ChainReactionsPage() {
       <LessonCompleteButton moduleSlug="reading-signals" lessonSlug="chain-reactions" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Chain Reactions &mdash; All data from
+        Tamrack &mdash; Chain Reactions &mdash; All data from
         free public APIs
       </footer>
     </main>

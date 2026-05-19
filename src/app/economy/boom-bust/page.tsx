@@ -3,12 +3,13 @@ import { Suspense } from "react";
 import { Card, CardHeader } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
 import { computeTimeRange } from "@/lib/time-range";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Alberta Boom-Bust Cycle Tracker",
   description: "Track where Alberta is in its economic cycle. Live analysis of oil prices, employment, migration, and construction against historical boom-bust patterns.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/economy/boom-bust",
+    canonical: `${SITE_URL}/economy/boom-bust`,
   },
 };
 import {

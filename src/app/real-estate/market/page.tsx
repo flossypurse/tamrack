@@ -57,6 +57,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionHeader } from "@/components/section-header";
+import { SITE_URL } from "@/lib/constants/site";
 
 // ============================================================
 // Key metrics
@@ -1266,7 +1267,7 @@ export const metadata: Metadata = {
   title: "Alberta Real Estate Intelligence",
   description: "Province-wide real estate intelligence — permit hotspots, assessment trends, and teardown detection across Edmonton, Calgary, and 20+ Alberta municipalities.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/real-estate/market",
+    canonical: `${SITE_URL}/real-estate/market`,
   },
 };
 

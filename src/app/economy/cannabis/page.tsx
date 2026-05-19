@@ -28,13 +28,14 @@ import {
   fetchCannabisProductQuarterly,
   fetchAglcRetailerCount,
 } from "@/lib/data-sources-cannabis";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Alberta Cannabis Industry — Retail Sales & Market Data",
   description:
     "Live cannabis retail sales data for Alberta — monthly revenue, year-over-year growth, market share of total retail. Data from Statistics Canada.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/economy/cannabis",
+    canonical: `${SITE_URL}/economy/cannabis`,
   },
 };
 

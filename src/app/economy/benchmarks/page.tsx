@@ -28,6 +28,7 @@ import {
   fetchStatCanTimeSeries,
   STATSCAN_SERIES,
 } from "@/lib/data-sources";
+import { SITE_URL } from "@/lib/constants/site";
 
 // ============================================================
 // Server-side data fetching
@@ -309,7 +310,7 @@ export const metadata: Metadata = {
   title: "Alberta Municipal Benchmarks",
   description: "Side-by-side benchmark comparison of Alberta municipalities — permits, assessments, population, business activity, and economic indicators.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/economy/benchmarks",
+    canonical: `${SITE_URL}/economy/benchmarks`,
   },
 };
 

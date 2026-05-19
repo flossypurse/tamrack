@@ -7,20 +7,16 @@ import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { signOutAction } from "@/app/actions/auth";
 import {
-  Activity,
   ChevronDown,
-  Menu,
-  X,
   User,
   CreditCard,
   LogOut,
   Shield,
-  Sun,
-  Moon,
-  Search,
   Home,
   Building2,
 } from "lucide-react";
+import { Wordmark } from "./brand/wordmark";
+import { TSun, TMoon, TSearch, TMenu, TClose } from "./icons/t3";
 import { sections, buildMunicipalitySubSections, toolsItems, getAllNavItems } from "./nav-config";
 import { CommandPalette, InlineSearch } from "./command-palette";
 import type { CommandItem } from "./command-palette";
@@ -146,11 +142,10 @@ export function Nav() {
       {/* ================================================================ */}
 
       {/* Mobile top bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-b border-card-border">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-[var(--surface)]/95 backdrop-blur-sm border-b border-[var(--hairline)]">
         <div className="flex items-center justify-between px-4 py-3">
-          <Link href="/" className="flex items-center gap-2">
-            <Activity size={18} className="text-accent" />
-            <span className="text-sm font-semibold">Alberta Pulse Check</span>
+          <Link href="/" className="flex items-center text-[var(--ink)]" aria-label="Tamrack — home">
+            <Wordmark height={16} />
           </Link>
           <div className="flex items-center gap-1">
             {/* Mobile search */}
@@ -164,32 +159,35 @@ export function Nav() {
                   })
                 );
               }}
-              className="p-1.5 rounded-lg hover:bg-foreground/[0.05] text-muted hover:text-foreground transition-colors"
+              className="p-1.5 text-[var(--mid)] hover:text-[var(--ink)] transition-colors"
+              style={{ transitionDuration: "var(--dur-instant)" }}
               aria-label="Search"
             >
-              <Search size={16} />
+              <TSearch size={16} />
             </button>
             {mounted && (
               <button
                 onClick={() =>
                   setTheme(resolvedTheme === "dark" ? "light" : "dark")
                 }
-                className="p-1.5 rounded-lg hover:bg-foreground/[0.05] text-muted hover:text-foreground transition-colors"
+                className="p-1.5 text-[var(--mid)] hover:text-[var(--amber)] transition-colors"
+                style={{ transitionDuration: "var(--dur-instant)" }}
                 aria-label="Toggle theme"
               >
                 {resolvedTheme === "dark" ? (
-                  <Sun size={16} />
+                  <TSun size={16} />
                 ) : (
-                  <Moon size={16} />
+                  <TMoon size={16} />
                 )}
               </button>
             )}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="p-1.5 rounded-lg hover:bg-foreground/[0.05] text-muted hover:text-foreground transition-colors"
+              className="p-1.5 text-[var(--mid)] hover:text-[var(--ink)] transition-colors"
+              style={{ transitionDuration: "var(--dur-instant)" }}
               aria-label="Toggle navigation"
             >
-              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+              {mobileOpen ? <TClose size={20} /> : <TMenu size={20} />}
             </button>
           </div>
         </div>
@@ -210,22 +208,22 @@ export function Nav() {
         }`}
       >
         {/* Logo row */}
-        <div className="px-4 py-4 border-b border-card-border flex items-center justify-between shrink-0">
+        <div className="px-4 py-4 border-b border-[var(--hairline)] flex items-center justify-between shrink-0">
           <Link
             href="/"
-            className="flex items-center gap-2.5"
+            className="flex items-center text-[var(--ink)]"
             onClick={() => setMobileOpen(false)}
+            aria-label="Tamrack — home"
           >
-            <Activity size={20} className="text-accent" />
-            <span className="text-sm font-semibold tracking-tight">
-              Alberta Pulse Check
-            </span>
+            <Wordmark height={18} />
           </Link>
           <button
             onClick={() => setMobileOpen(false)}
-            className="p-1 rounded-lg hover:bg-foreground/[0.05] text-muted"
+            className="p-1 text-[var(--mid)] hover:text-[var(--ink)] transition-colors"
+            style={{ transitionDuration: "var(--dur-instant)" }}
+            aria-label="Close navigation"
           >
-            <X size={18} />
+            <TClose size={18} />
           </button>
         </div>
 

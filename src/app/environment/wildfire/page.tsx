@@ -27,6 +27,7 @@ import {
   HectaresBurnedBarChart,
   CauseBreakdownChart,
 } from "./charts";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const revalidate = 86400; // daily cache for historical data
 
@@ -550,7 +551,7 @@ export const metadata: Metadata = {
   title: "Alberta Wildfire Watch",
   description: "Track active wildfires across Alberta in near real-time. Historical fire data, cause analysis, and regional wildfire risk indicators.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/environment/wildfire",
+    canonical: `${SITE_URL}/environment/wildfire`,
   },
 };
 
@@ -697,7 +698,7 @@ export default function WildfirePage() {
 
       {/* Footer */}
       <p className="text-center text-xs text-muted py-4">
-        Alberta Pulse Check &mdash; Wildfire &mdash; Data from Alberta Wildfire
+        Tamrack &mdash; Wildfire &mdash; Data from Alberta Wildfire
         ArcGIS, CWFIS (NRCan), and Alberta Open Data
       </p>
     </main>

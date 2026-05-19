@@ -20,6 +20,7 @@ import {
   Zap,
   ExternalLink,
 } from "lucide-react";
+import { SITE_URL } from "@/lib/constants/site";
 
 // ============================================================
 // Every data source we're looking at, explained in plain English
@@ -938,10 +939,10 @@ const categories: Category[] = [
 // ============================================================
 
 export const metadata: Metadata = {
-  title: "Data Sources — Alberta Pulse Check",
-  description: "Complete list of government data sources powering Alberta Pulse Check — Bank of Canada, Statistics Canada, Alberta Open Data, and more.",
+  title: "Data Sources — Tamrack",
+  description: "Complete list of government data sources powering Tamrack — Bank of Canada, Statistics Canada, Alberta Open Data, and more.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/tools/sources",
+    canonical: `${SITE_URL}/tools/sources`,
   },
 };
 
@@ -951,7 +952,7 @@ export default function SourcesPage() {
       <div className="mb-8">
         <PageHeader
           title="Data Sources"
-          description="Everything Alberta Pulse Check looks at, explained in plain English. Each data source includes what it is, why it matters for making economic decisions, and how we access it."
+          description="Everything Tamrack looks at, explained in plain English. Each data source includes what it is, why it matters for making economic decisions, and how we access it."
           category="tools"
           icon={<Database size={20} />}
         >

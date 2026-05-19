@@ -3,12 +3,13 @@ import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
 import { computeTimeRange } from "@/lib/time-range";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Alberta Investment Thesis",
   description: "Macro cycle position, energy outlook, rate environment, and migration momentum — should you invest in Alberta real estate right now?",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/economy/invest",
+    canonical: `${SITE_URL}/economy/invest`,
   },
 };
 import {

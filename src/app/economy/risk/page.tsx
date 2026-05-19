@@ -3,12 +3,13 @@ import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
 import { computeTimeRange } from "@/lib/time-range";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Alberta Market Risk Dashboard",
   description: "Composite risk scoring for Alberta municipalities — employment dependency, vacancy, supply pipeline, rate sensitivity, and insolvency trends.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/economy/risk",
+    canonical: `${SITE_URL}/economy/risk`,
   },
 };
 import {

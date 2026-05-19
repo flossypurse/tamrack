@@ -4,7 +4,7 @@ import { Activity } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "Privacy Policy for Alberta Pulse Check. We respect your data privacy under PIPEDA and Alberta PIPA.",
+  description: "Privacy Policy for Tamrack. We respect your data privacy under PIPEDA and Alberta PIPA.",
 };
 
 export default function PrivacyPage() {
@@ -13,7 +13,7 @@ export default function PrivacyPage() {
       <div className="flex items-center gap-2 mb-8">
         <Link href="/" className="flex items-center gap-2 text-muted hover:text-foreground transition-colors">
           <Activity size={18} className="text-accent" />
-          <span className="text-sm font-semibold">Alberta Pulse Check</span>
+          <span className="text-sm font-semibold">Tamrack</span>
         </Link>
       </div>
 
@@ -100,7 +100,7 @@ export default function PrivacyPage() {
         </ul>
         <p>
           To exercise any of these rights, email us at{" "}
-          <a href="mailto:privacy@albertapulsecheck.ca" className="text-accent hover:underline">privacy@albertapulsecheck.ca</a>.
+          <a href="mailto:privacy@tamrack.ca" className="text-accent hover:underline">privacy@tamrack.ca</a>.
           We will respond within 30 days.
         </p>
 
@@ -120,7 +120,7 @@ export default function PrivacyPage() {
         <h2 className="text-lg font-semibold">Contact</h2>
         <p>
           Privacy questions? Email{" "}
-          <a href="mailto:privacy@albertapulsecheck.ca" className="text-accent hover:underline">privacy@albertapulsecheck.ca</a>.
+          <a href="mailto:privacy@tamrack.ca" className="text-accent hover:underline">privacy@tamrack.ca</a>.
         </p>
       </article>
     </main>

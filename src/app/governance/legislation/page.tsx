@@ -258,7 +258,7 @@ export default function LegislationPage() {
       </Suspense>
 
       <p className="text-center text-xs text-muted/60 font-mono pt-4">
-        Alberta Pulse Check — Legislation — Data from OpenParliament.ca
+        Tamrack — Legislation — Data from OpenParliament.ca
       </p>
     </main>
   );

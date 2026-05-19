@@ -385,7 +385,7 @@ export default function HealthOutcomesPage() {
       <LessonCompleteButton moduleSlug="safety-prosperity" lessonSlug="health-outcomes" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Health &amp; Prosperity &mdash; All data
+        Tamrack &mdash; Health &amp; Prosperity &mdash; All data
         from free public APIs
       </footer>
     </main>

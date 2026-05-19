@@ -320,7 +320,7 @@ export default function FederalPage() {
       </Suspense>
 
       <p className="text-center text-xs text-muted/60 font-mono pt-4">
-        Alberta Pulse Check — Federal — Data from Represent API &amp; OpenParliament.ca
+        Tamrack — Federal — Data from Represent API &amp; OpenParliament.ca
       </p>
     </main>
   );

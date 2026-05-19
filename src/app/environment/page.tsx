@@ -12,13 +12,14 @@ import {
   Factory,
 } from "lucide-react";
 import { fetchCWFISActiveFires, fetch511Alerts } from "@/lib/data-sources-fire";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Alberta Environment — Weather, Air, Water & Wildfire",
   description:
     "Real-time environmental monitoring for Alberta — weather conditions, air quality index, river levels, and wildfire tracking from Environment Canada and provincial sources.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/environment",
+    canonical: `${SITE_URL}/environment`,
   },
 };
 

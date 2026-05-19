@@ -140,7 +140,7 @@ async function renderComparisonPdf(result: ComparisonResult): Promise<Buffer> {
       <Page size="LETTER" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.brand}>Alberta Pulse — Peer Comparison</Text>
+          <Text style={styles.brand}>Tamrack — Peer Comparison</Text>
           <Text style={styles.title}>
             Municipality Comparison
           </Text>
@@ -244,7 +244,7 @@ async function renderComparisonPdf(result: ComparisonResult): Promise<Buffer> {
           <Text style={styles.footerText}>
             Data: regionaldashboard.alberta.ca
           </Text>
-          <Text style={styles.footerText}>albertapulsecheck.ca/edo</Text>
+          <Text style={styles.footerText}>tamrack.ca/edo</Text>
         </View>
       </Page>
     </Document>

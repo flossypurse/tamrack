@@ -18,7 +18,7 @@ export default function CommunityLeversQuizPage() {
       <ModuleQuiz moduleSlug="community-levers" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Community Levers Quiz
+        Tamrack &mdash; Community Levers Quiz
       </footer>
     </main>
   );

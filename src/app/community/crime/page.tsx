@@ -20,6 +20,7 @@ import {
   type CrimeSeverityPoint,
   type CrimeByCategoryPoint,
 } from "@/lib/data-sources-crime";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title:
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
   description:
     "Track crime severity index across 200+ Alberta police jurisdictions. Community-level crime data for Calgary. Real-time public safety intelligence.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/community/crime",
+    canonical: `${SITE_URL}/community/crime`,
   },
 };
 

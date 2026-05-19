@@ -20,7 +20,7 @@ export default function TaxDollarsQuizPage() {
       <ModuleQuiz moduleSlug="tax-dollars" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Your Tax Dollars Quiz
+        Tamrack &mdash; Your Tax Dollars Quiz
       </footer>
     </main>
   );

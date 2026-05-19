@@ -41,7 +41,7 @@ import {
 // ============================================================
 
 export const metadata: Metadata = {
-  title: "Learn — Alberta Pulse Check",
+  title: "Learn — Tamrack",
   description:
     "Understand how your community works. Guided explorations using live Alberta data — housing, energy, taxes, immigration, safety, and the levers that shift outcomes.",
 };

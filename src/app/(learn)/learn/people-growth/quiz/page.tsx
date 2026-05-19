@@ -19,7 +19,7 @@ export default function PeopleGrowthQuizPage() {
       <ModuleQuiz moduleSlug="people-growth" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; People &amp; Growth Quiz
+        Tamrack &mdash; People &amp; Growth Quiz
       </footer>
     </main>
   );

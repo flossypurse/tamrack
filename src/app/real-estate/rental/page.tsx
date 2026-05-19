@@ -3,12 +3,13 @@ import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
 import { computeTimeRange } from "@/lib/time-range";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Alberta Rental Market Intelligence",
   description: "CMHC rental vacancy rates, average rents by unit type, and rental market trends across Edmonton and Calgary CMAs.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/real-estate/rental",
+    canonical: `${SITE_URL}/real-estate/rental`,
   },
 };
 import {

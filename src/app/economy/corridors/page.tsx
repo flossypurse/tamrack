@@ -14,6 +14,7 @@ import {
 import {
   fetchMunicipalityMetrics,
 } from "@/lib/municipality-data";
+import { SITE_URL } from "@/lib/constants/site";
 
 // ============================================================
 // Growth scoring engine
@@ -240,7 +241,7 @@ export const metadata: Metadata = {
   title: "Alberta Growth Corridors",
   description: "Alberta municipalities ranked by composite growth score — population, permits, business formation, assessment growth, and migration.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/economy/corridors",
+    canonical: `${SITE_URL}/economy/corridors`,
   },
 };
 

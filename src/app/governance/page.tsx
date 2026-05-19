@@ -19,6 +19,7 @@ import {
   type ElectedOfficial,
   type FederalMP,
 } from "@/lib/data-sources-politics";
+import { SITE_URL } from "@/lib/constants/site";
 
 // ============================================================
 // Loading fallback
@@ -236,7 +237,7 @@ export const metadata: Metadata = {
   description:
     "Alberta political data — provincial legislature, federal MPs, election history, campaign finance, government spending, and federal-provincial fiscal transfers.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/governance",
+    canonical: `${SITE_URL}/governance`,
   },
 };
 
@@ -319,7 +320,7 @@ export default function PoliticsPage() {
       </Card>
 
       <p className="text-center text-xs text-muted/60 font-mono pt-4">
-        Alberta Pulse Check — Politics — Data from Represent API, OpenParliament, Elections Canada, Alberta Open Data
+        Tamrack — Politics — Data from Represent API, OpenParliament, Elections Canada, Alberta Open Data
       </p>
     </main>
   );

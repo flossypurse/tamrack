@@ -3,12 +3,13 @@ import { Suspense } from "react";
 import { ChartCard } from "@/components/chart-card";
 import { computeTimeRange } from "@/lib/time-range";
 import { Card, CardHeader, MetricCard } from "@/components/card";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Alberta Economic Diversification Tracker",
   description: "Is Alberta diversifying beyond oil and gas? Live GDP breakdown by industry, tech sector growth, and non-energy economic indicators.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/economy/diversification",
+    canonical: `${SITE_URL}/economy/diversification`,
   },
 };
 import {

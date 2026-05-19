@@ -19,6 +19,7 @@ import {
   Route,
   MapPin,
 } from "lucide-react";
+import { SITE_URL } from "@/lib/constants/site";
 
 // ============================================================
 // Helpers
@@ -421,7 +422,7 @@ export const metadata: Metadata = {
   title: "Alberta Highway Conditions & Traffic",
   description: "Real-time highway conditions, road closures, and traffic events across Alberta's major transportation corridors.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/community/traffic",
+    canonical: `${SITE_URL}/community/traffic`,
   },
 };
 

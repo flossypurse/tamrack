@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { Code, Copy, Check, Share2, X } from "lucide-react";
+import { SITE_URL } from "@/lib/constants/site";
 
 export function ChartPageActions({
   chartId,
@@ -16,10 +17,10 @@ export function ChartPageActions({
   const origin =
     typeof window !== "undefined"
       ? window.location.origin
-      : "https://albertapulsecheck.ca";
+      : SITE_URL;
   const embedSnippet = `<div data-ap-chart="${chartId}"></div>\n<script src="${origin}/embed/widget.js"><\/script>`;
   const chartUrl = `${origin}/charts/${chartId}`;
-  const shareText = `${title} — Alberta Pulse Check`;
+  const shareText = `${title} — Tamrack`;
 
   const copyToClipboard = useCallback(
     async (text: string, label: string) => {

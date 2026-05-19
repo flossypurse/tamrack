@@ -1,29 +1,35 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { AppShell } from "@/components/app-shell";
 import { OrganizationJsonLd, WebsiteJsonLd, SoftwareApplicationJsonLd } from "@/components/json-ld";
 import { Analytics } from "@/components/analytics";
 import { CookieConsent } from "@/components/cookie-consent";
+import { SITE_URL } from "@/lib/constants/site";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// T3 Terminal type stack — see tamrack/brand/identity/typography.md
+// Sans: Inter (running prose, UI labels, form fields)
+// Mono: JetBrains Mono (wordmark companion, all data values, all section labels, code)
+const sans = Inter({
+  variable: "--font-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const mono = JetBrains_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "800"],
+  display: "swap",
 });
-
-const BASE_URL = "https://albertapulsecheck.ca";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(BASE_URL),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Alberta Pulse Check — Economic Intelligence for Alberta",
-    template: "%s | Alberta Pulse Check",
+    default: "Tamrack — Economic Intelligence for Alberta",
+    template: "%s | Tamrack",
   },
   description:
     "Real-time economic, real estate, and municipal data for Alberta. Live data from 8+ government sources across 22 municipalities — permits, assessments, energy, labour, migration, and more.",
@@ -33,32 +39,32 @@ export const metadata: Metadata = {
     "Alberta energy data", "Alberta housing market", "Alberta economic dashboard",
     "Alberta business intelligence", "Alberta population growth",
   ],
-  authors: [{ name: "Alberta Pulse Check" }],
-  creator: "Alberta Pulse Check",
-  publisher: "Alberta Pulse Check",
+  authors: [{ name: "Tamrack" }],
+  creator: "Tamrack",
+  publisher: "Tamrack",
   openGraph: {
     type: "website",
     locale: "en_CA",
-    url: BASE_URL,
-    siteName: "Alberta Pulse Check",
-    title: "Alberta Pulse Check — Economic Intelligence for Alberta",
+    url: SITE_URL,
+    siteName: "Tamrack",
+    title: "Tamrack — Economic Intelligence for Alberta",
     description:
       "Real-time economic, real estate, and municipal data for Alberta. Live data from 8+ government sources across 22 municipalities.",
     images: [
       {
-        url: "/api/og?title=Alberta+Pulse+Check+-+Economic+Intelligence+for+Alberta",
+        url: "/api/og?title=Tamrack+-+Economic+Intelligence+for+Alberta",
         width: 1200,
         height: 630,
-        alt: "Alberta Pulse Check — Economic Intelligence Dashboard",
+        alt: "Tamrack — Economic Intelligence Dashboard",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Alberta Pulse Check — Economic Intelligence for Alberta",
+    title: "Tamrack — Economic Intelligence for Alberta",
     description:
       "Real-time economic, real estate, and municipal data for Alberta. Live data from 8+ government sources across 22 municipalities.",
-    images: ["/api/og?title=Alberta+Pulse+Check+-+Economic+Intelligence+for+Alberta"],
+    images: ["/api/og?title=Tamrack+-+Economic+Intelligence+for+Alberta"],
   },
   robots: {
     index: true,
@@ -72,7 +78,7 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: BASE_URL,
+    canonical: SITE_URL,
   },
 };
 
@@ -89,7 +95,7 @@ export default function RootLayout({
         <SoftwareApplicationJsonLd />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
+        className={`${sans.variable} ${mono.variable} antialiased min-h-screen`}
       >
         <Providers>
           <AppShell>{children}</AppShell>

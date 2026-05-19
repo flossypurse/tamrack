@@ -1,11 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="8" fill="#0c0f14"/>
-  <polyline
-    points="3,18 9,18 12,10 16,24 20,8 24,18 29,18"
-    fill="none"
-    stroke="#d4863a"
-    stroke-width="2.5"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Tamrack — Favicon
+  Simplified symbol for 16px survival.
+  Grid: 16×16. Stem 2u. Three tick tiers (vs symbol's four) for clarity at small size.
+  Sharp mitered, integer coords, pure fill, no stroke.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" shape-rendering="crispEdges">
+  <g fill="#0E0E0E">
+    <!-- Central stem -->
+    <rect x="7" y="1" width="2" height="14"/>
+    <!-- Three tiers, tapered -->
+    <rect x="5" y="4"  width="6"  height="2"/>
+    <rect x="3" y="8"  width="10" height="2"/>
+    <rect x="1" y="12" width="14" height="2"/>
+  </g>
 </svg>

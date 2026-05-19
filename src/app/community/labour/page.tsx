@@ -3,12 +3,13 @@ import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
 import { computeTimeRange } from "@/lib/time-range";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Alberta Labour Market Data",
   description: "Alberta employment, unemployment rate, participation rate, weekly earnings, and workforce composition — live data from Statistics Canada.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/community/labour",
+    canonical: `${SITE_URL}/community/labour`,
   },
 };
 import {

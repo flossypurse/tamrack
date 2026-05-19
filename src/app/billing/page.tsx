@@ -6,6 +6,7 @@ import { CreditCard, Key, Loader2, Copy, Check, Trash2, Plus, ExternalLink, Buil
 import Link from "next/link";
 import { trackEvent } from "@/components/analytics";
 import { PageHeader } from "@/components/page-header";
+import { freeTierHighlights } from "@/lib/plans";
 
 interface ApiKeyRow {
   id: string;
@@ -45,9 +46,15 @@ export default function BillingPage() {
   }
 
   async function handleCheckout() {
+    // No active paid plans are sold via this page after the 2026-05-18 sunset.
+    // EDO/Realtor are closed; Tamrack isn't live yet. Send the user to /pricing.
     trackEvent("begin_checkout", "conversion", "billing_page");
+    const userPlan = sub?.plan;
+    if (!userPlan || userPlan === "free") {
+      window.location.href = "/pricing";
+      return;
+    }
     setLoading("checkout");
-    const userPlan = sub?.plan || "pro";
     const res = await fetch("/api/billing", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -139,27 +146,45 @@ export default function BillingPage() {
           )}
         </div>
 
-        <p className="text-sm text-muted">
+        <div className="text-sm text-muted space-y-3">
           {isEdo ? (
-            <>
+            <p>
               Pulse EDO — <span className="text-foreground font-medium">$299/mo CAD</span> per municipality
               <br />
               Community profiles, peer comparison, alerts, and council reports.
-            </>
+            </p>
           ) : isRealtor ? (
-            <>
+            <p>
               Pulse Real Estate — <span className="text-foreground font-medium">$49/mo CAD</span> per seat
               <br />
               Market intelligence, prospect tracking, and listing presentation tools.
-            </>
+            </p>
           ) : (
-            <>
-              Alberta Pulse Check — <span className="text-muted">Free tier</span>
-              <br />
-              Browse charts, explore municipalities, and access public dashboards.
-            </>
+            <div className="space-y-2">
+              <p>
+                Tamrack — <span className="text-muted">Free tier</span>
+              </p>
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted/70 mb-1.5">Free tier includes:</p>
+                <ul className="space-y-1">
+                  {freeTierHighlights.map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-sm">
+                      <Check size={13} className="text-accent-green mt-0.5 shrink-0" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/pricing"
+                  className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent/80 mt-2"
+                >
+                  See full comparison
+                  <ArrowRight size={11} />
+                </Link>
+              </div>
+            </div>
           )}
-        </p>
+        </div>
 
         <div className="flex flex-wrap gap-3">
           {!isActive && !isEdo && !isRealtor && (
@@ -202,53 +227,10 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* EDO Upsell — only show for non-EDO users */}
-      {!isEdo && (
-        <div className="bg-card border border-indigo-500/30 rounded-xl p-6 space-y-4">
-          <div className="flex items-center gap-2">
-            <Building2 size={18} className="text-indigo-400" />
-            <h2 className="font-semibold">Pulse EDO</h2>
-            <span className="text-[10px] font-mono px-2 py-0.5 bg-indigo-500/10 text-indigo-400 rounded-full">
-              $299/mo
-            </span>
-          </div>
-          <p className="text-sm text-muted">
-            Purpose-built for economic development officers. Get automated community profiles,
-            peer comparison, trend alerts, and council-ready reports for your municipality.
-          </p>
-          <Link
-            href="/pricing?plan=edo"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors text-sm"
-          >
-            Learn more
-            <ArrowRight size={14} />
-          </Link>
-        </div>
-      )}
-
-      {/* Realtor Upsell — only show for non-realtor users */}
-      {!isRealtor && (
-        <div className="bg-card border border-teal-500/30 rounded-xl p-6 space-y-4">
-          <div className="flex items-center gap-2">
-            <Home size={18} className="text-teal-400" />
-            <h2 className="font-semibold">Pulse Real Estate</h2>
-            <span className="text-[10px] font-mono px-2 py-0.5 bg-teal-500/10 text-teal-400 rounded-full">
-              $49/mo
-            </span>
-          </div>
-          <p className="text-sm text-muted">
-            Purpose-built for Alberta real estate professionals. Get market intelligence, development permit
-            tracking, neighbourhood reports, and listing presentation tools.
-          </p>
-          <Link
-            href="/pricing?plan=realtor"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg font-medium hover:bg-teal-600 transition-colors text-sm"
-          >
-            Learn more
-            <ArrowRight size={14} />
-          </Link>
-        </div>
-      )}
+      {/* Pulse EDO + Pulse Real Estate upsell cards removed 2026-05-18 (sunset
+          to new signups). Grandfathered EDO/Realtor subscribers see their
+          existing plan in the Subscription panel above; new signups are
+          closed (no upgrade path from /billing). */}
 
       {/* API Keys */}
       <div className="bg-card border border-card-border rounded-xl p-6 space-y-4">

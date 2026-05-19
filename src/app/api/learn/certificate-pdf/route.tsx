@@ -148,7 +148,7 @@ async function renderCertificatePdf(name: string, date: string): Promise<Buffer>
     <Document>
       <Page size="A4" orientation="landscape" style={styles.page}>
         <View style={styles.border}>
-          <Text style={styles.brandLine}>Alberta Pulse Check</Text>
+          <Text style={styles.brandLine}>Tamrack</Text>
           <Text style={styles.certTitle}>Certificate of Completion</Text>
           <Text style={styles.certSubtitle}>Alberta Economic Literacy</Text>
 
@@ -177,7 +177,7 @@ async function renderCertificatePdf(name: string, date: string): Promise<Buffer>
             <View style={styles.footerCol}>
               <View style={styles.footerLine} />
               <Text style={styles.footerLabel}>Issued by</Text>
-              <Text style={styles.footerValue}>Alberta Pulse Check</Text>
+              <Text style={styles.footerValue}>Tamrack</Text>
             </View>
             <View style={styles.footerCol}>
               <View style={styles.footerLine} />
@@ -189,7 +189,7 @@ async function renderCertificatePdf(name: string, date: string): Promise<Buffer>
             <View style={styles.footerCol}>
               <View style={styles.footerLine} />
               <Text style={styles.footerLabel}>Verify at</Text>
-              <Text style={styles.footerValue}>albertapulsecheck.ca/learn</Text>
+              <Text style={styles.footerValue}>tamrack.ca/learn</Text>
             </View>
           </View>
         </View>

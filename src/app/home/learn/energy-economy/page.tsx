@@ -37,7 +37,7 @@ import { Flame, Zap, Factory, Users, Home, TrendingUp } from "lucide-react";
 // ============================================================
 
 export const metadata: Metadata = {
-  title: "Alberta's Energy Engine — Learn — Alberta Pulse Check",
+  title: "Alberta's Energy Engine — Learn — Tamrack",
   description:
     "Trace how energy prices ripple through Alberta's entire economy — jobs, migration, housing, and GDP. Live data from Bank of Canada, StatsCan, and CER.",
 };

@@ -429,7 +429,7 @@ export default function DemographicsPage() {
       <LessonCompleteButton moduleSlug="people-growth" lessonSlug="demographics" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Demographics &amp; Housing &mdash; All data
+        Tamrack &mdash; Demographics &amp; Housing &mdash; All data
         from free public APIs
       </footer>
     </main>

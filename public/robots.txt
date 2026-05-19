@@ -1,4 +1,4 @@
-# Alberta Pulse Check — albertapulsecheck.ca
+# Tamrack — albertapulsecheck.ca (domain flips to tamrack.ca at cutover; update Sitemap URL below then)
 User-agent: *
 Allow: /
 Disallow: /api/

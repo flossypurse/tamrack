@@ -3,12 +3,13 @@ import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
 import { computeTimeRange } from "@/lib/time-range";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Alberta Commercial Real Estate Pulse",
   description: "Commercial property assessments, business formation trends, retail sales, and commercial zoning analysis across Alberta municipalities.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/real-estate/commercial",
+    canonical: `${SITE_URL}/real-estate/commercial`,
   },
 };
 import {

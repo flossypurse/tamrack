@@ -3,12 +3,13 @@ import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
 import { computeTimeRange } from "@/lib/time-range";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Alberta Drilling & Well Activity",
   description: "AER well licence data, drilling activity trends, oil and gas production volumes, and oilfield service activity across Alberta.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/economy/drilling",
+    canonical: `${SITE_URL}/economy/drilling`,
   },
 };
 import {

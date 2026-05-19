@@ -5,6 +5,7 @@ import { Wind, AlertTriangle, CheckCircle2, Shield } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionHeader } from "@/components/section-header";
 import { fetchAlbertaAQHI, type AQHIReading } from "@/lib/data-sources";
+import { SITE_URL } from "@/lib/constants/site";
 
 // ============================================================
 // Helpers
@@ -250,7 +251,7 @@ export const metadata: Metadata = {
   title: "Alberta Air Quality Index (AQHI)",
   description: "Real-time Air Quality Health Index monitoring across Alberta stations. Track particulate matter, ozone, and nitrogen dioxide levels.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/environment/air-quality",
+    canonical: `${SITE_URL}/environment/air-quality`,
   },
 };
 
@@ -283,7 +284,7 @@ export default function AirQualityPage() {
 
       {/* Footer */}
       <p className="text-center text-xs text-muted/60 font-mono pt-4">
-        Alberta Pulse Check — Air Quality — Data from ECCC AQHI API
+        Tamrack — Air Quality — Data from ECCC AQHI API
       </p>
     </main>
   );

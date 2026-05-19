@@ -14,6 +14,7 @@ import {
   fetchAlbertaWaterLevels,
   type HydrometricReading,
 } from "@/lib/data-sources";
+import { SITE_URL } from "@/lib/constants/site";
 
 // ============================================================
 // Loading fallback
@@ -163,7 +164,7 @@ export const metadata: Metadata = {
   title: "Alberta Water Levels & River Monitoring",
   description: "Live monitoring of Alberta's river systems, water levels, and flood risk indicators from government hydrometric stations.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/environment/water",
+    canonical: `${SITE_URL}/environment/water`,
   },
 };
 

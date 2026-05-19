@@ -31,7 +31,7 @@ import { Wrench, Globe, Landmark, Users, Home, Flame, Shield, TrendingUp, Lightb
 // ============================================================
 
 export const metadata: Metadata = {
-  title: "The Community Levers — Learn — Alberta Pulse Check",
+  title: "The Community Levers — Learn — Tamrack",
   description:
     "What can you actually change? A synthesis of every pattern from the Learn series, mapped to the levers that shift them — federal, municipal, and community.",
 };

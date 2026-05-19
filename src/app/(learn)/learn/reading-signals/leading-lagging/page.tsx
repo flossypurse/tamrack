@@ -349,7 +349,7 @@ export default function LeadingLaggingPage() {
       <LessonCompleteButton moduleSlug="reading-signals" lessonSlug="leading-lagging" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Reading the Signals &mdash; All data from
+        Tamrack &mdash; Reading the Signals &mdash; All data from
         free public APIs
       </footer>
     </main>

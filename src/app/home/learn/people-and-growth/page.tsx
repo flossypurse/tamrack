@@ -26,7 +26,7 @@ import {
 import { Users } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "People & Growth — Learn — Alberta Pulse Check",
+  title: "People & Growth — Learn — Tamrack",
   description:
     "Immigration, migration, demographics, and whether Alberta's communities are building fast enough to keep up with one of Canada's fastest-growing populations.",
 };

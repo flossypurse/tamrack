@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   // Use x-forwarded-host/proto to get the real public origin behind Railway's proxy
   const headers = new Headers(req.headers);
   const proto = headers.get("x-forwarded-proto") || "https";
-  const host = headers.get("x-forwarded-host") || headers.get("host") || "albertapulsecheck.ca";
+  const host = headers.get("x-forwarded-host") || headers.get("host") || "tamrack.ca";
   const origin = `${proto}://${host}`;
   const response = NextResponse.redirect(origin, 302);
 

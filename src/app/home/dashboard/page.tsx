@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Alberta Economic Dashboard",
   description: "Live macro economic indicators for Alberta — GDP, unemployment, inflation, interest rates, and retail sales updated daily from government sources.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/home/dashboard",
+    canonical: `${SITE_URL}/home/dashboard`,
   },
 };
 import { TimeSeriesAreaChart, TimeSeriesBarChart } from "@/components/chart";
@@ -20,6 +20,7 @@ import {
 } from "@/lib/data-sources";
 import { SectionHeader } from "@/components/section-header";
 import { TrendingUp, Briefcase, BarChart3, Activity } from "lucide-react";
+import { SITE_URL } from "@/lib/constants/site";
 
 // ============================================================
 // Server-side data fetching

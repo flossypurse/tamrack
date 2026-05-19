@@ -28,6 +28,7 @@ import {
   UtensilsCrossed, GraduationCap, Hospital, Pill, ShoppingCart,
   Fuel, Landmark, Dumbbell, Trees, BookOpen, Info, Database,
 } from "lucide-react";
+import { SITE_URL } from "@/lib/constants/site";
 
 // Use dynamic rendering — upstream APIs (ArcGIS, StatsCan) are unreliable at build time
 export const dynamic = "force-dynamic";
@@ -42,19 +43,19 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title,
     description,
     alternates: {
-      canonical: `https://albertapulsecheck.ca/municipalities/${slug}`,
+      canonical: `${SITE_URL}/municipalities/${slug}`,
     },
     openGraph: {
-      title: `${title} | Alberta Pulse Check`,
+      title: `${title} | Tamrack`,
       description,
-      url: `https://albertapulsecheck.ca/municipalities/${slug}`,
+      url: `${SITE_URL}/municipalities/${slug}`,
       type: "website",
       images: [
         {
           url: `/api/og?title=${encodeURIComponent(config.name)}&subtitle=${encodeURIComponent("Economic Data & Development Activity")}&type=municipality`,
           width: 1200,
           height: 630,
-          alt: `${config.name} economic data — Alberta Pulse Check`,
+          alt: `${config.name} economic data — Tamrack`,
         },
       ],
     },

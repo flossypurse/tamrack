@@ -15,13 +15,14 @@ import {
   fetchHousingStarts,
   fetchVacancyRates,
 } from "@/lib/data-sources-cmhc";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Alberta Real Estate — Market Intelligence & Opportunities",
   description:
     "Alberta real estate data — prospect leads, market intelligence, neighbourhood analysis, development pipeline, rental trends, and commercial activity. Built for agents, investors, and developers.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/real-estate",
+    canonical: `${SITE_URL}/real-estate`,
   },
 };
 

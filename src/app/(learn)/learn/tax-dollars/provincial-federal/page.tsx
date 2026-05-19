@@ -427,7 +427,7 @@ export default function ProvincialFederalPage() {
       <LessonCompleteButton moduleSlug="tax-dollars" lessonSlug="provincial-federal" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Provincial &amp; Federal &mdash; All data
+        Tamrack &mdash; Provincial &amp; Federal &mdash; All data
         from free public APIs
       </footer>
     </main>

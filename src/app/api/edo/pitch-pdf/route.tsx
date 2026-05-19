@@ -131,7 +131,7 @@ async function renderPitchPdf(pitch: PitchKit): Promise<Buffer> {
       <Page size="LETTER" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.brand}>Alberta Pulse — Investment Pitch Kit</Text>
+          <Text style={styles.brand}>Tamrack — Investment Pitch Kit</Text>
           <Text style={styles.title}>{pitch.municipalityName}</Text>
           <Text style={styles.subtitle}>
             Investment Profile · Generated{" "}
@@ -272,7 +272,7 @@ async function renderPitchPdf(pitch: PitchKit): Promise<Buffer> {
           <Text style={styles.footerText}>
             Data: regionaldashboard.alberta.ca, Google Maps, municipal ArcGIS
           </Text>
-          <Text style={styles.footerText}>albertapulsecheck.ca/edo</Text>
+          <Text style={styles.footerText}>tamrack.ca/edo</Text>
         </View>
       </Page>
     </Document>

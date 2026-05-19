@@ -19,7 +19,7 @@ export default function ReadingSignalsQuizPage() {
       <ModuleQuiz moduleSlug="reading-signals" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Reading the Signals Quiz
+        Tamrack &mdash; Reading the Signals Quiz
       </footer>
     </main>
   );

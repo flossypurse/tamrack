@@ -13,6 +13,7 @@ import {
   fetchLeadingCausesOfDeath,
   type LeadingCauseOfDeath,
 } from "@/lib/data-sources-health";
+import { SITE_URL } from "@/lib/constants/site";
 
 // ============================================================
 // Metadata
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
   description:
     "Leading causes of death in Alberta with historical trends. Province-wide data from Alberta Open Data, 2001-2022.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/community/mortality",
+    canonical: `${SITE_URL}/community/mortality`,
   },
 };
 

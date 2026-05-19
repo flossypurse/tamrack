@@ -16,7 +16,7 @@ import {
 export const metadata: Metadata = {
   title: "Tools — Calculators, Learn, API Docs & Data Sources",
   description:
-    "Free Alberta calculators, educational tools, API documentation, and data source reference for Alberta Pulse Check.",
+    "Free Alberta calculators, educational tools, API documentation, and data source reference for Tamrack.",
 };
 
 const calculators = [
@@ -60,7 +60,7 @@ const pages = [
     icon: BookOpen,
     title: "API Documentation",
     description:
-      "Interactive documentation for Alberta Pulse Check's API endpoints. If you're a developer building on top of this data — or want to integrate it into your own tools, dashboards, or analysis pipelines — this page lets you explore endpoints, see request/response shapes, and test queries live.",
+      "Interactive documentation for Tamrack's API endpoints. If you're a developer building on top of this data — or want to integrate it into your own tools, dashboards, or analysis pipelines — this page lets you explore endpoints, see request/response shapes, and test queries live.",
     sources: "Internal API reference",
   },
   {
@@ -97,7 +97,7 @@ export default function ToolsPage() {
             It uses the same live data as the rest of the dashboard, so the examples are always current.
           </p>
           <p>
-            <strong className="text-foreground">API Docs</strong> is for developers. Alberta Pulse Check
+            <strong className="text-foreground">API Docs</strong> is for developers. Tamrack
             exposes its data through REST API endpoints — if you want to pull this data into your own tools,
             that's where to start.
           </p>

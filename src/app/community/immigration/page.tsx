@@ -3,12 +3,13 @@ import { Suspense } from "react";
 import { Card, CardHeader, MetricCard } from "@/components/card";
 import { ChartCard } from "@/components/chart-card";
 import { computeTimeRange } from "@/lib/time-range";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Alberta Migration & Population Growth",
   description: "Who is moving to Alberta and why? International immigration, interprovincial migration flows, and population growth data updated quarterly.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/community/immigration",
+    canonical: `${SITE_URL}/community/immigration`,
   },
 };
 import {

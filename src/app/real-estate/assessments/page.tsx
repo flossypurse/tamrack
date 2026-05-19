@@ -18,7 +18,7 @@ import {
 } from "@/lib/data-sources-ualberta";
 
 export const metadata: Metadata = {
-  title: "Neighbourhood Assessments — Alberta Pulse Check",
+  title: "Neighbourhood Assessments — Tamrack",
   description:
     "Neighbourhood-level property assessment data for Edmonton and Calgary. City-wide trends, top neighbourhoods by value, and year-over-year comparisons.",
 };

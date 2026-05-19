@@ -264,7 +264,7 @@ export default function CampaignFinancePage() {
       </Suspense>
 
       <p className="text-center text-xs text-muted/60 font-mono pt-4">
-        Alberta Pulse Check — Campaign Finance — Data from Elections Canada, Elections Alberta
+        Tamrack — Campaign Finance — Data from Elections Canada, Elections Alberta
       </p>
     </main>
   );

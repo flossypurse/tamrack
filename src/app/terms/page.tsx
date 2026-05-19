@@ -4,7 +4,7 @@ import { Activity } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "Terms of Service for Alberta Pulse Check — economic intelligence dashboard for Alberta.",
+  description: "Terms of Service for Tamrack — economic intelligence dashboard for Alberta.",
 };
 
 export default function TermsPage() {
@@ -13,7 +13,7 @@ export default function TermsPage() {
       <div className="flex items-center gap-2 mb-8">
         <Link href="/" className="flex items-center gap-2 text-muted hover:text-foreground transition-colors">
           <Activity size={18} className="text-accent" />
-          <span className="text-sm font-semibold">Alberta Pulse Check</span>
+          <span className="text-sm font-semibold">Tamrack</span>
         </Link>
       </div>
 
@@ -23,13 +23,13 @@ export default function TermsPage() {
 
         <h2 className="text-lg font-semibold">1. Agreement to Terms</h2>
         <p>
-          By accessing or using Alberta Pulse Check (&ldquo;the Service&rdquo;), you agree to be bound by these Terms of Service.
+          By accessing or using Tamrack (&ldquo;the Service&rdquo;), you agree to be bound by these Terms of Service.
           If you do not agree, do not use the Service.
         </p>
 
         <h2 className="text-lg font-semibold">2. Description of Service</h2>
         <p>
-          Alberta Pulse Check provides economic data dashboards, embeddable charts, and APIs aggregating
+          Tamrack provides economic data dashboards, embeddable charts, and APIs aggregating
           publicly available data from government sources including but not limited to: Bank of Canada,
           Statistics Canada, Alberta Open Data, the Canada Energy Regulator (CER), Alberta Electric System
           Operator (AESO), Immigration Refugees and Citizenship Canada (IRCC), Infrastructure Canada,
@@ -65,7 +65,7 @@ export default function TermsPage() {
         <h2 className="text-lg font-semibold">5. Embeddable Charts</h2>
         <p>
           Pro subscribers may embed charts on external websites using the provided embed URLs. Embedded charts
-          must retain the Alberta Pulse Check attribution link. You may not modify, remove, or obscure the
+          must retain the Tamrack attribution link. You may not modify, remove, or obscure the
           attribution. We reserve the right to disable embed access for accounts that violate this requirement.
         </p>
 
@@ -79,7 +79,7 @@ export default function TermsPage() {
 
         <h2 className="text-lg font-semibold">7. Intellectual Property</h2>
         <p>
-          The Service&apos;s interface, design, and proprietary analysis are owned by Alberta Pulse Check. The
+          The Service&apos;s interface, design, and proprietary analysis are owned by Tamrack. The
           underlying data is sourced from public government sources and remains subject to the respective
           government open data licences. You may use data obtained through the API or embeds for your own
           purposes, provided you comply with applicable government open data licence terms.
@@ -87,7 +87,7 @@ export default function TermsPage() {
 
         <h2 className="text-lg font-semibold">8. Limitation of Liability</h2>
         <p>
-          To the maximum extent permitted by law, Alberta Pulse Check and its operators shall not be liable for any
+          To the maximum extent permitted by law, Tamrack and its operators shall not be liable for any
           indirect, incidental, special, consequential, or punitive damages resulting from your use of the Service,
           including but not limited to financial losses based on data presented by the Service.
         </p>
@@ -102,7 +102,7 @@ export default function TermsPage() {
         <p>
           We may suspend or terminate your account if you violate these terms, abuse the API, or engage in any
           activity that harms the Service or other users. You may delete your account at any time by contacting us
-          at <a href="mailto:support@albertapulsecheck.ca" className="text-accent hover:underline">support@albertapulsecheck.ca</a>.
+          at <a href="mailto:support@tamrack.ca" className="text-accent hover:underline">support@tamrack.ca</a>.
         </p>
 
         <h2 className="text-lg font-semibold">11. Changes to Terms</h2>
@@ -119,7 +119,7 @@ export default function TermsPage() {
         <h2 className="text-lg font-semibold">Contact</h2>
         <p>
           Questions about these terms? Email{" "}
-          <a href="mailto:support@albertapulsecheck.ca" className="text-accent hover:underline">support@albertapulsecheck.ca</a>.
+          <a href="mailto:support@tamrack.ca" className="text-accent hover:underline">support@tamrack.ca</a>.
         </p>
       </article>
     </main>

@@ -218,7 +218,7 @@ export default function GeographyLessonPage() {
             together (or limits it).
           </p>
           <p>
-            Every chart you see on Alberta Pulse is shaped by these physical
+            Every chart you see on Tamrack is shaped by these physical
             realities. When you see a spike in construction permits in
             Lethbridge, it makes more sense when you know Lethbridge sits in
             irrigated agricultural country with reliable water. When Fort

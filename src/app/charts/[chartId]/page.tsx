@@ -14,6 +14,7 @@ import {
 import { resolveChart } from "@/lib/chart-resolver";
 import { BreadcrumbJsonLd } from "@/components/json-ld";
 import { ChartPageActions } from "./chart-actions";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const revalidate = 3600; // ISR: 1 hour
 
@@ -37,15 +38,15 @@ export async function generateMetadata({
   const { chartId } = await params;
   const meta = getChartById(chartId);
   if (!meta) {
-    return { title: "Chart Not Found — Alberta Pulse Check" };
+    return { title: "Chart Not Found — Tamrack" };
   }
 
   return {
-    title: `${meta.title} — Alberta Pulse Check`,
+    title: `${meta.title} — Tamrack`,
     description: meta.description,
-    alternates: { canonical: `https://albertapulsecheck.ca/charts/${chartId}` },
+    alternates: { canonical: `${SITE_URL}/charts/${chartId}` },
     openGraph: {
-      title: `${meta.title} — Alberta Pulse Check`,
+      title: `${meta.title} — Tamrack`,
       description: meta.description,
       type: "article",
       images: [
@@ -244,9 +245,9 @@ export default async function ChartDetailPage({
           {/* Breadcrumb structured data */}
           <BreadcrumbJsonLd
             items={[
-              { name: "Home", url: "https://albertapulsecheck.ca" },
-              { name: "Charts", url: "https://albertapulsecheck.ca/charts" },
-              { name: meta.title, url: `https://albertapulsecheck.ca/charts/${meta.id}` },
+              { name: "Home", url: SITE_URL },
+              { name: "Charts", url: `${SITE_URL}/charts` },
+              { name: meta.title, url: `${SITE_URL}/charts/${meta.id}` },
             ]}
           />
 
@@ -259,18 +260,18 @@ export default async function ChartDetailPage({
                 "@type": "Dataset",
                 name: meta.title,
                 description: meta.description,
-                url: `https://albertapulsecheck.ca/charts/${meta.id}`,
+                url: `${SITE_URL}/charts/${meta.id}`,
                 creator: {
                   "@type": "Organization",
-                  name: "Alberta Pulse Check",
-                  url: "https://albertapulsecheck.ca",
+                  name: "Tamrack",
+                  url: SITE_URL,
                 },
                 distribution: {
                   "@type": "DataDownload",
                   encodingFormat: "text/html",
-                  contentUrl: `https://albertapulsecheck.ca/embed/${meta.id}`,
+                  contentUrl: `${SITE_URL}/embed/${meta.id}`,
                 },
-                license: "https://albertapulsecheck.ca/terms",
+                license: `${SITE_URL}/terms`,
                 temporalCoverage: "..",
                 spatialCoverage: {
                   "@type": "Place",
@@ -314,7 +315,7 @@ export default async function ChartDetailPage({
       {/* Powered by */}
       <div className="mt-10 pt-6 border-t border-card-border text-center">
         <p className="text-[10px] text-muted/40">
-          Powered by Alberta Pulse Check — live Alberta data from government sources
+          Powered by Tamrack — live Alberta data from government sources
         </p>
       </div>
     </main>

@@ -24,6 +24,7 @@ import {
   type RenovationSignal,
   type ConvergenceSignal,
 } from "@/lib/analysis";
+import { SITE_URL } from "@/lib/constants/site";
 
 // ============================================================
 // Signal badge
@@ -399,7 +400,7 @@ export const metadata: Metadata = {
   title: "Alberta Neighbourhood Micro Signals",
   description: "Neighbourhood-level intelligence from cross-analyzing permits, development activity, and assessment changes across Alberta communities.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/real-estate/neighbourhoods",
+    canonical: `${SITE_URL}/real-estate/neighbourhoods`,
   },
 };
 

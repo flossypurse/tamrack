@@ -318,7 +318,7 @@ export default function LegislaturePage() {
       </Suspense>
 
       <p className="text-center text-xs text-muted/60 font-mono pt-4">
-        Alberta Pulse Check — Legislature — Data from Represent API (Open North)
+        Tamrack — Legislature — Data from Represent API (Open North)
       </p>
     </main>
   );

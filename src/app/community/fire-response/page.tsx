@@ -17,13 +17,14 @@ import {
   type ActiveFireCWFIS,
   type AlbertaAlert,
 } from "@/lib/data-sources-fire";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Alberta Fire & Emergency Response Data",
   description:
     "Edmonton fire and EMS incident data, active wildfire tracking, and Alberta emergency alerts. Real-time public safety intelligence.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/community/fire-response",
+    canonical: `${SITE_URL}/community/fire-response`,
   },
 };
 

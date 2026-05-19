@@ -453,7 +453,7 @@ export default function PropertyTaxPage() {
       <LessonCompleteButton moduleSlug="tax-dollars" lessonSlug="property-tax" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Property Tax 101 &mdash; All data from free
+        Tamrack &mdash; Property Tax 101 &mdash; All data from free
         public APIs
       </footer>
     </main>

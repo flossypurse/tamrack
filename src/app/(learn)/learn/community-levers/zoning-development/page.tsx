@@ -342,7 +342,7 @@ export default function ZoningDevelopmentPage() {
       <LessonCompleteButton moduleSlug="community-levers" lessonSlug="zoning-development" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Zoning &amp; Development &mdash; All data
+        Tamrack &mdash; Zoning &amp; Development &mdash; All data
         from free public APIs
       </footer>
     </main>

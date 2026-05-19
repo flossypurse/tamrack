@@ -166,7 +166,7 @@ async function renderPdf(profile: CommunityProfile): Promise<Buffer> {
       <Page size="LETTER" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.brand}>Alberta Pulse — Community Profile</Text>
+          <Text style={styles.brand}>Tamrack — Community Profile</Text>
           <Text style={styles.title}>{profile.municipalityName}</Text>
           <Text style={styles.subtitle}>
             Generated {new Date(profile.generatedAt).toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" })}
@@ -210,7 +210,7 @@ async function renderPdf(profile: CommunityProfile): Promise<Buffer> {
             Data: regionaldashboard.alberta.ca, StatsCan, municipal ArcGIS
           </Text>
           <Text style={styles.footerText}>
-            albertapulsecheck.ca/edo
+            tamrack.ca/edo
           </Text>
         </View>
       </Page>

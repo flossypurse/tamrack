@@ -7,6 +7,7 @@ import {
   fetchFederalElectionResultsAB,
   type ElectionRidingResult,
 } from "@/lib/data-sources-politics";
+import { SITE_URL } from "@/lib/constants/site";
 
 function LoadingCard() {
   return (
@@ -242,7 +243,7 @@ export const metadata: Metadata = {
   description:
     "Historical election results for Alberta federal and provincial ridings. Vote share, seat counts, and trends.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/governance/elections",
+    canonical: `${SITE_URL}/governance/elections`,
   },
 };
 
@@ -263,7 +264,7 @@ export default function ElectionsPage() {
       </Suspense>
 
       <p className="text-center text-xs text-muted/60 font-mono pt-4">
-        Alberta Pulse Check — Elections — Data from Elections Canada Open Data
+        Tamrack — Elections — Data from Elections Canada Open Data
       </p>
     </main>
   );

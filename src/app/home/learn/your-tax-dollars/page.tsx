@@ -33,7 +33,7 @@ import { Landmark, DollarSign, Building2, Wrench, MapPin } from "lucide-react";
 // ============================================================
 
 export const metadata: Metadata = {
-  title: "Your Tax Dollars at Work — Learn — Alberta Pulse Check",
+  title: "Your Tax Dollars at Work — Learn — Tamrack",
   description:
     "How property assessments become municipal budgets become community services. Understand the assessment-rate-budget loop with live data for real Alberta municipalities.",
 };

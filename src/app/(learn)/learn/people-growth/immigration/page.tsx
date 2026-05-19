@@ -434,7 +434,7 @@ export default function ImmigrationPage() {
       <LessonCompleteButton moduleSlug="people-growth" lessonSlug="immigration" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Immigration Drivers &mdash; All data from
+        Tamrack &mdash; Immigration Drivers &mdash; All data from
         free public APIs
       </footer>
     </main>

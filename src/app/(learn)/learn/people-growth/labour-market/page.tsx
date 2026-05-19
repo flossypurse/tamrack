@@ -418,7 +418,7 @@ export default function LabourMarketPage() {
       <LessonCompleteButton moduleSlug="people-growth" lessonSlug="labour-market" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; The Labour Market &mdash; All data from free
+        Tamrack &mdash; The Labour Market &mdash; All data from free
         public APIs
       </footer>
     </main>

@@ -458,7 +458,7 @@ export default function EconomicDevelopmentPage() {
       <LessonCompleteButton moduleSlug="community-levers" lessonSlug="economic-development" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Economic Development &mdash; All data from
+        Tamrack &mdash; Economic Development &mdash; All data from
         free public APIs
       </footer>
     </main>

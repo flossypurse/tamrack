@@ -10,13 +10,14 @@ import {
   ArrowRight,
   Lock,
 } from "lucide-react";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Alberta Health Data — Demographics, Mortality & Public Health",
   description:
     "Alberta health data including life expectancy by municipality, leading causes of death, births and deaths trends. Data from Alberta Regional Dashboard and open government sources.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/community/health",
+    canonical: `${SITE_URL}/community/health`,
   },
 };
 

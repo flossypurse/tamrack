@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { PrintButton } from "./print-button";
+import { auth } from "@/lib/auth";
 import {
   findEquityGoldSellers,
   findTeardownTargets,
@@ -25,6 +26,17 @@ import {
   getLeadSummary,
   type ProspectLead,
 } from "@/lib/prospects";
+import { SITE_URL } from "@/lib/constants/site";
+
+// ============================================================
+// Access state
+// ============================================================
+//
+// Pulse Real Estate is sunset to new signups (2026-05-18) and the page is no
+// longer gated for non-subscribers. Everyone sees the full lead list — the
+// page now functions as a public showcase of the data work, not as a paywall
+// funnel. Preserved as a marketing/SEO surface; can be deleted entirely once
+// the broader content strategy decides whether to keep `/real-estate/*`.
 
 // ============================================================
 // Priority badge
@@ -131,6 +143,7 @@ function LeadGrid({
 
   const summary = getLeadSummary(leads);
   const municipalities = summary.municipalities;
+  const displayed = leads.slice(0, limit);
 
   return (
     <div className="space-y-3">
@@ -156,7 +169,7 @@ function LeadGrid({
 
       {/* Lead cards */}
       <div className="space-y-2">
-        {leads.slice(0, limit).map((lead) => (
+        {displayed.map((lead) => (
           <ProspectCard key={lead.id} lead={lead} />
         ))}
       </div>
@@ -174,7 +187,10 @@ async function EquityGoldSection() {
         realize — a great conversation starter. Pulled from all municipalities
         with sale price data.
       </p>
-      <LeadGrid leads={leads} emptyMessage="No equity gap leads found. Sale price data may be limited." />
+      <LeadGrid
+        leads={leads}
+        emptyMessage="No equity gap leads found. Sale price data may be limited."
+      />
     </div>
   );
 }
@@ -190,7 +206,10 @@ async function TeardownSection() {
         same transformation. Sellers in these areas are sitting on land worth
         more than their house.
       </p>
-      <LeadGrid leads={leads} emptyMessage="No teardown targets found right now." />
+      <LeadGrid
+        leads={leads}
+        emptyMessage="No teardown targets found right now."
+      />
     </div>
   );
 }
@@ -204,7 +223,10 @@ async function VacantLotSection() {
         looking to build custom. Scanned from dedicated vacant lot endpoints and
         property classification data across multiple municipalities.
       </p>
-      <LeadGrid leads={leads} emptyMessage="No vacant lot data available." />
+      <LeadGrid
+        leads={leads}
+        emptyMessage="No vacant lot data available."
+      />
     </div>
   );
 }
@@ -218,7 +240,10 @@ async function RenovationSection() {
         Owners who just renovated may be preparing to sell — or their neighbours
         are now wondering what their own home is worth.
       </p>
-      <LeadGrid leads={leads} emptyMessage="No high-value renovation permits found recently." />
+      <LeadGrid
+        leads={leads}
+        emptyMessage="No high-value renovation permits found recently."
+      />
     </div>
   );
 }
@@ -232,7 +257,11 @@ async function NewNeighbourhoodSection() {
         for their builds, and developers need preferred agent referrals. Sourced
         from municipal development stage registries.
       </p>
-      <LeadGrid leads={leads} emptyMessage="No recent development stage data available." limit={20} />
+      <LeadGrid
+        leads={leads}
+        emptyMessage="No recent development stage data available."
+        limit={20}
+      />
     </div>
   );
 }
@@ -246,7 +275,10 @@ async function DevPermitSurgeSection() {
         Edmonton and Calgary. Active permits signal neighbourhood growth —
         neighbours of new builds often consider selling.
       </p>
-      <LeadGrid leads={leads} emptyMessage="No dev permit data from ArcGIS municipalities." />
+      <LeadGrid
+        leads={leads}
+        emptyMessage="No dev permit data from ArcGIS municipalities."
+      />
     </div>
   );
 }
@@ -313,11 +345,15 @@ export const metadata: Metadata = {
   description:
     "Province-wide data-driven real estate leads organized by signal strength — permit activity, assessment changes, and neighbourhood momentum.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/real-estate/prospects",
+    canonical: `${SITE_URL}/real-estate/prospects`,
   },
 };
 
-export default function ProspectsPage() {
+export default async function ProspectsPage() {
+  // Auth lookup retained for future personalization but no longer used to gate
+  // content (Pulse Real Estate sunset to new signups 2026-05-18).
+  await auth();
+
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto space-y-6 print:p-2 print:space-y-4">
       {/* Header */}
@@ -342,6 +378,9 @@ export default function ProspectsPage() {
           <PrintButton />
         </div>
       </PageHeader>
+
+      {/* Preview-mode upsell banner removed 2026-05-18 (Pulse Real Estate
+          sunset). All sections render full lists for every visitor. */}
 
       {/* Section 1: Equity Gold */}
       <section>

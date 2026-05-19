@@ -264,7 +264,7 @@ export default function MunicipalPowersPage() {
       <LessonCompleteButton moduleSlug="community-levers" lessonSlug="municipal-powers" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Municipal Powers &mdash; All data from
+        Tamrack &mdash; Municipal Powers &mdash; All data from
         free public APIs
       </footer>
     </main>

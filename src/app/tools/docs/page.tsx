@@ -36,13 +36,25 @@ type ParamDef = {
   options?: string[];
 };
 
+// Tamrack scopes — keep in sync with src/lib/api-auth.ts (5-scope taxonomy).
+// Replaces the legacy tier: "pro" | "all" model. Every endpoint now declares
+// the single scope an API key needs to call it. `none` = no scope check
+// (e.g. /api/health).
+type TamrackScope =
+  | "tamrack:macro:read"
+  | "tamrack:regional:read"
+  | "tamrack:real-estate:read"
+  | "tamrack:energy:read"
+  | "tamrack:economy:read"
+  | "none";
+
 type EndpointDef = {
   method: string;
   path: string;
   title: string;
   description: string;
   icon: React.ElementType;
-  tier: "pro" | "all";
+  scope: TamrackScope;
   params: ParamDef[];
   exampleResponse: object;
   curlExample: string;
@@ -56,7 +68,7 @@ const ENDPOINTS: EndpointDef[] = [
     description:
       "Normalized time series data for 18 macroeconomic indicators covering interest rates, employment, GDP, housing, commodities, and more. Data sourced live from Bank of Canada and Statistics Canada.",
     icon: BarChart3,
-    tier: "pro",
+    scope: "tamrack:macro:read",
     params: [
       {
         name: "indicator",
@@ -107,8 +119,8 @@ const ENDPOINTS: EndpointDef[] = [
         { date: "2025-06-04", value: 2.75 },
       ],
     },
-    curlExample: `curl -H "Authorization: Bearer ap_YOUR_KEY" \\
-  "https://albertapulsecheck.ca/api/macro?indicator=policy_rate&periods=6"`,
+    curlExample: `curl -H "Authorization: Bearer <YOUR_API_KEY>" \\
+  "https://tamrack.ca/api/macro?indicator=policy_rate&periods=6"`,
   },
   {
     method: "GET",
@@ -117,7 +129,7 @@ const ENDPOINTS: EndpointDef[] = [
     description:
       "Building permits, development permits, and construction project data aggregated across Edmonton metro municipalities. Includes hot zones, monthly trends, and recent permit details.",
     icon: Building2,
-    tier: "pro",
+    scope: "tamrack:real-estate:read",
     params: [
       {
         name: "municipality",
@@ -166,8 +178,8 @@ const ENDPOINTS: EndpointDef[] = [
         { month: "2025-02", permits: 289, value: 82000000 },
       ],
     },
-    curlExample: `curl -H "Authorization: Bearer ap_YOUR_KEY" \\
-  "https://albertapulsecheck.ca/api/permits?municipality=edmonton"`,
+    curlExample: `curl -H "Authorization: Bearer <YOUR_API_KEY>" \\
+  "https://tamrack.ca/api/permits?municipality=edmonton"`,
   },
   {
     method: "GET",
@@ -176,7 +188,7 @@ const ENDPOINTS: EndpointDef[] = [
     description:
       "Property assessment data normalized across 5 municipalities. Includes average values by neighbourhood, subdivision, zoning, and building type. Perfect for identifying undervalued areas.",
     icon: Home,
-    tier: "pro",
+    scope: "tamrack:real-estate:read",
     params: [
       {
         name: "municipality",
@@ -203,8 +215,8 @@ const ENDPOINTS: EndpointDef[] = [
         { area: "THE HAMPTONS", count: 1204, avgAssessment: 587000 },
       ],
     },
-    curlExample: `curl -H "Authorization: Bearer ap_YOUR_KEY" \\
-  "https://albertapulsecheck.ca/api/assessments?municipality=edmonton"`,
+    curlExample: `curl -H "Authorization: Bearer <YOUR_API_KEY>" \\
+  "https://tamrack.ca/api/assessments?municipality=edmonton"`,
   },
   {
     method: "GET",
@@ -213,7 +225,7 @@ const ENDPOINTS: EndpointDef[] = [
     description:
       "The computed intelligence layer. Combines permit activity, assessment values, and business licence data to surface transformation zones, teardown opportunities, renovation ROI signals, and business-residential convergence patterns.",
     icon: Radar,
-    tier: "pro",
+    scope: "tamrack:real-estate:read",
     params: [],
     exampleResponse: {
       description: "Cross-analysis signals combining multiple Edmonton data sources.",
@@ -268,8 +280,8 @@ const ENDPOINTS: EndpointDef[] = [
         },
       },
     },
-    curlExample: `curl -H "Authorization: Bearer ap_YOUR_KEY" \\
-  "https://albertapulsecheck.ca/api/signals"`,
+    curlExample: `curl -H "Authorization: Bearer <YOUR_API_KEY>" \\
+  "https://tamrack.ca/api/signals"`,
   },
 ];
 
@@ -282,8 +294,8 @@ function generateCurl(endpoint: EndpointDef, params: Record<string, string>) {
     .filter(([, v]) => v)
     .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
     .join("&");
-  const url = `https://albertapulsecheck.ca${endpoint.path}${qs ? `?${qs}` : ""}`;
-  return `curl -H "Authorization: Bearer ap_YOUR_KEY" \\
+  const url = `https://tamrack.ca${endpoint.path}${qs ? `?${qs}` : ""}`;
+  return `curl -H "Authorization: Bearer <YOUR_API_KEY>" \\
   "${url}"`;
 }
 
@@ -292,9 +304,9 @@ function generateJS(endpoint: EndpointDef, params: Record<string, string>) {
     .filter(([, v]) => v)
     .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
     .join("&");
-  const url = `https://albertapulsecheck.ca${endpoint.path}${qs ? `?${qs}` : ""}`;
+  const url = `https://tamrack.ca${endpoint.path}${qs ? `?${qs}` : ""}`;
   return `const res = await fetch("${url}", {
-  headers: { Authorization: "Bearer ap_YOUR_KEY" },
+  headers: { Authorization: "Bearer <YOUR_API_KEY>" },
 });
 const data = await res.json();
 console.log(data);`;
@@ -308,8 +320,8 @@ function generatePython(endpoint: EndpointDef, params: Record<string, string>) {
   return `import requests
 
 resp = requests.get(
-    "https://albertapulsecheck.ca${endpoint.path}",
-    headers={"Authorization": "Bearer ap_YOUR_KEY"},${qs ? `\n    params={${qs}},` : ""}
+    "https://tamrack.ca${endpoint.path}",
+    headers={"Authorization": "Bearer <YOUR_API_KEY>"},${qs ? `\n    params={${qs}},` : ""}
 )
 data = resp.json()
 print(data)`;
@@ -368,14 +380,24 @@ function MethodBadge({ method }: { method: string }) {
   );
 }
 
-function TierBadge({ tier }: { tier: string }) {
+function ScopeBadge({ scope }: { scope: TamrackScope }) {
+  // The five-scope taxonomy renders as a short two-letter chip in the
+  // route's accent color; "none" renders as a "FREE" green chip.
+  if (scope === "none") {
+    return (
+      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-accent-green/10 text-accent-green">
+        FREE
+      </span>
+    );
+  }
+  // Strip "tamrack:" prefix + ":read" suffix → e.g. "macro", "real-estate".
+  const label = scope.replace(/^tamrack:/, "").replace(/:read$/, "");
   return (
-    <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
-      tier === "pro"
-        ? "bg-accent/10 text-accent"
-        : "bg-accent-green/10 text-accent-green"
-    }`}>
-      {tier === "pro" ? "PRO" : "FREE"}
+    <span
+      className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-accent/10 text-accent"
+      title={scope}
+    >
+      {label}
     </span>
   );
 }
@@ -425,7 +447,7 @@ function EndpointCard({ endpoint }: { endpoint: EndpointDef }) {
           <div className="flex items-center gap-2 flex-wrap">
             <MethodBadge method={endpoint.method} />
             <code className="text-sm font-mono font-medium text-foreground">{endpoint.path}</code>
-            <TierBadge tier={endpoint.tier} />
+            <ScopeBadge scope={endpoint.scope} />
           </div>
           <h3 className="text-sm font-medium mt-1.5">{endpoint.title}</h3>
           <p className="text-xs text-muted mt-0.5 line-clamp-2">{endpoint.description}</p>
@@ -650,7 +672,7 @@ export default function DocsPage() {
           </div>
           <p className="text-[11px] text-muted">
             Pass your key in the <code className="text-[10px] bg-background px-1 py-0.5 rounded">Authorization</code> header
-            as <code className="text-[10px] bg-background px-1 py-0.5 rounded">Bearer ap_...</code>
+            as <code className="text-[10px] bg-background px-1 py-0.5 rounded">Bearer &lt;YOUR_API_KEY&gt;</code>
           </p>
         </Card>
         <Card>
@@ -677,8 +699,8 @@ export default function DocsPage() {
             Every request must include your API key in the Authorization header:
           </p>
           <CodeBlock
-            code={`curl -H "Authorization: Bearer ap_YOUR_KEY" \\
-  "https://albertapulsecheck.ca/api/macro?indicator=policy_rate"`}
+            code={`curl -H "Authorization: Bearer <YOUR_API_KEY>" \\
+  "https://tamrack.ca/api/macro?indicator=policy_rate"`}
             lang="http"
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
@@ -771,7 +793,7 @@ export default function DocsPage() {
             <Code2 size={16} className="text-accent" />
           </div>
           <div>
-            <h3 className="text-sm font-medium">Build with Alberta Pulse Check</h3>
+            <h3 className="text-sm font-medium">Build with Tamrack</h3>
             <p className="text-xs text-muted mt-1">
               Use our API to power your own dashboards, alerts, spreadsheets, or AI agents.
               Feed macro indicators into your models, track permit activity for real estate leads,
@@ -798,7 +820,7 @@ export default function DocsPage() {
 
       {/* Footer */}
       <p className="text-[10px] text-muted/50 text-center pb-4">
-        All data is sourced from official government APIs. Alberta Pulse Check does not store or cache data —
+        All data is sourced from official government APIs. Tamrack does not store or cache data —
         every API call fetches live from the source. Response times depend on upstream API performance.
       </p>
     </div>

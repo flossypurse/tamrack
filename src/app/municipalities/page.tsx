@@ -11,12 +11,13 @@ import {
   type MunicipalityConfig,
 } from "@/lib/municipality-registry";
 import { Globe, Building2, ArrowRight, MapPin } from "lucide-react";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata = {
   title: "Alberta Municipalities — Economic Data for 22+ Communities",
   description: "Explore economic data across 22 live Alberta municipalities — building permits, property assessments, business activity, and development trends from Edmonton to Calgary and beyond.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/municipalities",
+    canonical: `${SITE_URL}/municipalities`,
   },
 };
 

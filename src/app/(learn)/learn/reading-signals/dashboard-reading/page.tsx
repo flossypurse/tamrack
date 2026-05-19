@@ -366,7 +366,7 @@ export default function DashboardReadingPage() {
       <LessonCompleteButton moduleSlug="reading-signals" lessonSlug="dashboard-reading" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Reading the Dashboard &mdash; All data from
+        Tamrack &mdash; Reading the Dashboard &mdash; All data from
         free public APIs
       </footer>
     </main>

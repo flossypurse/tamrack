@@ -1,8 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getLiveMunicipalities } from "@/lib/municipality-registry";
 import { CHART_REGISTRY } from "@/lib/chart-registry";
-
-const BASE_URL = "https://albertapulsecheck.ca";
+import { SITE_URL as BASE_URL } from "@/lib/constants/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date().toISOString();

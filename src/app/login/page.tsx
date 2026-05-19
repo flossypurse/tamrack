@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { Activity, Mail, Loader2 } from "lucide-react";
 import { trackEvent } from "@/components/analytics";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { Wordmark } from "@/components/brand/wordmark";
+import { TMail, TPending } from "@/components/icons/t3";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -21,17 +22,10 @@ function LoginForm() {
     : rawCallbackUrl;
   const authError = searchParams.get("error");
 
-  const heading = plan === "realtor"
-    ? "Start Pulse Real Estate"
-    : plan === "edo"
-    ? "Start Pulse EDO"
-    : "Sign in to Alberta Pulse Check";
-
-  const subtitle = plan === "realtor"
-    ? "$49/mo per seat — sign in to begin"
-    : plan === "edo"
-    ? "$299/mo per municipality — sign in to begin"
-    : "Community intelligence for Alberta decision-makers";
+  // Pulse EDO + Pulse Real Estate sunset to new signups 2026-05-18; login copy
+  // no longer advertises them. Existing subscribers sign in normally.
+  const heading = "Sign in to Tamrack";
+  const subtitle = "Alberta data substrate · returning subscribers";
 
   async function handleEmail(e: React.FormEvent) {
     e.preventDefault();
@@ -58,20 +52,26 @@ function LoginForm() {
 
   if (sent) {
     return (
-      <div className="text-center space-y-4">
-        <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
-          <Mail size={32} className="text-accent" />
+      <div className="space-y-4">
+        <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--mid)] pb-2 border-b border-[var(--hairline)]">
+          magic link · sent · check inbox
         </div>
-        <h2 className="text-xl font-semibold">Check your email</h2>
-        <p className="text-muted text-sm">
-          We sent a sign-in link to <span className="text-foreground font-medium">{email}</span>.
-          <br />Click the link to access your dashboard.
-        </p>
+        <div className="flex items-start gap-3 pt-2">
+          <TMail size={20} className="text-[var(--amber)] mt-1 shrink-0" />
+          <div className="space-y-2">
+            <h2 className="font-mono text-lg font-semibold text-[var(--ink)]">Check your email</h2>
+            <p className="text-sm text-[var(--ink)]/85 leading-relaxed">
+              We sent a sign-in link to <code className="font-mono text-[var(--amber)]">{email}</code>.
+              Click the link to access your dashboard.
+            </p>
+          </div>
+        </div>
         <button
           onClick={() => setSent(false)}
-          className="text-sm text-accent hover:underline"
+          className="font-mono text-[10px] tracking-[0.14em] uppercase text-[var(--mid)] hover:text-[var(--amber)] transition-colors"
+          style={{ transitionDuration: "var(--dur-instant)" }}
         >
-          Use a different email
+          ← use a different email
         </button>
       </div>
     );
@@ -79,41 +79,43 @@ function LoginForm() {
 
   return (
     <div className="space-y-6">
-      <div className="text-center space-y-2">
-        <h1 className="text-2xl font-bold">{heading}</h1>
-        <p className="text-muted text-sm">
-          {subtitle}
+      <div className="space-y-2">
+        <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--mid)]">
+          tamrack · sign in · v0
         </p>
+        <h1 className="font-mono text-xl font-extrabold tracking-tight text-[var(--ink)]">
+          <span className="text-[var(--amber)]">&gt;</span> {heading}
+        </h1>
+        <p className="font-mono text-xs text-[var(--mid)]">{subtitle}</p>
       </div>
 
       {(authError || error) && (
-        <div className="bg-accent-red/10 border border-accent-red/20 rounded-lg p-3 text-sm text-accent-red">
+        <div className="border border-[var(--amber)]/40 bg-[var(--amber)]/5 p-3 text-sm text-[var(--ink)] font-mono">
           {error || "There was an error signing in. Please try again."}
         </div>
       )}
 
       {/* Magic Link */}
       <form onSubmit={handleEmail} className="space-y-3">
-        <label className="block text-sm font-medium text-muted">Email address</label>
+        <label className="block font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--mid)]">
+          email address
+        </label>
         <input
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
-          className="w-full px-4 py-2.5 bg-card border border-card-border rounded-lg text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-2 focus:ring-accent/50"
+          className="w-full px-4 py-2.5 bg-[var(--surface)] border border-[var(--hairline)] text-[var(--ink)] placeholder:text-[var(--mid)]/60 font-mono text-sm focus:outline-none focus:border-[var(--amber)]"
         />
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-accent text-white rounded-lg font-medium hover:bg-accent/90 disabled:opacity-50 transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--ink)] text-[var(--ink-inv)] font-medium hover:bg-[var(--amber)] hover:text-[var(--ink)] disabled:opacity-50 transition-colors text-sm"
+          style={{ transitionDuration: "var(--dur-instant)" }}
         >
-          {loading ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <Mail size={16} />
-          )}
-          {loading ? "Sending..." : "Send magic link"}
+          {loading ? <TPending size={16} /> : <TMail size={16} />}
+          {loading ? "Sending…" : "Send magic link"}
         </button>
       </form>
 
@@ -122,19 +124,20 @@ function LoginForm() {
         <>
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-card-border" />
+              <div className="w-full border-t border-[var(--hairline)]" />
             </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-background px-2 text-muted">or</span>
+            <div className="relative flex justify-center font-mono text-[10px] tracking-[0.18em] uppercase">
+              <span className="bg-[var(--surface-elevated)] px-2 text-[var(--mid)]">or</span>
             </div>
           </div>
 
           {/* Google */}
           <button
             onClick={() => signIn("google", { callbackUrl: callbackUrl })}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-card-border rounded-lg text-foreground hover:bg-card transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-[var(--hairline)] text-[var(--ink)] hover:border-[var(--ink)] transition-colors text-sm"
+            style={{ transitionDuration: "var(--dur-instant)" }}
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -145,11 +148,11 @@ function LoginForm() {
         </>
       )}
 
-      <p className="text-center text-xs text-muted/60">
-        By signing in, you agree to our{" "}
-        <Link href="/terms" className="text-accent hover:underline">Terms</Link>{" "}
-        and{" "}
-        <Link href="/privacy" className="text-accent hover:underline">Privacy Policy</Link>.
+      <p className="font-mono text-[10px] tracking-[0.14em] uppercase text-[var(--mid)] leading-relaxed">
+        by signing in you agree to our{" "}
+        <Link href="/terms" className="text-[var(--amber)] hover:underline">terms</Link>
+        {" · "}
+        <Link href="/privacy" className="text-[var(--amber)] hover:underline">privacy</Link>
       </p>
     </div>
   );
@@ -157,16 +160,21 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[var(--surface)] flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <Activity size={28} className="text-accent" />
-          <span className="text-lg font-semibold">Alberta Pulse Check</span>
+        {/* Wordmark */}
+        <div className="flex items-center justify-center mb-8 text-[var(--ink)]">
+          <Wordmark height={22} />
         </div>
 
-        <div className="bg-card border border-card-border rounded-xl p-6">
-          <Suspense fallback={<div className="h-64 animate-pulse bg-card-border/50 rounded" />}>
+        <div className="bg-[var(--surface-elevated)] border border-[var(--hairline)] p-6">
+          <Suspense
+            fallback={
+              <div className="h-64 flex items-center justify-center font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--mid)]">
+                loading…
+              </div>
+            }
+          >
             <LoginForm />
           </Suspense>
         </div>

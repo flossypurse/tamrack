@@ -388,7 +388,7 @@ export default function TransfersPage() {
       </Suspense>
 
       <p className="text-center text-xs text-muted/60 font-mono pt-4">
-        Alberta Pulse Check — Transfers — Data from open.canada.ca, Dept of Finance
+        Tamrack — Transfers — Data from open.canada.ca, Dept of Finance
       </p>
     </main>
   );

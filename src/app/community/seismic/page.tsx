@@ -13,6 +13,7 @@ import {
   fetchAlbertaEarthquakes,
   type Earthquake,
 } from "@/lib/data-sources";
+import { SITE_URL } from "@/lib/constants/site";
 
 // ============================================================
 // Helpers
@@ -355,7 +356,7 @@ export const metadata: Metadata = {
   title: "Alberta Seismic Activity & Earthquakes",
   description: "Track earthquakes in Alberta including induced seismicity from oil and gas operations. Live data from Natural Resources Canada.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/community/seismic",
+    canonical: `${SITE_URL}/community/seismic`,
   },
 };
 

@@ -9,14 +9,15 @@ import {
   type ChartMeta,
 } from "@/lib/chart-registry";
 import { ChartCatalogueFilter } from "./catalogue-filter";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
-  title: "Chart Catalogue — Alberta Pulse Check",
+  title: "Chart Catalogue — Tamrack",
   description:
     "Browse 110+ live data charts covering Alberta's economy, real estate, community, and environment. Free to embed, share, and explore.",
-  alternates: { canonical: "https://albertapulsecheck.ca/charts" },
+  alternates: { canonical: `${SITE_URL}/charts` },
   openGraph: {
-    title: "Chart Catalogue — Alberta Pulse Check",
+    title: "Chart Catalogue — Tamrack",
     description:
       "Browse 110+ live data charts covering Alberta's economy, real estate, community, and environment.",
     images: [

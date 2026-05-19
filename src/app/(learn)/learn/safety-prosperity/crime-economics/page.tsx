@@ -482,7 +482,7 @@ export default function CrimeEconomicsPage() {
       <LessonCompleteButton moduleSlug="safety-prosperity" lessonSlug="crime-economics" />
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Alberta Pulse Check &mdash; Crime &amp; Economics &mdash; All data
+        Tamrack &mdash; Crime &amp; Economics &mdash; All data
         from free public APIs
       </footer>
     </main>

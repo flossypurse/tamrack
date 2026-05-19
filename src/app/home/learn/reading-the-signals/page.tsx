@@ -45,7 +45,7 @@ import {
 // ============================================================
 
 export const metadata: Metadata = {
-  title: "Reading the Signals — Learn — Alberta Pulse Check",
+  title: "Reading the Signals — Learn — Tamrack",
   description:
     "Learn the difference between leading and lagging indicators. Read the dashboard like an economist — permits predict construction, construction predicts supply, supply predicts rent.",
 };

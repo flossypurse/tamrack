@@ -20,13 +20,14 @@ import {
   STATSCAN_SERIES,
 } from "@/lib/data-sources";
 import { fetchImmigrationTimeSeries } from "@/lib/data-sources-ircc";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Alberta Community — People, Health, Safety & Demographics",
   description:
     "Alberta community data — demographics, immigration, labour market, health indicators, crime, fire response, traffic, seismic activity, and emergency alerts.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/community",
+    canonical: `${SITE_URL}/community`,
   },
 };
 

@@ -19,13 +19,14 @@ import {
   CYCLE_INDICATORS,
   type CyclePositionResult,
 } from "@/lib/cycle-engine";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Cycle Positioning — Where Is Alberta Right Now?",
   description:
     "10-dimension economic fingerprint compared against five historical Alberta periods. See which era today most resembles and what happened next.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/economy/cycle-position",
+    canonical: `${SITE_URL}/economy/cycle-position`,
   },
 };
 

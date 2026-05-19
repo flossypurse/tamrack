@@ -6,12 +6,13 @@ import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { signOutAction } from "@/app/actions/auth";
+// Lucide icons retained here are functional/menu-only (avatar dropdown,
+// section icons rendered from nav-config). Brand-bearing icons (search,
+// theme toggle) have been swapped to T3. A full Lucide sweep across the
+// 50+ remaining pages is tracked as deferred Phase 4 P3 work — see
+// brand-phase-4 handoff notes and iconography/rejections.md.
 import {
-  Activity,
   BarChart3,
-  Search,
-  Sun,
-  Moon,
   User,
   CreditCard,
   LogIn,
@@ -25,6 +26,8 @@ import {
   Building2,
 } from "lucide-react";
 import { sections } from "./nav-config";
+import { Wordmark } from "./brand/wordmark";
+import { TSearch, TSun, TMoon } from "./icons/t3";
 
 export function TopBar() {
   const pathname = usePathname();
@@ -57,13 +60,14 @@ export function TopBar() {
     prefixes.some((p) => pathname.startsWith(p));
 
   return (
-    <header className="hidden lg:flex fixed top-0 left-0 right-0 z-40 h-12 bg-card border-b border-card-border items-center px-4 gap-1">
-      {/* Logo */}
-      <Link href="/" className="flex items-center gap-2 mr-4 shrink-0">
-        <Activity size={20} className="text-accent" />
-        <span className="text-sm font-semibold tracking-tight text-foreground">
-          Alberta Pulse Check
-        </span>
+    <header className="hidden lg:flex fixed top-0 left-0 right-0 z-40 h-12 bg-[var(--surface)] border-b border-[var(--hairline)] items-center px-4 gap-1">
+      {/* Wordmark — T3 custom-cut SVG, not type-set */}
+      <Link
+        href="/"
+        className="flex items-center mr-5 shrink-0 text-[var(--ink)] hover:text-[var(--ink)]"
+        aria-label="Tamrack — home"
+      >
+        <Wordmark height={18} />
       </Link>
 
       {/* Section links */}
@@ -75,11 +79,12 @@ export function TopBar() {
             <Link
               key={section.key}
               href={section.href}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors whitespace-nowrap ${
                 active
-                  ? "bg-accent/10 text-accent font-medium"
-                  : "text-muted hover:text-foreground hover:bg-foreground/[0.05]"
+                  ? "text-[var(--amber)] font-medium"
+                  : "text-[var(--mid)] hover:text-[var(--ink)]"
               }`}
+              style={{ transitionDuration: "var(--dur-instant)" }}
             >
               <Icon size={15} className="shrink-0" />
               {section.label}
@@ -89,11 +94,12 @@ export function TopBar() {
         {/* Chart catalogue link */}
         <Link
           href="/charts"
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors whitespace-nowrap ${
             pathname.startsWith("/charts")
-              ? "bg-accent/10 text-accent font-medium"
-              : "text-muted hover:text-foreground hover:bg-foreground/[0.05]"
+              ? "text-[var(--amber)] font-medium"
+              : "text-[var(--mid)] hover:text-[var(--ink)]"
           }`}
+          style={{ transitionDuration: "var(--dur-instant)" }}
         >
           <BarChart3 size={15} className="shrink-0" />
           Charts
@@ -113,11 +119,12 @@ export function TopBar() {
               })
             );
           }}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-[var(--mid)] hover:text-[var(--ink)] transition-colors"
+          style={{ transitionDuration: "var(--dur-instant)" }}
           title="Search (⌘K)"
         >
-          <Search size={15} />
-          <span className="text-xs text-muted/60">⌘K</span>
+          <TSearch size={15} />
+          <span className="font-mono text-[10px] tracking-wider uppercase text-[var(--mid)]/70">⌘K</span>
         </button>
 
         {/* Theme toggle */}
@@ -126,13 +133,15 @@ export function TopBar() {
             onClick={() =>
               setTheme(resolvedTheme === "dark" ? "light" : "dark")
             }
-            className="p-2 rounded-md text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
+            className="p-2 text-[var(--mid)] hover:text-[var(--amber)] transition-colors"
+            style={{ transitionDuration: "var(--dur-instant)" }}
             title={resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
+            aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           >
             {resolvedTheme === "dark" ? (
-              <Sun size={15} />
+              <TSun size={15} />
             ) : (
-              <Moon size={15} />
+              <TMoon size={15} />
             )}
           </button>
         )}

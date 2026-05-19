@@ -17,6 +17,7 @@ import {
   type LifeExpectancyPoint,
   type BirthDeathPoint,
 } from "@/lib/data-sources-health";
+import { SITE_URL } from "@/lib/constants/site";
 
 // ============================================================
 // Metadata
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
   description:
     "Life expectancy by municipality, births and deaths across Alberta. Data from the Alberta Regional Dashboard covering ~340 municipalities.",
   alternates: {
-    canonical: "https://albertapulsecheck.ca/community/demographics",
+    canonical: `${SITE_URL}/community/demographics`,
   },
 };
 

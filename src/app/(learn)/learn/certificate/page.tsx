@@ -195,7 +195,7 @@ export default function CertificatePage() {
       )}
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Pulse Learn — Alberta Pulse Check
+        Pulse Learn — Tamrack
       </footer>
     </main>
   );
