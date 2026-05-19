@@ -3,6 +3,7 @@
 import { useRef, useState, useCallback, type ReactNode } from "react";
 import { Code, Check, Copy, Download, X } from "lucide-react";
 import { toPng } from "html-to-image";
+import { SITE_URL } from "@/lib/constants/site";
 
 interface ChartCardProps {
   /** Unique chart ID matching the embed registry (e.g. "macro-policy-rate", "edmonton-assessment-by-zone") */
@@ -23,11 +24,11 @@ export function ChartCard({ chartId, title, timeRange, source, children }: Chart
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://albertapulsecheck.ca";
+  const origin = typeof window !== "undefined" ? window.location.origin : SITE_URL;
   const embedSnippet = `<div data-ap-chart="${chartId}"></div>\n<script src="${origin}/embed/widget.js"><\/script>`;
 
   const shareUrl = `${origin}/embed/${chartId}`;
-  const shareText = `${title} — Alberta Pulse Check`;
+  const shareText = `${title} — Tamrack`;
 
   const handleCopy = useCallback(async () => {
     try {
@@ -56,7 +57,7 @@ export function ChartCard({ chartId, title, timeRange, source, children }: Chart
         },
       });
       const link = document.createElement("a");
-      link.download = `alberta-pulse-${chartId}.png`;
+      link.download = `tamrack-${chartId}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
@@ -99,7 +100,7 @@ export function ChartCard({ chartId, title, timeRange, source, children }: Chart
           )}
           {!timeRange && !source && (
             <span className="text-[8px] text-muted/30 font-mono">
-              albertapulsecheck.ca
+              tamrack.ca
             </span>
           )}
         </div>
