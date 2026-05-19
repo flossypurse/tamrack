@@ -3,6 +3,7 @@ import Nodemailer from "next-auth/providers/nodemailer";
 import Google from "next-auth/providers/google";
 import { PostgresAdapter } from "./auth-adapter";
 import { getDb } from "./db";
+import { sendMail } from "./mailgun";
 
 // Send magic link via Mailgun HTTP API (avoids SMTP port issues on Railway)
 async function sendVerificationRequest(params: {
@@ -14,23 +15,8 @@ async function sendVerificationRequest(params: {
   request: Request;
 }) {
   const { identifier: email, url } = params;
-  const domain = process.env.MAILGUN_DOMAIN || "email.tamrack.ca";
-  const apiKey = process.env.MAILGUN_API_KEY;
-  const from = process.env.EMAIL_FROM || "Tamrack <noreply@email.tamrack.ca>";
 
-  if (!apiKey) {
-    // Fallback: log the link for development
-    console.log(`[auth] Magic link for ${email}: ${url}`);
-    return;
-  }
-
-  const body = new FormData();
-  body.append("from", from);
-  body.append("to", email);
-  body.append("subject", "Sign in to Tamrack");
-  body.append(
-    "html",
-    `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">
+  const html = `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">
       <div style="text-align: center; margin-bottom: 32px;">
         <h1 style="font-size: 20px; font-weight: 600; color: #1a1a2e; margin: 0;">Tamrack</h1>
         <p style="color: #6b7280; font-size: 14px; margin-top: 4px;">Community intelligence for Alberta</p>
@@ -40,21 +26,18 @@ async function sendVerificationRequest(params: {
         <a href="${url}" style="display: inline-block; padding: 12px 32px; background-color: #005daa; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">Sign in</a>
       </div>
       <p style="color: #9ca3af; font-size: 12px; line-height: 1.5;">If you didn't request this email, you can safely ignore it.<br/>This link can only be used once.</p>
-    </div>`
-  );
+    </div>`;
 
-  const res = await fetch(`https://api.mailgun.net/v3/${domain}/messages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(`api:${apiKey}`).toString("base64")}`,
-    },
-    body,
+  const result = await sendMail({
+    to: email,
+    subject: "Sign in to Tamrack",
+    html,
   });
 
-  if (!res.ok) {
-    const text = await res.text();
-    console.error(`[auth] Mailgun error: ${res.status} ${text}`);
-    throw new Error(`Failed to send magic link email: ${res.status}`);
+  if (!result.ok) {
+    // Match the previous error shape so NextAuth's retry behavior is unchanged.
+    const status = result.error?.split(" ")[0] ?? "unknown";
+    throw new Error(`Failed to send magic link email: ${status}`);
   }
 }
 

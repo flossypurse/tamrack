@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { sendMail } from "@/lib/mailgun";
 
 // Basic email shape — good enough for placeholder gate; full validation
 // lands when the Resonate workflow replaces the inline notification below.
@@ -42,17 +43,7 @@ export async function POST(req: NextRequest) {
 }
 
 async function sendNotification(req: { name: string; email: string; intent: string }) {
-  const domain = process.env.MAILGUN_DOMAIN || "email.tamrack.ca";
-  const apiKey = process.env.MAILGUN_API_KEY;
-  const from = process.env.EMAIL_FROM || "Tamrack <noreply@email.tamrack.ca>";
   const to = process.env.NOTIFY_TO || "cullywakelin@gmail.com";
-
-  if (!apiKey) {
-    // Dev fallback — log instead of failing so the form still returns 202.
-    console.log(`[access-request] (no MAILGUN_API_KEY) name=${req.name} email=${req.email} intent=${req.intent}`);
-    return;
-  }
-
   const subject = `Tamrack access request: ${req.name}`;
   const intentLine = req.intent ? req.intent : "(no intent provided)";
   const text = `Name: ${req.name}\nEmail: ${req.email}\n\nIntent:\n${intentLine}\n`;
@@ -64,26 +55,18 @@ async function sendNotification(req: { name: string; email: string; intent: stri
     <p style="color: #374151; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">${escapeHtml(intentLine)}</p>
   </div>`;
 
-  const formBody = new FormData();
-  formBody.append("from", from);
-  formBody.append("to", to);
-  formBody.append("subject", subject);
-  formBody.append("text", text);
-  formBody.append("html", html);
-  formBody.append("h:Reply-To", req.email);
-
-  const res = await fetch(`https://api.mailgun.net/v3/${domain}/messages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(`api:${apiKey}`).toString("base64")}`,
-    },
-    body: formBody,
+  // PLACEHOLDER — replaced by Resonate workflow in follow-up PR
+  const result = await sendMail({
+    to,
+    subject,
+    text,
+    html,
+    replyTo: req.email,
   });
 
-  if (!res.ok) {
-    const errText = await res.text().catch(() => "");
-    console.error(`[access-request] Mailgun error: ${res.status} ${errText}`);
+  if (!result.ok) {
     // Don't fail the user — the form already collected the data.
     // Resonate workflow in follow-up PR will own retry semantics.
+    console.error(`[access-request] sendMail failed: ${result.error}`);
   }
 }
