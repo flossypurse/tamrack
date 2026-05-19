@@ -536,6 +536,37 @@ const MIGRATION_SQL = `
       ON smart_query_events(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_smart_query_events_dashboard
       ON smart_query_events(dashboard_id);
+
+    -- ============================================================
+    -- Access requests (charter: tamrack/handoffs/2026-05-19-access-request-resonate-charter.md §5)
+    -- ============================================================
+    -- One row per (lower-cased) email that ever requested access. The
+    -- Resonate workflow attaches via id-hash idempotency; UNIQUE(email_lower)
+    -- is the row-level idempotency anchor. invite_id / existing_user_id /
+    -- decided_by FKs go to TEXT-PK tables (invites.id, users.id) — types
+    -- agree. ON DELETE SET NULL so admin tooling that nukes an invite/user
+    -- doesn't cascade-delete audit history.
+    CREATE TABLE IF NOT EXISTS access_requests (
+      id              TEXT PRIMARY KEY,
+      email_lower     TEXT NOT NULL,
+      name            TEXT NOT NULL,
+      intent          TEXT,
+      source_ip       TEXT,
+      status          TEXT NOT NULL DEFAULT 'pending',
+      invite_id       TEXT REFERENCES invites(id) ON DELETE SET NULL,
+      existing_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+      decided_by      TEXT REFERENCES users(id) ON DELETE SET NULL,
+      decided_at      TIMESTAMPTZ,
+      resonate_workflow_id TEXT,
+      admin_mail_message_id TEXT,
+      invite_mail_message_id TEXT,
+      created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (email_lower)
+    );
+    CREATE INDEX IF NOT EXISTS idx_access_requests_status ON access_requests(status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_access_requests_pending ON access_requests(created_at) WHERE status = 'pending';
+    CREATE INDEX IF NOT EXISTS idx_access_requests_source_ip ON access_requests(source_ip, created_at DESC);
 `;
 
 /**
