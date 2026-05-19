@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import {
   Activity,
   Shield,
-  MapPin,
 } from "lucide-react";
 import { TArrowRight } from "@/components/icons/t3";
 import { Wordmark } from "@/components/brand/wordmark";
@@ -19,7 +18,6 @@ import { MUNICIPALITY_REGISTRY } from "@/lib/municipality-registry";
 import { CHART_REGISTRY } from "@/lib/chart-registry";
 import { Sparkline } from "@/components/sparkline";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { LandingTabs } from "@/components/landing-tabs";
 import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
@@ -206,29 +204,29 @@ export default function LandingPage() {
 
             {/* Sub — Inter, man-page register */}
             <p className="text-[var(--ink)]/85 text-lg sm:text-xl max-w-2xl leading-relaxed">
-              Alberta&apos;s data substrate. One subscription.{" "}
+              Alberta&apos;s data substrate — {chartCount} live charts from{" "}
+              {dataSources.length} government sources, free to browse.{" "}
               <span className="text-[var(--mid)]">
-                {chartCount}+ live charts from {dataSources.length} government sources. Free to browse,
-                no account needed.
+                The insights layer on top is invite-only while we get it right.
               </span>
             </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-start gap-3">
             <Link
-              href="/charts"
+              href="/access-request"
               className="flex items-center gap-2 px-6 py-3 bg-[var(--ink)] text-[var(--ink-inv)] font-medium hover:bg-[var(--amber)] hover:text-[var(--ink)] transition-colors text-sm"
               style={{ transitionDuration: "var(--dur-instant)" }}
             >
-              Explore free charts
+              Request access
               <TArrowRight size={16} />
             </Link>
             <Link
-              href="/access-request"
+              href="/charts"
               className="px-6 py-3 border border-[var(--ink)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--ink-inv)] transition-colors text-sm"
               style={{ transitionDuration: "var(--dur-instant)" }}
             >
-              Request access
+              Browse the charts
             </Link>
           </div>
         </div>
@@ -262,80 +260,77 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── What you can do — tabbed section ── */}
+      {/* ── What's behind the wall ── */}
       <section className="relative bg-[var(--surface)]">
-        <div className="max-w-5xl mx-auto px-6 py-16 lg:py-24">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink)]">
-              One platform, built for how you work
-            </h2>
-            <p className="text-base text-[var(--mid)] mt-3 max-w-xl mx-auto leading-relaxed">
-              Whether you{"'"}re browsing trends, closing deals, or briefing council —
-              the data is already here.
+        <div className="max-w-3xl mx-auto px-6 py-16 lg:py-24 space-y-8">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink)]">
+            What&apos;s behind the wall
+          </h2>
+          <div className="space-y-5 text-[var(--ink)]/85 text-base sm:text-lg leading-relaxed">
+            <p>
+              Behind the wall, the data gets read. Not by a model that generates
+              a paragraph and calls it a take — by someone who knows the place,
+              with help from agents that point at things worth noticing.
+            </p>
+            <p>
+              The agents do the part they&apos;re good at — scanning every chart
+              on every refresh, surfacing the inflection that wasn&apos;t there
+              last week, flagging the line that just crossed a 5-year baseline.
+              The human does the part they&apos;re good at — knowing whether the
+              inflection matters, what to write next to it, and who it&apos;s for.
+              The insights layer is that handoff, kept tight.
             </p>
           </div>
-
-          <LandingTabs chartCount={chartCount} municipalityCount={liveMunicipalities.length} />
         </div>
       </section>
 
-      {/* ── Social proof / credibility ── */}
+      {/* ── Proof strip ── */}
       <section className="relative border-y border-[var(--border)] bg-[var(--surface-elevated)]/60 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto px-6 py-12 lg:py-16">
           <div className="grid sm:grid-cols-3 gap-8 text-center">
             <div className="space-y-2">
-              <p className="font-mono text-3xl font-bold text-[var(--ink)] tracking-tight">{totalFeeds}+</p>
-              <p className="text-sm text-[var(--mid)]">Live government data feeds</p>
+              <p className="font-mono text-3xl font-bold text-[var(--ink)] tracking-tight">{chartCount}</p>
+              <p className="text-sm text-[var(--mid)]">live charts, updated against the source</p>
+            </div>
+            <div className="space-y-2">
+              <p className="font-mono text-3xl font-bold text-[var(--ink)] tracking-tight">{totalFeeds}</p>
+              <p className="text-sm text-[var(--mid)]">data feeds across {dataSources.length} government sources</p>
             </div>
             <div className="space-y-2">
               <p className="font-mono text-3xl font-bold text-[var(--ink)] tracking-tight">{liveMunicipalities.length}</p>
-              <p className="text-sm text-[var(--mid)]">Alberta municipalities</p>
-            </div>
-            <div className="space-y-2">
-              <p className="font-mono text-3xl font-bold text-[var(--ink)] tracking-tight">{chartCount}+</p>
-              <p className="text-sm text-[var(--mid)]">Charts you can browse right now</p>
+              <p className="text-sm text-[var(--mid)]">Alberta municipalities indexed</p>
             </div>
           </div>
 
-          <div className="mt-10 max-w-lg mx-auto text-center">
-            <p className="text-sm text-[var(--mid)] leading-relaxed italic">
-              &ldquo;Every chart pulls directly from government APIs — not scraped,
-              not estimated, not stale. When the Bank of Canada updates a rate,
-              you see it here within the hour.&rdquo;
-            </p>
-            <p className="text-xs text-[var(--mid)]/70 mt-3 flex items-center justify-center gap-1.5">
-              <MapPin size={11} />
-              Built in Parkland County, Alberta
-              <img src="/mapleleaf.svg" alt="" width={12} height={12} className="opacity-40" />
+          <div className="mt-10 max-w-xl mx-auto text-center">
+            <p className="text-sm text-[var(--mid)] leading-relaxed">
+              Every chart pulls from the source on a schedule. When the Bank of
+              Canada moves the policy rate, the chart moves within the hour.
             </p>
           </div>
         </div>
       </section>
 
-      {/* ── Final CTA ── */}
-      <section className="relative py-16 lg:py-24 bg-[var(--surface)]">
-        <div className="max-w-lg mx-auto text-center space-y-5 px-6">
+      {/* ── Free-and-public anchor ── */}
+      <section className="relative py-16 lg:py-20 bg-[var(--surface)]">
+        <div className="max-w-2xl mx-auto px-6 space-y-6">
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink)]">
-            Start exploring — it{"'"}s free
+            The chart catalogue is free, forever.
           </h2>
-          <p className="text-base text-[var(--mid)] leading-relaxed">
-            No account, no trial, no credit card.
-            Just {chartCount}+ live Alberta data charts.
+          <p className="text-[var(--ink)]/85 text-base sm:text-lg leading-relaxed">
+            {chartCount} charts on Alberta&apos;s economy, real estate, community
+            and environment — no account, no trial, no card. The insights layer
+            on top is invite-only and that&apos;s where the work happens, but the
+            substrate is public because it should be.
           </p>
           <Link
             href="/charts"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-[var(--ink)] text-[var(--ink-inv)] font-semibold hover:bg-[var(--amber)] hover:text-[var(--ink)] transition-colors text-sm"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--ink)] text-[var(--ink-inv)] font-medium hover:bg-[var(--amber)] hover:text-[var(--ink)] transition-colors text-sm"
             style={{ transitionDuration: "var(--dur-instant)" }}
           >
-            Browse the chart catalogue
+            Browse the catalogue
             <TArrowRight size={16} />
           </Link>
-          <p className="text-sm text-[var(--mid)]">
-            Professional tools?{" "}
-            <Link href="/access-request" className="text-[var(--ink)] underline decoration-[var(--mid)]/40 underline-offset-4 hover:decoration-[var(--amber)]">
-              Request access
-            </Link>
-          </p>
         </div>
       </section>
 
