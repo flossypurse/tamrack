@@ -18,6 +18,7 @@ import { MUNICIPALITY_REGISTRY } from "@/lib/municipality-registry";
 import { CHART_REGISTRY } from "@/lib/chart-registry";
 import { Sparkline } from "@/components/sparkline";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SectionDividerTerminal } from "@/components/section-divider-terminal";
 import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
@@ -242,6 +243,11 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Between-section beat 1 (A→B): announces the upcoming gov-source strip. Label rhymes with beat 2 ("the proof") to read as a two-beat system. */}
+      <div className="py-8 sm:py-12">
+        <SectionDividerTerminal label="the sources" />
+      </div>
+
       {/* ── Trust bar ── */}
       <section className="relative border-y border-[var(--border)] bg-[var(--surface-elevated)]/60 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto px-6 py-6">
@@ -283,6 +289,11 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Between-section beat 2 (C→D): announces the upcoming three-number proof strip. */}
+      <div className="py-8 sm:py-12">
+        <SectionDividerTerminal label="the proof" />
+      </div>
 
       {/* ── Proof strip ── */}
       <section className="relative border-y border-[var(--border)] bg-[var(--surface-elevated)]/60 backdrop-blur-sm">
