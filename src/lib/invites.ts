@@ -23,6 +23,12 @@
 import { randomUUID, randomBytes, createHash } from "crypto";
 import { getDb } from "./db";
 
+// Short-lived cookie that carries the just-minted plaintext API key from
+// the invite-claim route to /account/keys, where it's shown ONCE and
+// deleted. Lives here (not in the route file) because Next.js 16 forbids
+// non-route exports from route.ts.
+export const ONCE_KEY_COOKIE = "tk_once";
+
 /** Days before an unredeemed invite expires. */
 const INVITE_TTL_DAYS = 30;
 

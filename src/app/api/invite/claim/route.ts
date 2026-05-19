@@ -29,7 +29,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { createApiKey } from "@/lib/api-keys";
 import { getDb } from "@/lib/db";
-import { redeemInvite, lookupInvite } from "@/lib/invites";
+import { redeemInvite, lookupInvite, ONCE_KEY_COOKIE } from "@/lib/invites";
 
 const FULL_READ_SCOPES = [
   "tamrack:macro:read",
@@ -38,9 +38,6 @@ const FULL_READ_SCOPES = [
   "tamrack:energy:read",
   "tamrack:economy:read",
 ] as const;
-
-/** Name of the HttpOnly cookie /account/keys reads once. */
-export const ONCE_KEY_COOKIE = "tk_once";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const token = req.nextUrl.searchParams.get("token");

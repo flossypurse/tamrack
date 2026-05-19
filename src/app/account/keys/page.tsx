@@ -10,7 +10,7 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
-import { ONCE_KEY_COOKIE } from "@/app/api/invite/claim/route";
+import { ONCE_KEY_COOKIE } from "@/lib/invites";
 import { KeyOnceCard } from "@/components/key-once-card";
 import { TKey } from "@/components/icons/t3";
 
