@@ -42,3 +42,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# fumadocs-mdx codegen output
+/.source/
+
+# Claude Code per-project memory
+/.claude/
+
+# Workspace-internal session handoffs (kept on disk, not in public repo)
+/handoffs/

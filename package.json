@@ -1,5 +1,5 @@
 {
-  "name": "alberta-pulse",
+  "name": "tamrack",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -20,12 +20,16 @@
     "worker": "npx tsx worker.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.96.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@react-pdf/renderer": "^4.3.2",
     "@resonatehq/sdk": "^0.9.6",
     "@types/pg": "^8.18.0",
     "better-sqlite3": "^12.6.2",
     "date-fns": "^4.1.0",
+    "fumadocs-core": "^16.8.11",
+    "fumadocs-mdx": "^15.0.6",
+    "fumadocs-ui": "^16.8.11",
     "html-to-image": "^1.11.13",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.577.0",

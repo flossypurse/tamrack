@@ -1,10 +1,13 @@
 import type { NextConfig } from "next";
+import { createMDX } from "fumadocs-mdx/next";
 
 // Build uses --webpack flag (see package.json) because Turbopack production
 // builds in Next.js 16.1.x have a chunk-loading race condition that causes
 // ChunkLoadError / ENOENT on SSR chunks during static page generation.
 // Dev still uses Turbopack (Next.js 16 default). The prebuild script cleans
 // .next to prevent Turbopack dev cache from conflicting with Webpack builds.
+const withMDX = createMDX();
+
 const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
@@ -87,7 +90,8 @@ const nextConfig: NextConfig = {
       { source: "/coverage", destination: "/municipalities/coverage", permanent: true },
 
       // Tools
-      { source: "/docs", destination: "/tools/docs", permanent: true },
+      // NOTE: `/docs` is now served by Fumadocs (Tamrack developer docs).
+      // The legacy `/tools/docs` page remains for the in-app docs surface.
       { source: "/sources", destination: "/tools/sources", permanent: true },
 
       // Legacy routes removed in Phase 1
@@ -99,4 +103,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withMDX(nextConfig);

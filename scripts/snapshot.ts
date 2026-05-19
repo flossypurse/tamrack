@@ -295,7 +295,7 @@ async function snapshotMacroIndicators() {
 // ============================================================
 
 async function main() {
-  console.log(`\n Alberta Pulse Snapshot — ${today}\n`);
+  console.log(`\n Tamrack Snapshot — ${today}\n`);
   const start = Date.now();
 
   const tasks = [

@@ -1,14 +1,14 @@
 #!/usr/bin/env npx tsx
 /**
- * Alberta Pulse — Comprehensive Data Collector
+ * Tamrack — Comprehensive Data Collector
  *
  * Fetches from ALL data sources and stores in SQLite for time-series analysis.
  * Imports directly from the existing lib data-source modules.
  *
  * Usage:
- *   cd alberta-pulse/webui && npx tsx scripts/collect.ts
- *   cd alberta-pulse/webui && npx tsx scripts/collect.ts --source regional
- *   cd alberta-pulse/webui && npx tsx scripts/collect.ts --source energy
+ *   cd tamrack/webui && npx tsx scripts/collect.ts
+ *   cd tamrack/webui && npx tsx scripts/collect.ts --source regional
+ *   cd tamrack/webui && npx tsx scripts/collect.ts --source energy
  *
  * Sources: regional, energy, municipalities, wells, immigration, projects, macro, all (default)
  *
@@ -929,7 +929,7 @@ async function main() {
   const source = (sourceArg || "all") as SourceName;
 
   console.log(`\n╔══════════════════════════════════════════════════╗`);
-  console.log(`║  Alberta Pulse — Data Collector                  ║`);
+  console.log(`║  Tamrack — Data Collector                        ║`);
   console.log(`║  ${today}                                   ║`);
   console.log(`║  Source: ${source.padEnd(40)}║`);
   console.log(`╚══════════════════════════════════════════════════╝\n`);

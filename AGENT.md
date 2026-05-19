@@ -1,6 +1,6 @@
-# Alberta Pulse
+# Tamrack
 
-Multi-product SaaS platform tracking Alberta's economy. ~320 pages, 50+ live data sources, 4 product surfaces.
+Multi-product SaaS platform tracking Alberta's economy (formerly "Alberta Pulse Check"; rebrand in progress, public copy still uses the old name until Phase A3 + cutover). ~320 pages, 50+ live data sources, 4 product surfaces.
 
 ## Status
 
@@ -38,7 +38,7 @@ All 4 product phases complete. Deployed live on Railway (auto-deploy from `main`
 ## Run
 
 ```bash
-cd alberta-pulse/webui && npm run dev
+cd tamrack/webui && npm run dev
 ```
 
 Owner prefers to start dev servers themselves — don't auto-start.
@@ -74,7 +74,7 @@ Full data source reference and scouted-but-unwired endpoint inventory are mainta
 - **Nav**: Two-tier — top bar (7 sections) + contextual sidebar + mobile bottom tabs. Config in `src/components/nav-config.ts`.
 - **Data freshness**: `DataFreshness` component via `CardHeader` `freshness` prop (tiers: realtime/hourly/daily).
 - **Concurrency**: Regional fetch concurrency set to 10.
-- **Git repo**: This directory (`alberta-pulse/webui/`) is the git root. The parent `alberta-pulse/` also contains the Resonate server and worker, but they're separate concerns.
+- **Git repo**: This directory (`tamrack/webui/`) is the git root. The parent `tamrack/` also contains the Resonate server and worker, but they're separate concerns.
 
 ## Deploy
 

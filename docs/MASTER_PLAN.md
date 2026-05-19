@@ -1,8 +1,10 @@
-# Alberta Pulse — Master Plan
+# Tamrack — Master Plan
+
+(Historically "Alberta Pulse" / "Alberta Pulse Check". Rebrand in progress — internal references converted; public-facing copy still says "Alberta Pulse Check" until Phase A3 + cutover.)
 
 ## Vision
 
-Alberta Pulse is not one product. It is a **data platform** that powers multiple focused products, each serving a specific audience with a specific value proposition. The shared foundation is a catalogue of live Alberta public data. The products are opinionated views of that data, tailored to how each audience actually works.
+Tamrack is not one product. It is a **data platform** that powers multiple focused products, each serving a specific audience with a specific value proposition. The shared foundation is a catalogue of live Alberta public data. The products are opinionated views of that data, tailored to how each audience actually works.
 
 ## Products
 
@@ -168,7 +170,7 @@ Move and rename routes per the nav redesign plan (`docs/nav-redesign-plan.md`):
 - `/municipalities` — Search/filter explorer (already exists, enhance)
 
 ### Phase 1.3 — Landing Page Platform Repositioning
-> Reposition the landing page from a single-product dashboard pitch to a multi-product data platform. The visitor should understand within 5 seconds: Alberta Pulse is a platform with free charts, paid products for EDOs and realtors, and a learning hub. The background animation (HeroVisualization), live ticker, and sparkline bar are preserved unchanged.
+> Reposition the landing page from a single-product dashboard pitch to a multi-product data platform. The visitor should understand within 5 seconds: Tamrack is a platform with free charts, paid products for EDOs and realtors, and a learning hub. The background animation (HeroVisualization), live ticker, and sparkline bar are preserved unchanged.
 
 **1.3.1 — Rewrite hero section copy and CTAs**
 - Change headline from "Community intelligence built in Alberta, for Alberta" to platform-oriented copy (e.g., "Alberta's data platform" with "Charts. Intelligence. Reports." as secondary line)
