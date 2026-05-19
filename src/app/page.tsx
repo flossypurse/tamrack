@@ -19,7 +19,6 @@ import { MUNICIPALITY_REGISTRY } from "@/lib/municipality-registry";
 import { CHART_REGISTRY } from "@/lib/chart-registry";
 import { Sparkline } from "@/components/sparkline";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { HeroVisualization } from "@/components/hero-viz";
 import { LandingTabs } from "@/components/landing-tabs";
 import { SITE_URL } from "@/lib/constants/site";
 
@@ -182,9 +181,6 @@ export default function LandingPage() {
 
   return (
     <main className="min-h-screen relative">
-      {/* Full-page animated background */}
-      <HeroVisualization />
-
       {/* ── Hero (T3) ── */}
       <section className="relative">
         <div className="relative max-w-3xl mx-auto px-6 pt-20 sm:pt-28 lg:pt-36 pb-14 space-y-10">
