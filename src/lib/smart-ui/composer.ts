@@ -181,9 +181,10 @@ export async function composeDashboard(
   toolResults: ToolCallResult[],
   options: ComposerOptions = {},
 ): Promise<ComposerResult> {
-  const apiKey = options.apiKey ?? process.env.ANTHROPIC_API_KEY;
+  const apiKey =
+    options.apiKey ?? process.env.ANTHROPIC_TAMRACK_API_TOKEN ?? process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    throw new Error("ANTHROPIC_API_KEY is not set");
+    throw new Error("ANTHROPIC_TAMRACK_API_TOKEN is not set");
   }
   const client = new Anthropic({ apiKey });
 

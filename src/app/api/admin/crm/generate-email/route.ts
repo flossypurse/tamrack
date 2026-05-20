@@ -13,7 +13,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "contact_id is required" }, { status: 400 });
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const anthropicKey = process.env.ANTHROPIC_TAMRACK_API_TOKEN ?? process.env.ANTHROPIC_API_KEY;
+  if (!anthropicKey) {
     return NextResponse.json({ error: "Email generation service not configured" }, { status: 500 });
   }
 
@@ -89,7 +90,7 @@ ${contact.status === "demo" ? "We're at the demo stage. This should be about sch
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "x-api-key": anthropicKey,
         "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
