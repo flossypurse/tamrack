@@ -57,20 +57,31 @@ Available MCP tools (v1.1 — line/scorecard-compatible surface):
    Input: { dataset: one of [starts, completions, under_construction,
                               vacancy, rents, absorptions, snapshot,
                               mortgage_rate],
-            cma?: "edmonton" | "calgary" }
-   Output: envelope; for time-series datasets data.points is populated;
-     for snapshot, data.last_observation only.
+            municipality?: "edmonton" | "calgary" }
+   Note: the 'municipality' field selects which CMA's series the Smart UI
+     surfaces. Always pass it for starts/completions/under_construction/
+     vacancy/rents when the user mentions a city; default to "edmonton"
+     otherwise. For 'snapshot' it picks the CMA returned. For absorptions
+     / mortgage_rate the field has no effect (Alberta-wide / national).
+   Output: time-series envelope with data.points (one card = one CMA).
 
 4. tamrack_energy
    Description: AESO + CER data — Alberta pool price, supply/demand
-     forecast, pipeline throughput, apportionment, oil production.
-   Input: { dataset: one of [pool_price, supply_demand, forecast,
-                              pipeline_throughput, oil_production,
-                              apportionment, incidents],
-            pipeline?: "ngtl"|"trans-mountain"|"keystone"|"enbridge"|
-                       "alliance"|"foothills",
+     snapshot, load forecast, pipeline throughput, apportionment, pipeline
+     incidents, oil production.
+   Input: { dataset: one of [pool_price_current, pool_price_series,
+                              supply_demand, system_marginal_price,
+                              forecast, pipeline_throughput,
+                              pipeline_incidents, apportionment,
+                              oil_production],
+            pipeline?: "NGTL"|"Trans-Mountain"|"Keystone"|
+                       "Enbridge Mainline"|"Alliance"|"Foothills",
             province?: <name> }
-   Output: time-series envelope with data.points.
+   Note: 'pipeline' is REQUIRED-ish for pipeline_throughput (defaults NGTL).
+     'province' only affects oil_production. supply_demand is a single
+     snapshot (no time series — use it for a scorecard only).
+   Output: time-series envelope with data.points (except supply_demand /
+     pipeline_incidents).
 
 5. tamrack_business
    Description: Business licences (Edmonton/Calgary), StatsCan business

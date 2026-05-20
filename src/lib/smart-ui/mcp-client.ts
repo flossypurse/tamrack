@@ -16,6 +16,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createMcpServer } from "@/app/api/mcp/server";
 import { runWithMcpAuth } from "@/app/api/mcp/lib/auth-context";
 
+import { normalizeToolEnvelope } from "./normalize-envelope";
 import type { ToolCallResult } from "./types";
 
 /**
@@ -112,12 +113,18 @@ export async function createInProcessMcpClient(): Promise<McpClientHandle> {
         };
       }
       const structured = result.structuredContent;
+      // Project wide-shape envelopes (housing/energy/business) to also
+      // carry a top-level `data.points` series so the Smart UI composer
+      // + renderer (which only know the macro shape) find data. The
+      // public MCP envelope on the wire is untouched — this only mutates
+      // the in-process copy.
+      const { normalized } = normalizeToolEnvelope(tool, cleanArgs, structured);
       return {
         card_id: cardId,
         tool,
         args: cleanArgs,
         status: "ok",
-        data: structured ?? null,
+        data: normalized ?? null,
       };
     } catch (err) {
       return {

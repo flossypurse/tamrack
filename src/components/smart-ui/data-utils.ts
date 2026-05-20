@@ -6,10 +6,13 @@
  *       indicator, source, unit, last_observation,
  *       served_from, points: [{date, value}] } }
  *
- * Other tools share the structuredContent.data.points convention with
- * minor variation (housing/business/etc. use payload.rows). For v1 we
- * only support the macro envelope shape — wider extraction lands with
- * v1.1's expanded card surface.
+ * Other tools (housing / energy / business) emit wide payloads like
+ * `data.payload.rows: [{date, edmonton, calgary}]`. The Smart UI's
+ * `src/lib/smart-ui/normalize-envelope.ts` projects those to
+ * `data.points` at the in-process MCP-client boundary BEFORE the
+ * envelope reaches this renderer, so `extractPoints` only has to know
+ * about the macro shape. The `payload.rows` fallback here is a defensive
+ * second pass for tools that emit a narrow {date, value} rows shape.
  */
 
 import type { SeriesPoint } from "@/lib/smart-ui/types";
