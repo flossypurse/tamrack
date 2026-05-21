@@ -237,6 +237,8 @@ function LoadingCard() {
 // Page
 // ============================================================
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Alberta Growth Corridors",
   description: "Alberta municipalities ranked by composite growth score — population, permits, business formation, assessment growth, and migration.",
