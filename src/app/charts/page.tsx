@@ -1,12 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Activity, Search, BarChart3, ArrowRight } from "lucide-react";
 import {
   CHART_REGISTRY,
   CATEGORY_LABELS,
-  CATEGORY_COLORS,
   type ChartCategory,
-  type ChartMeta,
 } from "@/lib/chart-registry";
 import { ChartCatalogueFilter } from "./catalogue-filter";
 import { SITE_URL } from "@/lib/constants/site";
@@ -30,18 +26,6 @@ export const metadata: Metadata = {
   },
 };
 
-// Group charts by subcategory for display
-function groupBySubcategory(charts: ChartMeta[]): Map<string, ChartMeta[]> {
-  const groups = new Map<string, ChartMeta[]>();
-  for (const c of charts) {
-    const key = c.subcategory;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(c);
-  }
-  return groups;
-}
-
-// Category stats
 function getCategoryStats(): { category: ChartCategory; label: string; count: number }[] {
   const stats = new Map<ChartCategory, number>();
   for (const c of CHART_REGISTRY) {
@@ -56,36 +40,49 @@ function getCategoryStats(): { category: ChartCategory; label: string; count: nu
 
 export default function ChartCataloguePage() {
   const categoryStats = getCategoryStats();
+  const sourceCount = new Set(CHART_REGISTRY.map((c) => c.source)).size;
 
   return (
-    <main className="px-4 sm:px-6 py-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <BarChart3 size={24} className="text-accent" />
-          <h1 className="text-2xl sm:text-3xl font-bold">Chart Catalogue</h1>
-        </div>
-        <p className="text-muted text-sm max-w-2xl">
-          {CHART_REGISTRY.length} live data charts from {new Set(CHART_REGISTRY.map((c) => c.source)).size}+ government
-          sources. Every chart is free to view, embed, and share.
+    <main className="px-4 sm:px-6 py-10 sm:py-14 max-w-6xl mx-auto">
+      {/* Header — T3 terminal voice, matches landing-page register */}
+      <header className="mb-10 sm:mb-12 space-y-5">
+        <p className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--mid)]">
+          tamrack · catalogue · v0
         </p>
+        <h1 className="font-mono font-extrabold text-3xl sm:text-4xl leading-[1.0] tracking-tight text-[var(--ink)]">
+          <span className="text-[var(--amber)]">&gt;</span> the catalogue.
+        </h1>
+        <p className="text-[var(--ink)]/85 text-base sm:text-lg leading-relaxed max-w-2xl">
+          {CHART_REGISTRY.length} live data charts pulled from {sourceCount}+ government
+          sources.{" "}
+          <span className="text-[var(--mid)]">
+            Free to view, embed, and share. No account, no trial, no card.
+          </span>
+        </p>
+      </header>
+
+      {/* Hairline section break + jump index */}
+      <div className="border-t border-[var(--hairline)] pt-6 mb-8">
+        <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--mid)] mb-3">
+          jump to section
+        </p>
+        <div className="flex flex-wrap gap-x-5 gap-y-2">
+          {categoryStats.map((s) => (
+            <a
+              key={s.category}
+              href={`#${s.category}`}
+              className="group inline-flex items-baseline gap-2 text-sm text-[var(--ink)] underline underline-offset-4 decoration-[var(--hairline)] hover:decoration-[var(--ink)] transition-colors"
+              style={{ transitionDuration: "var(--dur-instant)" }}
+            >
+              <span className="font-medium">{s.label}</span>
+              <span className="font-mono text-[11px] text-[var(--mid)]">
+                {s.count.toString().padStart(3, "0")}
+              </span>
+            </a>
+          ))}
+        </div>
       </div>
 
-      {/* Category summary pills */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {categoryStats.map((s) => (
-          <a
-            key={s.category}
-            href={`#${s.category}`}
-            className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors hover:opacity-80 ${CATEGORY_COLORS[s.category]}`}
-          >
-            {s.label}
-            <span className="opacity-60">{s.count}</span>
-          </a>
-        ))}
-      </div>
-
-      {/* Client-side filter */}
       <ChartCatalogueFilter charts={CHART_REGISTRY} />
     </main>
   );

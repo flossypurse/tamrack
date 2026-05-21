@@ -1393,11 +1393,18 @@ export const CATEGORY_LABELS: Record<ChartCategory, string> = {
   municipalities: "Municipalities",
 };
 
+// T3 brand discipline: amber is the only chromatic value in the system, and
+// it is reserved for signal moments (active state, live dot, focused series).
+// Category identity comes from the label text and section grouping, not color.
+// All six categories collapse to the same neutral instrument-panel chip.
+const CATEGORY_CHIP =
+  "bg-transparent text-[var(--mid)] border-[var(--hairline)] font-mono uppercase tracking-[0.14em]";
+
 export const CATEGORY_COLORS: Record<ChartCategory, string> = {
-  economy: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  "real-estate": "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  community: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  environment: "bg-green-500/10 text-green-400 border-green-500/20",
-  governance: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
-  municipalities: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  economy: CATEGORY_CHIP,
+  "real-estate": CATEGORY_CHIP,
+  community: CATEGORY_CHIP,
+  environment: CATEGORY_CHIP,
+  governance: CATEGORY_CHIP,
+  municipalities: CATEGORY_CHIP,
 };

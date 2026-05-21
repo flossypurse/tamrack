@@ -2,10 +2,9 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Search, Code, ArrowRight, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import {
   CATEGORY_LABELS,
-  CATEGORY_COLORS,
   type ChartCategory,
   type ChartMeta,
 } from "@/lib/chart-registry";
@@ -39,7 +38,6 @@ export function ChartCatalogueFilter({ charts }: { charts: ChartMeta[] }) {
     return result;
   }, [charts, query, selectedCategory]);
 
-  // Group filtered results by category then subcategory
   const grouped = useMemo(() => {
     const cats = new Map<ChartCategory, Map<string, ChartMeta[]>>();
     for (const c of filtered) {
@@ -55,46 +53,63 @@ export function ChartCatalogueFilter({ charts }: { charts: ChartMeta[] }) {
 
   return (
     <div>
-      {/* Search + filter bar */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-8">
+      {/* Search + filter bar — sharp, instrument-panel register */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+          <Search
+            size={14}
+            aria-hidden="true"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--mid)]"
+          />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search charts... (e.g. housing, GDP, calgary)"
-            className="w-full pl-9 pr-8 py-2.5 bg-card border border-card-border rounded-lg text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:border-accent transition-colors"
+            placeholder="search the catalogue — e.g. housing, gdp, calgary"
+            aria-label="Search charts"
+            className="w-full pl-9 pr-9 py-2.5 bg-[var(--surface-elevated)] border border-[var(--hairline)] text-sm text-[var(--ink)] placeholder:text-[var(--mid)]/70 font-mono focus:outline-none focus:border-[var(--amber)] transition-colors"
+            style={{ transitionDuration: "var(--dur-instant)" }}
           />
           {query && (
             <button
               onClick={() => setQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--mid)] hover:text-[var(--ink)] transition-colors"
+              aria-label="Clear search"
             >
               <X size={14} />
             </button>
           )}
         </div>
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
+        <div
+          role="tablist"
+          aria-label="Filter charts by category"
+          className="flex gap-px overflow-x-auto scrollbar-none border border-[var(--hairline)] bg-[var(--hairline)]"
+        >
           <button
+            role="tab"
+            aria-selected={!selectedCategory}
             onClick={() => setSelectedCategory(null)}
-            className={`shrink-0 text-xs px-3 py-2 rounded-lg border transition-colors ${
+            className={`shrink-0 font-mono text-[10px] tracking-[0.18em] uppercase px-3 py-2.5 transition-colors ${
               !selectedCategory
-                ? "bg-accent/10 text-accent border-accent/30"
-                : "text-muted border-card-border hover:border-accent/30"
+                ? "bg-[var(--ink)] text-[var(--ink-inv)]"
+                : "bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
             }`}
+            style={{ transitionDuration: "var(--dur-instant)" }}
           >
             All
           </button>
           {categories.map((cat) => (
             <button
               key={cat}
+              role="tab"
+              aria-selected={selectedCategory === cat}
               onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
-              className={`shrink-0 text-xs px-3 py-2 rounded-lg border transition-colors ${
+              className={`shrink-0 font-mono text-[10px] tracking-[0.18em] uppercase px-3 py-2.5 transition-colors ${
                 selectedCategory === cat
-                  ? CATEGORY_COLORS[cat]
-                  : "text-muted border-card-border hover:border-accent/30"
+                  ? "bg-[var(--ink)] text-[var(--ink-inv)]"
+                  : "bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
               }`}
+              style={{ transitionDuration: "var(--dur-instant)" }}
             >
               {CATEGORY_LABELS[cat]}
             </button>
@@ -102,85 +117,87 @@ export function ChartCatalogueFilter({ charts }: { charts: ChartMeta[] }) {
         </div>
       </div>
 
-      {/* Results count */}
-      <p className="text-xs text-muted mb-6">
+      {/* Results count — mono meta line */}
+      <p className="font-mono text-[11px] tracking-[0.14em] uppercase text-[var(--mid)] mb-8">
         {filtered.length === charts.length
-          ? `Showing all ${charts.length} charts`
-          : `${filtered.length} of ${charts.length} charts`}
+          ? `showing all ${charts.length} charts`
+          : `${filtered.length} / ${charts.length} charts`}
       </p>
 
       {/* Chart grid by category */}
       {filtered.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-muted text-sm">No charts match your search.</p>
+        <div className="border border-[var(--hairline)] py-16 text-center">
+          <p className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--mid)] mb-3">
+            no matches
+          </p>
           <button
             onClick={() => {
               setQuery("");
               setSelectedCategory(null);
             }}
-            className="text-accent text-sm mt-2 hover:underline"
+            className="text-sm text-[var(--ink)] hover:text-[var(--amber)] underline underline-offset-4 decoration-[var(--hairline)] hover:decoration-[var(--amber)] transition-colors"
+            style={{ transitionDuration: "var(--dur-instant)" }}
           >
             Clear filters
           </button>
         </div>
       ) : (
-        <div className="space-y-10">
-          {Array.from(grouped.entries()).map(([category, subcats]) => (
-            <section key={category} id={category}>
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <span
-                  className={`inline-block w-2 h-2 rounded-full ${CATEGORY_COLORS[category].split(" ")[0]}`}
-                />
-                {CATEGORY_LABELS[category]}
-                <span className="text-xs text-muted font-normal">
-                  {Array.from(subcats.values()).reduce((sum, arr) => sum + arr.length, 0)}
-                </span>
-              </h2>
-
-              {Array.from(subcats.entries()).map(([subcategory, subCharts]) => (
-                <div key={subcategory} className="mb-6">
-                  <h3 className="text-xs font-medium text-muted uppercase tracking-wider mb-3">
-                    {subcategory}
-                  </h3>
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {subCharts.map((chart) => (
-                      <Link
-                        key={chart.id}
-                        href={`/charts/${chart.id}`}
-                        className="group bg-card border border-card-border rounded-xl p-4 hover:border-accent transition-colors"
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <h4 className="text-sm font-medium text-foreground leading-tight pr-2 group-hover:text-accent transition-colors">
-                            {chart.title}
-                          </h4>
-                          <ArrowRight
-                            size={14}
-                            className="text-muted/30 group-hover:text-accent transition-colors shrink-0 mt-0.5"
-                          />
-                        </div>
-                        <p className="text-xs text-muted leading-relaxed mb-3 line-clamp-2">
-                          {chart.description}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <span
-                            className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${CATEGORY_COLORS[chart.category]}`}
-                          >
-                            {CATEGORY_LABELS[chart.category]}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-muted/50 font-mono">
-                              {FREQUENCY_LABELS[chart.updateFrequency] || chart.updateFrequency}
-                            </span>
-                            <Code size={10} className="text-muted/30" />
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
+        <div className="space-y-14">
+          {Array.from(grouped.entries()).map(([category, subcats]) => {
+            const sectionCount = Array.from(subcats.values()).reduce(
+              (sum, arr) => sum + arr.length,
+              0,
+            );
+            return (
+              <section key={category} id={category} className="scroll-mt-16">
+                {/* Section header — terminal eyebrow + display weight + count */}
+                <div className="border-t border-[var(--hairline)] pt-6 mb-6">
+                  <div className="flex items-baseline justify-between gap-4 flex-wrap">
+                    <h2 className="font-mono font-extrabold text-xl sm:text-2xl tracking-tight text-[var(--ink)]">
+                      <span className="text-[var(--amber)]">&gt;</span>{" "}
+                      {CATEGORY_LABELS[category].toLowerCase()}
+                    </h2>
+                    <span className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--mid)]">
+                      {sectionCount.toString().padStart(3, "0")} charts
+                    </span>
                   </div>
                 </div>
-              ))}
-            </section>
-          ))}
+
+                {Array.from(subcats.entries()).map(([subcategory, subCharts]) => (
+                  <div key={subcategory} className="mb-10 last:mb-0">
+                    <h3 className="font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--mid)] mb-3 border-l-2 border-[var(--hairline)] pl-3">
+                      {subcategory}
+                    </h3>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[var(--hairline)] border border-[var(--hairline)]">
+                      {subCharts.map((chart) => (
+                        <Link
+                          key={chart.id}
+                          href={`/charts/${chart.id}`}
+                          className="group bg-[var(--surface)] hover:bg-[var(--surface-elevated)] p-4 transition-colors"
+                          style={{ transitionDuration: "var(--dur-instant)" }}
+                        >
+                          <h4 className="font-mono text-sm font-medium text-[var(--ink)] leading-tight group-hover:text-[var(--amber)] transition-colors mb-2">
+                            {chart.title}
+                          </h4>
+                          <p className="text-xs text-[var(--mid)] leading-relaxed mb-3 line-clamp-2">
+                            {chart.description}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-[10px] tracking-[0.14em] uppercase text-[var(--mid)]">
+                              {CATEGORY_LABELS[chart.category]}
+                            </span>
+                            <span className="font-mono text-[10px] text-[var(--mid)]">
+                              {FREQUENCY_LABELS[chart.updateFrequency] || chart.updateFrequency}
+                            </span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            );
+          })}
         </div>
       )}
     </div>
