@@ -16,7 +16,7 @@
  * On Railway:   Set env vars in Railway dashboard, deploy as a separate service
  */
 
-import { Resonate } from "@resonatehq/sdk";
+import { Resonate, type Context } from "@resonatehq/sdk";
 
 import {
   collectRegionalIndicators,
@@ -55,12 +55,12 @@ const PHASES = [
 // Durable workflow: each phase is a separate Resonate step
 // ---------------------------------------------------------------------------
 
-async function dailyCollection(ctx: { run: (id: string, fn: () => Promise<PhaseResult>) => Promise<PhaseResult> }): Promise<PhaseResult[]> {
+function* dailyCollection(ctx: Context): Generator<any, PhaseResult[], any> {
   const today = new Date().toISOString().split("T")[0];
   const results: PhaseResult[] = [];
 
   for (const phase of PHASES) {
-    const result = await ctx.run(`phase-${phase.name}`, async (): Promise<PhaseResult> => {
+    const result: PhaseResult = yield* ctx.run(async (): Promise<PhaseResult> => {
       const start = Date.now();
       try {
         const rows = await phase.fn(today);
