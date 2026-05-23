@@ -2,9 +2,17 @@
 
 Multi-product SaaS platform tracking Alberta's economy (formerly "Alberta Pulse Check"; rebrand in progress, public copy still uses the old name until Phase A3 + cutover). ~320 pages, 50+ live data sources, 4 product surfaces.
 
+> ## ⚠️ HOSTING DIRECTION CHANGE — 2026-05-22
+>
+> **New direction:** All Tamrack infrastructure moves to Canadian-region hosting. Fly.io (Toronto `yyz`) for compute, Crunchy Bridge (Montreal `ca-central-1`) for Postgres.
+>
+> **This SUPERSEDES the prior "Tamrack stays on Railway" rule.** Full plan and migration sequence at [`../HOSTING-PLAN-2026-05-22.md`](../HOSTING-PLAN-2026-05-22.md). Do not start the migration without reading it. Do not propose Railway-based changes for Tamrack going forward.
+>
+> Current Railway deployment remains live until migration executes (target: mid-June 2026, post-rebrand-cutover stabilization).
+
 ## Status
 
-All 4 product phases complete. Deployed live on Railway (auto-deploy from `main`). Focus is now marketing and user acquisition.
+All 4 product phases complete. Deployed live on Railway (auto-deploy from `main`). Focus is now marketing and user acquisition. **Hosting migration to Fly.io + Crunchy Bridge planned mid-June 2026** — see notice above.
 
 ## Stack
 
