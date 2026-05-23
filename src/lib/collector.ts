@@ -16,6 +16,8 @@ import {
   fetchRegionalIndicator,
 } from "./data-sources-regional";
 
+export { REGIONAL_INDICATORS };
+
 import {
   type CEREndpointKey,
   fetchPipelineThroughput,
@@ -179,50 +181,55 @@ const SQL = {
 // Phase 1: Regional Indicators
 // ---------------------------------------------------------------------------
 
+/**
+ * Fetch and persist a single regional indicator for all municipalities.
+ * Exported so worker.ts can issue one ctx.run step per indicator, keeping
+ * only one payload in memory at a time (each payload can be 23–34 MB).
+ */
+export async function collectOneRegionalIndicator(name: string): Promise<number> {
+  const data = await fetchRegionalIndicator(name);
+  if (data.length === 0) return 0;
+
+  const aggregated = new Map<
+    string,
+    { csduid: string; municipality: string; indicator: string; period: string; value: number; unit: string }
+  >();
+
+  for (const pt of data) {
+    if (!pt.csduid || !pt.period) continue;
+    const key = `${pt.csduid}|${pt.indicator}|${pt.period}`;
+    const existing = aggregated.get(key);
+    if (existing) {
+      existing.value += pt.value;
+    } else {
+      aggregated.set(key, {
+        csduid: pt.csduid,
+        municipality: pt.municipality,
+        indicator: pt.indicator,
+        period: pt.period,
+        value: pt.value,
+        unit: pt.unit,
+      });
+    }
+  }
+
+  return await withTransaction(async (client: pg.PoolClient) => {
+    for (const row of aggregated.values()) {
+      await client.query(SQL.upsertRegional, [
+        row.csduid, row.municipality, row.indicator,
+        row.period, row.value, row.unit,
+      ]);
+    }
+    return aggregated.size;
+  });
+}
+
 export async function collectRegionalIndicators(): Promise<number> {
   const pool = await getDb();
   const indicatorNames = Object.keys(REGIONAL_INDICATORS);
   let totalRows = 0;
 
-  const tasks = indicatorNames.map(
-    (name) => async () => {
-      const data = await fetchRegionalIndicator(name);
-      if (data.length === 0) return 0;
-
-      const aggregated = new Map<
-        string,
-        { csduid: string; municipality: string; indicator: string; period: string; value: number; unit: string }
-      >();
-
-      for (const pt of data) {
-        if (!pt.csduid || !pt.period) continue;
-        const key = `${pt.csduid}|${pt.indicator}|${pt.period}`;
-        const existing = aggregated.get(key);
-        if (existing) {
-          existing.value += pt.value;
-        } else {
-          aggregated.set(key, {
-            csduid: pt.csduid,
-            municipality: pt.municipality,
-            indicator: pt.indicator,
-            period: pt.period,
-            value: pt.value,
-            unit: pt.unit,
-          });
-        }
-      }
-
-      return await withTransaction(async (client: pg.PoolClient) => {
-        for (const row of aggregated.values()) {
-          await client.query(SQL.upsertRegional, [
-            row.csduid, row.municipality, row.indicator,
-            row.period, row.value, row.unit,
-          ]);
-        }
-        return aggregated.size;
-      });
-    }
-  );
+  const tasks = indicatorNames.map((name) => () => collectOneRegionalIndicator(name));
 
   const results = await runWithConcurrency(tasks, 5);
   for (const r of results) {

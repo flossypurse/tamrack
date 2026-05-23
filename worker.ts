@@ -19,7 +19,8 @@
 import { Resonate, type Context } from "@resonatehq/sdk";
 
 import {
-  collectRegionalIndicators,
+  REGIONAL_INDICATORS,
+  collectOneRegionalIndicator,
   collectEnergyData,
   collectMunicipalityData,
   collectWellLicences,
@@ -41,25 +42,71 @@ interface PhaseResult {
   error?: string;
 }
 
-const PHASES = [
-  { name: "regional", fn: () => collectRegionalIndicators() },
-  { name: "energy", fn: () => collectEnergyData() },
+// Non-regional phases run as a single ctx.run step each (payloads are small).
+const NON_REGIONAL_PHASES = [
+  { name: "energy",        fn: (_today: string) => collectEnergyData() },
   { name: "municipalities", fn: (today: string) => collectMunicipalityData(today) },
-  { name: "wells", fn: (today: string) => collectWellLicences(today) },
-  { name: "immigration", fn: () => collectImmigration() },
-  { name: "projects", fn: (today: string) => collectMajorProjects(today) },
-  { name: "macro", fn: (today: string) => collectMacroIndicators(today) },
+  { name: "wells",         fn: (today: string) => collectWellLicences(today) },
+  { name: "immigration",   fn: (_today: string) => collectImmigration() },
+  { name: "projects",      fn: (today: string) => collectMajorProjects(today) },
+  { name: "macro",         fn: (today: string) => collectMacroIndicators(today) },
 ] as const;
 
+// Slug-safe key for Resonate step IDs (must be deterministic across replays).
+function indicatorSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
 // ---------------------------------------------------------------------------
-// Durable workflow: each phase is a separate Resonate step
+// Durable workflow: each phase is a separate Resonate step.
+// The regional phase is further split: one ctx.run step per indicator so
+// OOM on a single large payload only replays that one indicator, not the
+// whole phase.
 // ---------------------------------------------------------------------------
 
 function* dailyCollection(ctx: Context): Generator<any, PhaseResult[], any> {
   const today = new Date().toISOString().split("T")[0];
   const results: PhaseResult[] = [];
 
-  for (const phase of PHASES) {
+  // --- Phase: regional (per-indicator steps) ---
+  {
+    const indicatorNames = Object.keys(REGIONAL_INDICATORS);
+    let regionalRows = 0;
+    let regionalErrors = 0;
+
+    for (const name of indicatorNames) {
+      const slug = indicatorSlug(name);
+      const start = Date.now();
+
+      const indicatorResult: { rows: number; error?: string } = yield* ctx.run(
+        async (): Promise<{ rows: number; error?: string }> => {
+          try {
+            const rows = await collectOneRegionalIndicator(name);
+            return { rows };
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            console.error(`[worker] Indicator ${slug} failed: ${msg}`);
+            return { rows: 0, error: msg };
+          }
+        }
+      );
+
+      const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+      if (indicatorResult.error) {
+        regionalErrors++;
+        console.warn(`[worker] Indicator ${slug}: 0 rows (${elapsed}s) — ${indicatorResult.error}`);
+      } else {
+        regionalRows += indicatorResult.rows;
+        console.log(`[worker] Indicator ${slug}: ${indicatorResult.rows} rows (${elapsed}s)`);
+      }
+    }
+
+    console.log(`[worker] Phase regional: ${regionalRows} rows (${regionalErrors} errors)`);
+    results.push({ phase: "regional", rows: regionalRows, status: regionalErrors === 0 ? "ok" : "error" });
+  }
+
+  // --- Remaining phases (one step each) ---
+  for (const phase of NON_REGIONAL_PHASES) {
     const result: PhaseResult = yield* ctx.run(async (): Promise<PhaseResult> => {
       const start = Date.now();
       try {
