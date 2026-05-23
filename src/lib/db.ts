@@ -9,11 +9,27 @@ let _migrated = false;
 
 function getPool(): pg.Pool {
   if (!_pool) {
+    const dbUrl = process.env.DATABASE_URL ?? "";
+    // Disable cert verification for private/internal Postgres hosts (Railway
+    // 6PN and Crunchy Bridge). Both use self-signed / private CA certificates
+    // that Node's default TLS store won't trust.
+    //
+    // pg-connection-string extracts sslmode from the URL and sets ssl options
+    // internally. To ensure rejectUnauthorized:false wins, we strip the sslmode
+    // query param from the connectionString and pass ssl explicitly — preventing
+    // pg-connection-string from overriding our ssl config.
+    const hasSslMode =
+      dbUrl.includes("sslmode=require") ||
+      dbUrl.includes("sslmode=verify") ||
+      dbUrl.includes("sslmode=prefer");
+    const cleanUrl = dbUrl
+      .replace(/[?&]sslmode=[^&]*/g, "")
+      .replace(/[?&]uselibpqcompat=[^&]*/g, "")
+      .replace(/\?&/, "?") // fix ?& → ? if sslmode was first param
+      .replace(/[?&]$/, ""); // trim trailing ? or &
     _pool = new pg.Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_URL?.includes("railway.internal")
-        ? { rejectUnauthorized: false }
-        : undefined,
+      connectionString: hasSslMode ? cleanUrl : dbUrl,
+      ssl: hasSslMode ? { rejectUnauthorized: false } : undefined,
     });
   }
   return _pool;
@@ -101,19 +117,6 @@ const MIGRATION_SQL = `
     );
     CREATE INDEX IF NOT EXISTS idx_invites_created_by ON invites(created_by, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_invites_pending ON invites(expires_at) WHERE redeemed_at IS NULL;
-
-    -- Backfill: every existing user (anyone with an api_key, an active
-    -- subscription, or otherwise pre-Tamrack) gets the founder plan so
-    -- the rebrand doesn't blow up paying customers' quotas. New rows
-    -- default to free via the column default above.
-    UPDATE users
-       SET plan = 'founder'
-     WHERE plan = 'free'
-       AND id IN (
-         SELECT DISTINCT user_id FROM api_keys
-         UNION
-         SELECT DISTINCT user_id FROM subscriptions WHERE status IN ('active','trialing','past_due')
-       );
 
     CREATE TABLE IF NOT EXISTS accounts (
       id TEXT PRIMARY KEY,
@@ -208,6 +211,20 @@ const MIGRATION_SQL = `
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS municipality_id TEXT;
     -- Realtor: operating area (JSON array of municipality slugs)
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS operating_area TEXT;
+
+    -- Backfill: every existing user (anyone with an api_key, an active
+    -- subscription, or otherwise pre-Tamrack) gets the founder plan so
+    -- the rebrand doesn't blow up paying customers' quotas. New rows
+    -- default to free via the column default above.
+    -- NOTE: must run AFTER both api_keys and subscriptions are created.
+    UPDATE users
+       SET plan = 'founder'
+     WHERE plan = 'free'
+       AND id IN (
+         SELECT DISTINCT user_id FROM api_keys
+         UNION
+         SELECT DISTINCT user_id FROM subscriptions WHERE status IN ('active','trialing','past_due')
+       );
 
     CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id);
     CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe ON subscriptions(stripe_customer_id);
