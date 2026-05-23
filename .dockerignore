@@ -1,0 +1,17 @@
+# Exclude large directories not needed by Dockerfile.worker
+# worker.ts imports from src/lib/ so src/ must be included
+node_modules
+.next
+.git
+.claude
+*.log
+handoffs
+docs
+content
+data
+public
+tsconfig.tsbuildinfo
+.source
+.env.local
+.env*.local
+.github
