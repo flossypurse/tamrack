@@ -164,7 +164,11 @@ async function main() {
   console.log(`[worker] Connecting to Resonate at ${resonateUrl}`);
   console.log(`[worker] Connected to data Postgres`);
 
-  const resonate = new Resonate({ url: resonateUrl });
+  // TTL = 5 min: each indicator step can take up to ~90s (API timeout + DB
+  // fallback).  Default 60s TTL expires before the fence call, causing a
+  // "Version mismatch" 409 on task.fence.  Heartbeat sends tasks:[] so it
+  // does not renew leases — raise TTL instead.
+  const resonate = new Resonate({ url: resonateUrl, ttl: 5 * 60 * 1000 });
 
   // Register the collection workflow
   resonate.register("dailyCollection", dailyCollection);
