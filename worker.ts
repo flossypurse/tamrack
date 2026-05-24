@@ -164,11 +164,13 @@ async function main() {
   console.log(`[worker] Connecting to Resonate at ${resonateUrl}`);
   console.log(`[worker] Connected to data Postgres`);
 
+  const resonateToken = process.env.RESONATE_TOKEN;
+
   // TTL = 30 min: the energy phase (single ctx.run) can take 8–23 min.
   // Regional indicators top out at ~3 min each.  Heartbeat sends tasks:[]
   // so leases are never renewed — set TTL high enough to cover the longest
   // single step instead.  Default 60s caused "Version mismatch" 409s.
-  const resonate = new Resonate({ url: resonateUrl, ttl: 30 * 60 * 1000 });
+  const resonate = new Resonate({ url: resonateUrl, ttl: 30 * 60 * 1000, token: resonateToken });
 
   // Register the collection workflow
   resonate.register("dailyCollection", dailyCollection);

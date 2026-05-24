@@ -14,19 +14,32 @@ function getPool(): pg.Pool {
     // 6PN and Crunchy Bridge). Both use self-signed / private CA certificates
     // that Node's default TLS store won't trust.
     //
-    // pg-connection-string extracts sslmode from the URL and sets ssl options
-    // internally. To ensure rejectUnauthorized:false wins, we strip the sslmode
-    // query param from the connectionString and pass ssl explicitly — preventing
-    // pg-connection-string from overriding our ssl config.
-    const hasSslMode =
-      dbUrl.includes("sslmode=require") ||
-      dbUrl.includes("sslmode=verify") ||
-      dbUrl.includes("sslmode=prefer");
-    const cleanUrl = dbUrl
-      .replace(/[?&]sslmode=[^&]*/g, "")
-      .replace(/[?&]uselibpqcompat=[^&]*/g, "")
-      .replace(/\?&/, "?") // fix ?& → ? if sslmode was first param
-      .replace(/[?&]$/, ""); // trim trailing ? or &
+    // Use URL + searchParams.delete to strip driver-specific params cleanly.
+    // The old regex approach left a leading & when sslmode was the first query
+    // param (e.g. ?sslmode=require&statement_cache_mode=disable → &statement_cache_mode=disable).
+    if (!dbUrl.trim()) {
+      _pool = new pg.Pool({ ssl: undefined });
+      return _pool;
+    }
+    let hasSslMode = false;
+    let cleanUrl = dbUrl;
+    try {
+      const u = new URL(dbUrl);
+      const sslmode = u.searchParams.get("sslmode") ?? "";
+      hasSslMode = ["require", "verify-full", "verify-ca", "prefer"].includes(sslmode);
+      // Strip params that pg-connection-string would misinterpret or that are
+      // intended for other Postgres clients (asyncpg, libpq, node-postgres
+      // statement_cache_mode is not a libpq param and causes warnings).
+      for (const p of ["sslmode", "uselibpqcompat", "statement_cache_mode"]) {
+        u.searchParams.delete(p);
+      }
+      cleanUrl = u.toString();
+    } catch {
+      // Malformed URL — pass through as-is, let pg.Pool surface the error.
+      hasSslMode = dbUrl.includes("sslmode=require") ||
+        dbUrl.includes("sslmode=verify") ||
+        dbUrl.includes("sslmode=prefer");
+    }
     _pool = new pg.Pool({
       connectionString: hasSslMode ? cleanUrl : dbUrl,
       ssl: hasSslMode ? { rejectUnauthorized: false } : undefined,
