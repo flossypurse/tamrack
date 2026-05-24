@@ -175,11 +175,24 @@ async function main() {
   // Register the collection workflow
   resonate.register("dailyCollection", dailyCollection);
 
-  // Schedule daily at 6:00 AM UTC (midnight MST)
-  await resonate.schedule("daily-collection", "0 6 * * *", "dailyCollection");
-
   console.log("[worker] Registered dailyCollection workflow");
-  console.log("[worker] Scheduled daily-collection cron: 0 6 * * * (6 AM UTC)");
+
+  // The SDK encodes schedule.promiseId as the literal template
+  // "{{.id}}.{{.timestamp}}", which starts with "{" — no prefix-scoped
+  // JWT can satisfy starts_with(prefix). The schedule is bootstrapped
+  // separately and persists on the server, so a 403 here is expected
+  // when the worker's token is prefix-scoped, and non-fatal.
+  try {
+    await resonate.schedule("daily-collection", "0 6 * * *", "dailyCollection");
+    console.log("[worker] Scheduled daily-collection cron: 0 6 * * * (6 AM UTC)");
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("HTTP 403")) {
+      console.log("[worker] Skipping schedule.create (403 with prefix-scoped token); existing schedule preserved");
+    } else {
+      throw e;
+    }
+  }
   console.log("[worker] Worker running. Press Ctrl+C to stop.");
 
   // Keep the process alive — Resonate SDK handles the event loop
