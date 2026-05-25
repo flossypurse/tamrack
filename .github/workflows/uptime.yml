@@ -1,0 +1,66 @@
+name: Tamrack Uptime Probe
+
+# Scheduled uptime probe. Hits tamrack.ca and the Resonate server every 10
+# minutes and opens a GitHub issue on failure for paging via GH notifications.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: probe tamrack.ca
+        id: probe-web
+        run: |
+          set -euo pipefail
+          # 15s budget — any slower is degraded.
+          http_code=$(curl -fsS --max-time 15 -o /dev/null -w "%{http_code}" https://tamrack.ca/)
+          if [[ "$http_code" != "200" ]]; then
+            echo "::error::tamrack.ca returned HTTP $http_code"
+            exit 1
+          fi
+          echo "tamrack.ca OK (HTTP $http_code)"
+
+      - name: probe Resonate server /health
+        id: probe-resonate
+        run: |
+          set -euo pipefail
+          # /health returns HTTP 200 with empty body — assert by exit code only.
+          curl -fsS --max-time 15 https://tamrack-resonate-server.fly.dev/health
+          echo "Resonate server /health OK"
+
+      - name: file issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `[uptime] Tamrack probe failing (${new Date().toISOString()})`;
+            const body = [
+              `Scheduled uptime probe failed. See [run](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}).`,
+              ``,
+              `If this is the first failure of a streak, it may be a transient blip — check Fly logs.`,
+              `If it persists, treat as an active incident.`,
+            ].join("\n");
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: "uptime,auto",
+              state: "open",
+            });
+            if (existing.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["uptime", "auto"],
+              });
+            }
