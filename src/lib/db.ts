@@ -34,11 +34,13 @@ function getPool(): pg.Pool {
         u.searchParams.delete(p);
       }
       cleanUrl = u.toString();
-    } catch {
-      // Malformed URL — pass through as-is, let pg.Pool surface the error.
-      hasSslMode = dbUrl.includes("sslmode=require") ||
-        dbUrl.includes("sslmode=verify") ||
-        dbUrl.includes("sslmode=prefer");
+    } catch (parseErr) {
+      // Malformed URL — cannot safely strip statement_cache_mode/uselibpqcompat.
+      // Proceeding with the raw URL would leave those params in the connection
+      // string and re-introduce the pg-connection-string bug this refactor fixed.
+      // Crunchy passwords with special chars (# ? & etc.) must be %-encoded.
+      console.error("[db] DATABASE_URL parse failed; statement_cache_mode/uselibpqcompat NOT stripped — fix URL encoding");
+      throw parseErr;
     }
     _pool = new pg.Pool({
       connectionString: hasSslMode ? cleanUrl : dbUrl,

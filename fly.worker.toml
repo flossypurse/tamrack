@@ -8,11 +8,6 @@ primary_region = "yyz"
 # It connects outbound to tamrack-resonate-server via Fly Proxy HTTPS.
 # Do NOT add [[services]] here.
 
-[machines]
-  auto_stop_machines = "off"
-  auto_start_machines = true
-  min_machines_running = 1
-
 [vm]
   memory = "1024mb"
   cpu_kind = "shared"

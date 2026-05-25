@@ -9,11 +9,12 @@
  * instead of re-running all phases from scratch.
  *
  * Env vars:
- *   DATABASE_URL  — Postgres connection string (data DB, shared with webui)
- *   RESONATE_URL  — Resonate server HTTP API (e.g. http://resonate:8001)
+ *   DATABASE_URL    — Postgres connection string (data DB, shared with webui)
+ *   RESONATE_URL    — Resonate server HTTP API (e.g. http://resonate:8001)
+ *   RESONATE_TOKEN  — RS256 JWT for Resonate server auth (required when server has auth enabled)
  *
- * Run locally:  DATABASE_URL=... RESONATE_URL=... npx tsx worker.ts
- * On Railway:   Set env vars in Railway dashboard, deploy as a separate service
+ * Run locally:  DATABASE_URL=... RESONATE_URL=... RESONATE_TOKEN=... npx tsx worker.ts
+ * On Fly.io:    Set env vars as Fly secrets, deploy via fly.worker.toml
  */
 
 import { Resonate, type Context } from "@resonatehq/sdk";
@@ -88,7 +89,8 @@ function* dailyCollection(ctx: Context): Generator<any, PhaseResult[], any> {
             console.error(`[worker] Indicator ${slug} failed: ${msg}`);
             return { rows: 0, error: msg };
           }
-        }
+        },
+        (ctx as any).options({ id: slug })
       );
 
       const elapsed = ((Date.now() - start) / 1000).toFixed(1);
@@ -107,30 +109,33 @@ function* dailyCollection(ctx: Context): Generator<any, PhaseResult[], any> {
 
   // --- Remaining phases (one step each) ---
   for (const phase of NON_REGIONAL_PHASES) {
-    const result: PhaseResult = yield* ctx.run(async (): Promise<PhaseResult> => {
-      const start = Date.now();
-      try {
-        const rows = await phase.fn(today);
-        console.log(`[worker] Phase ${phase.name}: ${rows} rows (${((Date.now() - start) / 1000).toFixed(1)}s)`);
-        return { phase: phase.name, rows, status: "ok" };
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        console.error(`[worker] Phase ${phase.name} failed: ${msg}`);
-
-        // Log error to snapshot_log
+    const result: PhaseResult = yield* ctx.run(
+      async (): Promise<PhaseResult> => {
+        const start = Date.now();
         try {
-          const pool = await getDb();
-          await pool.query(
-            `INSERT INTO snapshot_log (taken_at, source, records_inserted, status, error) VALUES (NOW(), $1, 0, 'error', $2)`,
-            [phase.name, msg]
-          );
-        } catch {
-          // Don't let logging failures break the workflow
-        }
+          const rows = await phase.fn(today);
+          console.log(`[worker] Phase ${phase.name}: ${rows} rows (${((Date.now() - start) / 1000).toFixed(1)}s)`);
+          return { phase: phase.name, rows, status: "ok" };
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.error(`[worker] Phase ${phase.name} failed: ${msg}`);
 
-        return { phase: phase.name, rows: 0, status: "error", error: msg };
-      }
-    });
+          // Log error to snapshot_log
+          try {
+            const pool = await getDb();
+            await pool.query(
+              `INSERT INTO snapshot_log (taken_at, source, records_inserted, status, error) VALUES (NOW(), $1, 0, 'error', $2)`,
+              [phase.name, msg]
+            );
+          } catch {
+            // Don't let logging failures break the workflow
+          }
+
+          return { phase: phase.name, rows: 0, status: "error", error: msg };
+        }
+      },
+      (ctx as any).options({ id: phase.name })
+    );
 
     results.push(result);
   }
@@ -189,6 +194,9 @@ async function main() {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg.includes("HTTP 403")) {
       console.log("[worker] Skipping schedule.create (403 with prefix-scoped token); existing schedule preserved");
+    } else if (msg.includes("HTTP 401")) {
+      console.error("[worker] FATAL: token rejected (HTTP 401) — schedule.create unauthenticated; check RESONATE_TOKEN expiry/validity");
+      throw e;
     } else {
       throw e;
     }
