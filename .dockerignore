@@ -1,5 +1,7 @@
-# Exclude large directories not needed by Dockerfile.worker
-# worker.ts imports from src/lib/ so src/ must be included
+# Excluded for both webui (Dockerfile) and worker (Dockerfile.worker) builds.
+# worker.ts imports from src/lib/ so src/ must be included.
+# content/ and public/ are excluded from worker builds but needed for webui;
+# they are small (<400K combined) so including them in the build context is fine.
 node_modules
 .next
 .git
@@ -7,9 +9,7 @@ node_modules
 *.log
 handoffs
 docs
-content
 data
-public
 tsconfig.tsbuildinfo
 .source
 .env.local
