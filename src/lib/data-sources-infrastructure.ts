@@ -188,6 +188,11 @@ export async function fetchInfrastructureProjects(
 
 /**
  * Alberta major projects inventory (projects over $5M).
+ *
+ * The upstream payload is Socrata's `rows.json` shape:
+ *   { meta: { view: { columns: [{ name, ... }, ...] } }, data: [[...], ...] }
+ * where each `data[i]` is a positional array indexed by column position.
+ * We build a name → index map from `meta.view.columns` and read fields by name.
  */
 export async function fetchAlbertaMajorProjects(): Promise<MajorProject[]> {
   try {
@@ -198,18 +203,42 @@ export async function fetchAlbertaMajorProjects(): Promise<MajorProject[]> {
       console.error(`Alberta Major Projects fetch failed: ${res.status}`);
       return [];
     }
-    const data = await res.json();
-    const rows = Array.isArray(data) ? data : data?.data ?? data?.rows ?? [];
+    const payload = await res.json();
+    const columns: { name?: string }[] =
+      payload?.meta?.view?.columns ?? [];
+    const rows: unknown[][] = Array.isArray(payload?.data) ? payload.data : [];
+    if (columns.length === 0 || rows.length === 0) return [];
 
-    return rows.map((r: Record<string, unknown>) => ({
-      name: String(r["Project Name"] ?? r["project_name"] ?? r["name"] ?? ""),
-      sector: String(r["Sector"] ?? r["sector"] ?? ""),
-      type: String(r["Type"] ?? r["type"] ?? r["Project Type"] ?? ""),
-      stage: String(r["Stage"] ?? r["stage"] ?? r["Status"] ?? ""),
-      cost: parseFloat(String(r["Estimated Cost"] ?? r["cost"] ?? r["Cost ($Million)"] ?? "0")) || 0,
-      location: String(r["Location"] ?? r["location"] ?? r["Region"] ?? ""),
-      municipality: String(r["Municipality"] ?? r["municipality"] ?? r["Nearest Municipality"] ?? ""),
-    }));
+    const idx: Record<string, number> = {};
+    columns.forEach((c, i) => {
+      if (c?.name) idx[c.name] = i;
+    });
+
+    const get = (row: unknown[], col: string): unknown =>
+      idx[col] === undefined ? undefined : row[idx[col]];
+
+    return rows
+      .map((r) => {
+        // Location is a Socrata `location` cell: [human, lat, lon, ..., needs_recoding]
+        const loc = get(r, "Location");
+        const locationStr =
+          Array.isArray(loc) && loc[1] && loc[2]
+            ? `${loc[1]},${loc[2]}`
+            : "";
+
+        return {
+          name: String(get(r, "Name") ?? ""),
+          sector: String(get(r, "Sector") ?? ""),
+          type: String(get(r, "Sector") ?? ""), // dataset has no separate Type column
+          stage: String(get(r, "Stage") ?? ""),
+          cost: parseFloat(String(get(r, "Cost") ?? "0")) || 0,
+          location: locationStr,
+          municipality: String(
+            get(r, "From Municipality") ?? get(r, "To Municipality") ?? ""
+          ),
+        };
+      })
+      .filter((p) => p.name.length > 0);
   } catch (err) {
     console.error("Alberta Major Projects fetch error:", err);
     return [];
