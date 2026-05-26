@@ -132,8 +132,7 @@ function projectToolEnvelope(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Housing payload shapes (per
- * `src/app/api/mcp/tools/housing.ts:196-227`):
+ * Housing payload shapes mirror the tamrack_housing MCP handler:
  *   - starts | completions | under_construction | vacancy
  *       → { rows: [{date, edmonton, calgary}] }   (wide; pick a CMA column)
  *   - rents
@@ -248,7 +247,7 @@ function resolveCmaArg(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Energy payload shapes (per `src/app/api/mcp/tools/energy.ts:321-378`).
+ * Energy payload shapes mirror the tamrack_energy MCP handler.
  * Most carry `rows[]` with either a `value`, a `price`, a `throughput`,
  * or a `volume` field. We pick the most natural single-series projection
  * per dataset and let the composer caption it.

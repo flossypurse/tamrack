@@ -294,9 +294,33 @@ export async function fetchPipelineThroughput(
   });
 }
 
+// CER province cells contain two-letter codes (AB, NL, ON, ...).
+// Map to province names so callers can filter with either form.
+const PROVINCE_CODE_TO_NAME: Record<string, string> = {
+  AB: "Alberta",
+  BC: "British Columbia",
+  MB: "Manitoba",
+  NB: "New Brunswick",
+  NL: "Newfoundland and Labrador",
+  NS: "Nova Scotia",
+  NT: "Northwest Territories",
+  NU: "Nunavut",
+  ON: "Ontario",
+  PE: "Prince Edward Island",
+  QC: "Quebec",
+  SK: "Saskatchewan",
+  YT: "Yukon",
+};
+
+const PROVINCE_NAME_TO_CODE: Record<string, string> = Object.fromEntries(
+  Object.entries(PROVINCE_CODE_TO_NAME).map(([code, name]) => [name.toLowerCase(), code])
+);
+
 /**
  * Fetches crude oil production data, optionally filtered to a single province.
- * Defaults to "Alberta" if province is specified without match, returns all rows.
+ * Defaults to "Alberta". CER's CSV uses two-letter province codes in the
+ * "Region" column (e.g. "AB"), so we resolve to/from the full name before
+ * matching.
  */
 export async function fetchCrudeOilProduction(
   province?: string
@@ -305,25 +329,28 @@ export async function fetchCrudeOilProduction(
   if (rows.length === 0) return [];
 
   const filterProvince = province ?? "Alberta";
+  const filterCode = PROVINCE_NAME_TO_CODE[filterProvince.toLowerCase()] ?? filterProvince.toUpperCase();
+  const filterName = filterProvince.toLowerCase();
 
   const results: ProductionPoint[] = [];
   for (const row of rows) {
-    const rowProvince = col(row, "Province", "province", "Region", "region");
+    const rawProvince = col(row, "Province", "province", "Region", "region");
+    if (!rawProvince) continue;
 
-    if (
-      filterProvince &&
-      !rowProvince.toLowerCase().includes(filterProvince.toLowerCase())
-    ) {
-      continue;
-    }
+    const rawUpper = rawProvince.toUpperCase();
+    const matches =
+      rawUpper === filterCode ||
+      rawProvince.toLowerCase().includes(filterName);
+    if (!matches) continue;
+
+    const provinceName = PROVINCE_CODE_TO_NAME[rawUpper] ?? rawProvince;
 
     results.push({
       date: col(row, "Date", "date", "Month", "month", "Period"),
-      province: rowProvince,
+      province: provinceName,
       product: col(row, "Product", "product", "Type", "type"),
       volume: num(col(row, "Production", "production", "Volume", "volume", "Value")),
-      unit:
-        col(row, "Unit", "unit") || "thousand barrels per day",
+      unit: col(row, "Unit", "unit") || "thousand barrels per day",
     });
   }
 

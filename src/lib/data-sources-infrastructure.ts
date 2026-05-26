@@ -188,6 +188,11 @@ export async function fetchInfrastructureProjects(
 
 /**
  * Alberta major projects inventory (projects over $5M).
+ *
+ * The upstream payload is Socrata's `rows.json` shape:
+ *   { meta: { view: { columns: [{ name, ... }, ...] } }, data: [[...], ...] }
+ * where each `data[i]` is a positional array indexed by column position.
+ * We build a name → index map from `meta.view.columns` and read fields by name.
  */
 export async function fetchAlbertaMajorProjects(): Promise<MajorProject[]> {
   try {
@@ -198,18 +203,42 @@ export async function fetchAlbertaMajorProjects(): Promise<MajorProject[]> {
       console.error(`Alberta Major Projects fetch failed: ${res.status}`);
       return [];
     }
-    const data = await res.json();
-    const rows = Array.isArray(data) ? data : data?.data ?? data?.rows ?? [];
+    const payload = await res.json();
+    const columns: { name?: string }[] =
+      payload?.meta?.view?.columns ?? [];
+    const rows: unknown[][] = Array.isArray(payload?.data) ? payload.data : [];
+    if (columns.length === 0 || rows.length === 0) return [];
 
-    return rows.map((r: Record<string, unknown>) => ({
-      name: String(r["Project Name"] ?? r["project_name"] ?? r["name"] ?? ""),
-      sector: String(r["Sector"] ?? r["sector"] ?? ""),
-      type: String(r["Type"] ?? r["type"] ?? r["Project Type"] ?? ""),
-      stage: String(r["Stage"] ?? r["stage"] ?? r["Status"] ?? ""),
-      cost: parseFloat(String(r["Estimated Cost"] ?? r["cost"] ?? r["Cost ($Million)"] ?? "0")) || 0,
-      location: String(r["Location"] ?? r["location"] ?? r["Region"] ?? ""),
-      municipality: String(r["Municipality"] ?? r["municipality"] ?? r["Nearest Municipality"] ?? ""),
-    }));
+    const idx: Record<string, number> = {};
+    columns.forEach((c, i) => {
+      if (c?.name) idx[c.name] = i;
+    });
+
+    const get = (row: unknown[], col: string): unknown =>
+      idx[col] === undefined ? undefined : row[idx[col]];
+
+    return rows
+      .map((r) => {
+        // Location is a Socrata `location` cell: [human, lat, lon, ..., needs_recoding]
+        const loc = get(r, "Location");
+        const locationStr =
+          Array.isArray(loc) && loc[1] && loc[2]
+            ? `${loc[1]},${loc[2]}`
+            : "";
+
+        return {
+          name: String(get(r, "Name") ?? ""),
+          sector: String(get(r, "Sector") ?? ""),
+          type: String(get(r, "Sector") ?? ""), // dataset has no separate Type column
+          stage: String(get(r, "Stage") ?? ""),
+          cost: parseFloat(String(get(r, "Cost") ?? "0")) || 0,
+          location: locationStr,
+          municipality: String(
+            get(r, "From Municipality") ?? get(r, "To Municipality") ?? ""
+          ),
+        };
+      })
+      .filter((p) => p.name.length > 0);
   } catch (err) {
     console.error("Alberta Major Projects fetch error:", err);
     return [];
@@ -220,53 +249,70 @@ export async function fetchAlbertaMajorProjects(): Promise<MajorProject[]> {
 // AER Well Licences (Daily fixed-width text)
 // ============================================================
 
+/** Marker thrown when AER's static directory rejects the request. */
+export class AERAccessBlockedError extends Error {
+  constructor(url: string, status: number) {
+    super(`AER static directory blocked (${status}) at ${url}`);
+    this.name = "AERAccessBlockedError";
+  }
+}
+
 /**
  * Fetch AER well licences for a given date (defaults to today).
- * File format is fixed-width text at static.aer.ca.
+ *
+ * The historical source — `static.aer.ca/prd/data/well-lic/WELLS{MMDD}.TXT` —
+ * started returning HTTP 403 around 2026-03-14 and the entire `prd/data/`
+ * tree is now access-walled. No public Open Alberta dataset currently
+ * exposes the daily licence flow as a parseable file; only quarterly PDFs
+ * are published. Until a replacement source is identified, this fetcher
+ * throws AERAccessBlockedError on 403 so the collector can log a real
+ * error row instead of misleading "ok with no data".
  */
 export async function fetchAERWellLicences(
   date?: Date
 ): Promise<WellLicence[]> {
+  const d = date ?? new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const url = `${AER_WELL_BASE}/WELLS${mm}${dd}.TXT`;
+
+  let res: Response;
   try {
-    const d = date ?? new Date();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    const url = `${AER_WELL_BASE}/WELLS${mm}${dd}.TXT`;
-
-    const res = await fetch(url, { next: { revalidate: 86400 } });
-    if (!res.ok) {
-      console.error(`AER well licences fetch failed: ${res.status} for ${url}`);
-      return [];
-    }
-    const text = await res.text();
-    const lines = text.split("\n");
-
-    // Skip header lines (typically first 2-3 lines are headers/dashes)
-    const dataLines = lines.filter(
-      (l) =>
-        l.trim().length > 0 &&
-        !l.startsWith("-") &&
-        !l.startsWith("=") &&
-        !l.toLowerCase().includes("well name") &&
-        !l.toLowerCase().includes("licence")
-    );
-
-    // AER fixed-width format — approximate column positions
-    // Columns vary by year; these are common widths
-    return dataLines.map((line) => ({
-      licenceNumber: line.substring(0, 10).trim(),
-      wellName: line.substring(10, 50).trim(),
-      uniqueId: line.substring(50, 66).trim(),
-      surfaceLocation: line.substring(66, 100).trim(),
-      projectedDepth: parseInt(line.substring(100, 110).trim(), 10) || 0,
-      classification: line.substring(110, 125).trim(),
-      substance: line.substring(125, 145).trim(),
-      licensee: line.substring(145).trim(),
-    }));
+    res = await fetch(url, { next: { revalidate: 86400 } });
   } catch (err) {
     console.error("AER well licences fetch error:", err);
     return [];
   }
+
+  if (res.status === 403) {
+    throw new AERAccessBlockedError(url, res.status);
+  }
+  if (!res.ok) {
+    console.error(`AER well licences fetch failed: ${res.status} for ${url}`);
+    return [];
+  }
+
+  const text = await res.text();
+  const lines = text.split("\n");
+  const dataLines = lines.filter(
+    (l) =>
+      l.trim().length > 0 &&
+      !l.startsWith("-") &&
+      !l.startsWith("=") &&
+      !l.toLowerCase().includes("well name") &&
+      !l.toLowerCase().includes("licence")
+  );
+
+  return dataLines.map((line) => ({
+    licenceNumber: line.substring(0, 10).trim(),
+    wellName: line.substring(10, 50).trim(),
+    uniqueId: line.substring(50, 66).trim(),
+    surfaceLocation: line.substring(66, 100).trim(),
+    projectedDepth: parseInt(line.substring(100, 110).trim(), 10) || 0,
+    classification: line.substring(110, 125).trim(),
+    substance: line.substring(125, 145).trim(),
+    licensee: line.substring(145).trim(),
+  }));
 }
 
 // ============================================================
