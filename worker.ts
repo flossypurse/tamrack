@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Alberta Pulse — Resonate Durable Worker
+ * Tamrack — Resonate Durable Worker
  *
  * Runs the 7 collection phases as fault-tolerant durable steps.
  * Connects to Resonate server at RESONATE_URL and data Postgres at DATABASE_URL.
@@ -69,6 +69,16 @@ function* dailyCollection(ctx: Context): Generator<any, PhaseResult[], any> {
   const today = new Date().toISOString().split("T")[0];
   const results: PhaseResult[] = [];
 
+  // Step IDs are scoped by `today` to prevent Resonate's resolved-step cache
+  // from replaying yesterday's results on today's fire. Observed pre-fix on
+  // 2026-05-26: the daily-collection workflow completed in 4s because every
+  // step ID (e.g. "energy", "population") matched the prior day's resolved
+  // promise and short-circuited from cache — no DB writes happened.
+  // Including the date in the step ID makes each day's run get fresh cache
+  // entries while preserving idempotent mid-run replay (today's string is
+  // stable for the duration of one schedule fire).
+  const stepId = (suffix: string) => `${today}.${suffix}`;
+
   // --- Phase: regional (per-indicator steps) ---
   {
     const indicatorNames = Object.keys(REGIONAL_INDICATORS);
@@ -90,7 +100,7 @@ function* dailyCollection(ctx: Context): Generator<any, PhaseResult[], any> {
             return { rows: 0, error: msg };
           }
         },
-        (ctx as any).options({ id: slug })
+        (ctx as any).options({ id: stepId(slug) })
       );
 
       const elapsed = ((Date.now() - start) / 1000).toFixed(1);
@@ -134,7 +144,7 @@ function* dailyCollection(ctx: Context): Generator<any, PhaseResult[], any> {
           return { phase: phase.name, rows: 0, status: "error", error: msg };
         }
       },
-      (ctx as any).options({ id: phase.name })
+      (ctx as any).options({ id: stepId(phase.name) })
     );
 
     results.push(result);
