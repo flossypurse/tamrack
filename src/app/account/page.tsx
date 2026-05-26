@@ -15,7 +15,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
-import { signOutAction } from "@/app/actions/auth";
 import { AccountSubnav } from "@/components/account-subnav";
 import { TKey, TArrowRight } from "@/components/icons/t3";
 
@@ -151,7 +150,12 @@ export default async function AccountPage() {
             >
               manage billing
             </Link>
-            <form action={signOutAction}>
+            {/* POST directly to the manual cookie-clearing route. NextAuth v5's
+                signOut() + server-action wrapper both leave session cookies in
+                place under Next 16 (HTTPS + __Secure-/__Host- prefix handling).
+                The route at /api/auth/sign-out clears every variant explicitly
+                and 302s home. */}
+            <form action="/api/auth/sign-out" method="POST">
               <button
                 type="submit"
                 className="border border-[var(--hairline)] px-3 py-1.5 font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--mid)] hover:border-[var(--accent-red)] hover:text-[var(--accent-red)]"

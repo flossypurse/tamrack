@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { signOutAction } from "@/app/actions/auth";
 // Lucide icons retained here are functional/menu-only (avatar dropdown,
 // section icons rendered from nav-config). Brand-bearing icons (search,
 // theme toggle) have been swapped to T3. A full Lucide sweep across the
@@ -202,7 +201,7 @@ export function TopBar() {
                     </>
                   )}
                   <div className="border-t border-card-border my-1" />
-                  <form action={signOutAction}>
+                  <form action="/api/auth/sign-out" method="POST">
                     <button
                       type="submit"
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-accent-red/70 hover:text-accent-red hover:bg-accent-red/5 transition-colors"

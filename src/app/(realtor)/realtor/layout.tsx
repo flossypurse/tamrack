@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { signOutAction } from "@/app/actions/auth";
 import { SunsetBanner } from "@/components/sunset-banner";
 import {
   TrendingUp,
@@ -104,7 +103,7 @@ function RealtorTopBar() {
         <span className="text-xs text-muted hidden sm:inline">
           {session?.user?.email}
         </span>
-        <form action={signOutAction}>
+        <form action="/api/auth/sign-out" method="POST">
           <button
             type="submit"
             className="p-1.5 text-muted hover:text-foreground transition-colors"

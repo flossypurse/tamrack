@@ -7,8 +7,6 @@
  */
 import Link from "next/link";
 
-import { signOutAction } from "@/app/actions/auth";
-
 type AccountTab = "home" | "chat" | "keys" | "mcp";
 
 const TABS: ReadonlyArray<{ key: AccountTab; label: string; href: string }> = [
@@ -41,7 +39,7 @@ export function AccountSubnav({ active }: { active: AccountTab }) {
           );
         })}
       </div>
-      <form action={signOutAction}>
+      <form action="/api/auth/sign-out" method="POST">
         <button
           type="submit"
           className="border border-transparent px-3 py-1.5 font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--mid)] hover:border-[var(--hairline)] hover:text-[var(--accent-red)]"
