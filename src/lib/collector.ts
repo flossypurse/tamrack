@@ -325,6 +325,28 @@ export async function collectMunicipalityData(today: string): Promise<number> {
   const liveMunis = MUNICIPALITY_REGISTRY.filter((m) => m.status === "live");
   let totalRows = 0;
 
+  // logPerMuni surfaces per-muni outcomes that were previously swallowed by
+  // bare try/catch. Each muni gets its own snapshot_log row with
+  // source = "municipality_data:<slug>:<kind>" so a single query can tell
+  // which munis are healthy without scraping container logs.
+  const logPerMuni = async (
+    slug: string,
+    kind: "zoning" | "neighbourhood" | "permits",
+    rows: number,
+    error?: string
+  ) => {
+    try {
+      await pool.query(SQL.logEntry, [
+        `municipality_data:${slug}:${kind}`,
+        rows,
+        error ? "error" : "ok",
+        error ?? null,
+      ]);
+    } catch {
+      // logging failure must not mask the upstream outcome
+    }
+  };
+
   // Assessments
   const assessmentTasks = liveMunis
     .filter((m) => m.capabilities.includes("assessments") || m.endpoints.assessments || m.endpoints.parcels)
@@ -343,8 +365,10 @@ export async function collectMunicipalityData(today: string): Promise<number> {
           });
           count += byZoning.length;
         }
-      } catch {
-        // Non-fatal
+        await logPerMuni(m.slug, "zoning", byZoning.length);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        await logPerMuni(m.slug, "zoning", 0, msg);
       }
 
       if (m.fields.neighbourhood) {
@@ -361,8 +385,10 @@ export async function collectMunicipalityData(today: string): Promise<number> {
             });
             count += byHood.length;
           }
-        } catch {
-          // neighbourhood grouping not always available
+          await logPerMuni(m.slug, "neighbourhood", byHood.length);
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          await logPerMuni(m.slug, "neighbourhood", 0, msg);
         }
       }
       return count;
@@ -390,12 +416,14 @@ export async function collectMunicipalityData(today: string): Promise<number> {
             ]);
           }
         });
-        return permits.length;
       }
-    } catch {
-      // Non-fatal
+      await logPerMuni(m.slug, "permits", permits.length);
+      return permits.length;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      await logPerMuni(m.slug, "permits", 0, msg);
+      return 0;
     }
-    return 0;
   });
 
   const permitResults = await runWithConcurrency(permitTasks, 4);
