@@ -42,9 +42,20 @@ function getPool(): pg.Pool {
       console.error("[db] DATABASE_URL parse failed; statement_cache_mode/uselibpqcompat NOT stripped — fix URL encoding");
       throw parseErr;
     }
+    // Pool sizing tuned for Crunchy Bridge hobby-0 (max ~20 connections).
+    // Each Fly machine creates its own pool; with 2 webui machines + 1 worker
+    // machine that's 3 × max = aggregate cap. Set max=5 so the aggregate stays
+    // under 20 with headroom for psql admin sessions.
+    //
+    // rejectUnauthorized:false is a migration-era shortcut for Crunchy's
+    // self-signed CA chain. Tighten to verify-full + bundled CA in a follow-up
+    // (requires shipping the Crunchy root CA cert with the build).
     _pool = new pg.Pool({
       connectionString: hasSslMode ? cleanUrl : dbUrl,
       ssl: hasSslMode ? { rejectUnauthorized: false } : undefined,
+      max: 5,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 5_000,
     });
   }
   return _pool;

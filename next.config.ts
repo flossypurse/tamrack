@@ -8,7 +8,36 @@ import { createMDX } from "fumadocs-mdx/next";
 // .next to prevent Turbopack dev cache from conflicting with Webpack builds.
 const withMDX = createMDX();
 
+// Content Security Policy — strict-ish but compatible with our actual surface:
+// - 'unsafe-inline' on script-src is needed for Next.js inline runtime bootstrap
+//   chunks; tightening to a nonce-based policy requires custom middleware and is
+//   deferred until we have time to verify across every route.
+// - 'unsafe-inline' on style-src is needed for Tailwind's CSS-in-JS hash classes
+//   and the inline <style> tags Next emits for critical CSS.
+// - Mailgun (img + connect) is reachable for the auth-form magic-link UX.
+// - Google Analytics (script + img + connect) is whitelisted because GA4 is
+//   wired in the analytics component when NEXT_PUBLIC_GA_MEASUREMENT_ID is set.
+// - Stripe (script + frame) reserved for when the paid tier ships.
+// Tighten further (nonce, no unsafe-inline) when we ship a Sentry/observability
+// pass — context-wide tracking will need similar audit.
+const CSP_DIRECTIVES = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://js.stripe.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' https://fonts.gstatic.com data:",
+  "connect-src 'self' https://api.mailgun.net https://www.google-analytics.com https://analytics.google.com https://api.stripe.com",
+  "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "upgrade-insecure-requests",
+].join("; ");
+
 const nextConfig: NextConfig = {
+  // Suppress `x-powered-by: Next.js` header (reduces framework fingerprinting).
+  poweredByHeader: false,
   typescript: {
     ignoreBuildErrors: false,
   },
@@ -29,6 +58,7 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          { key: "Content-Security-Policy", value: CSP_DIRECTIVES },
         ],
       },
     ];
