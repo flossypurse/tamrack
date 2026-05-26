@@ -10,11 +10,24 @@ export const revalidate = 3600; // ISR: refresh embed data hourly
 export async function generateMetadata({ params }: { params: Promise<{ chartId: string }> }) {
   const { chartId } = await params;
   const chart = resolveChart(chartId);
-  const title = chart?.title || "Chart — Tamrack";
+  const title = chart?.title || "Chart";
+  const description = `Embeddable chart: ${title}. Live Alberta data, powered by Tamrack.`;
+  const ogUrl = `/api/og?title=${encodeURIComponent(title)}&subtitle=${encodeURIComponent("Live Alberta data · Tamrack")}`;
   return {
     title,
-    description: `Embeddable chart: ${title}. Live Alberta economic data powered by Tamrack.`,
+    description,
     robots: { index: true, follow: true },
+    openGraph: {
+      title,
+      description,
+      images: [{ url: ogUrl, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image" as const,
+      title,
+      description,
+      images: [ogUrl],
+    },
   };
 }
 

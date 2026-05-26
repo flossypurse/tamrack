@@ -27,7 +27,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "The Migration Effect — The Energy Engine — Pulse Learn",
+  title: "The Migration Effect — The Energy Engine",
   description:
     "People follow the money — in and out. How energy prices drive Alberta's population swings.",
 };

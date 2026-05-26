@@ -22,7 +22,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "The Price of Money — The Housing Machine — Pulse Learn",
+  title: "The Price of Money — The Housing Machine",
   description:
     "How the BoC policy rate sets everything in motion. Live data from Bank of Canada.",
 };

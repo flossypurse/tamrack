@@ -28,7 +28,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "The Diversification Question — The Energy Engine — Pulse Learn",
+  title: "The Diversification Question — The Energy Engine",
   description:
     "Is Alberta actually diversifying? Sector GDP shares over time, traced with live data.",
 };

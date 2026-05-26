@@ -23,7 +23,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Vacancy & Rent — The Housing Machine — Pulse Learn",
+  title: "Vacancy & Rent — The Housing Machine",
   description:
     "When supply meets demand — the 3% tipping point. Vacancy rates and rent data for Edmonton and Calgary.",
 };

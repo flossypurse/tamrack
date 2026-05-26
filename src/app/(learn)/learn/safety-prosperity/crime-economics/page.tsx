@@ -35,7 +35,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Crime & Economics — Safety & Prosperity — Pulse Learn",
+  title: "Crime & Economics — Safety & Prosperity",
   description:
     "How crime, health, and economic conditions move together with predictable time lags. The Crime Severity Index explained, the economy-crime connection traced with live data.",
 };

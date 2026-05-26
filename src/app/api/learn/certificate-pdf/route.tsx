@@ -156,7 +156,7 @@ async function renderCertificatePdf(name: string, date: string): Promise<Buffer>
           <Text style={styles.recipientName}>{name}</Text>
 
           <Text style={styles.description}>
-            has successfully completed the Pulse Learn curriculum — an 8-module
+            has successfully completed the Tamrack Learn curriculum — an 8-module
             course covering Alberta&apos;s economy, energy systems, housing markets,
             fiscal policy, demographics, economic indicators, community governance,
             and the intersection of safety and prosperity. All quizzes passed with

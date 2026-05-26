@@ -162,15 +162,19 @@ export default async function ChartDetailPage({
               <ChartRenderer chartId={chartId} />
             </Suspense>
 
-            {/* Bottom bar */}
+            {/* Bottom bar — "View in context" link hidden during EARLY_ACCESS
+                because most overview pages (/economy/energy etc.) are auth-walled
+                during the invite-only window. Re-enable when the gate lifts. */}
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-card-border">
               <span className="text-[10px] text-muted/60 font-mono">{meta.source}</span>
-              <Link
-                href={meta.pageHref}
-                className="text-[10px] text-accent hover:text-accent/80 transition-colors flex items-center gap-1"
-              >
-                View in context <ArrowRight size={10} />
-              </Link>
+              {process.env.EARLY_ACCESS === "false" && (
+                <Link
+                  href={meta.pageHref}
+                  className="text-[10px] text-accent hover:text-accent/80 transition-colors flex items-center gap-1"
+                >
+                  View in context <ArrowRight size={10} />
+                </Link>
+              )}
             </div>
           </div>
 

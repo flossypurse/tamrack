@@ -27,7 +27,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Energy Commodities — The Energy Engine — Pulse Learn",
+  title: "Energy Commodities — The Energy Engine",
   description:
     "BCPI Energy, WCS, and what drives prices. Live data from Bank of Canada.",
 };

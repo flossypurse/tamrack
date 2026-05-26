@@ -34,7 +34,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "The Labour Market — People & Growth — Pulse Learn",
+  title: "The Labour Market — People & Growth",
   description:
     "Employment, unemployment, participation rates, and wage dynamics — how Alberta's labour market reflects the boom-bust cycle, traced with live data.",
 };

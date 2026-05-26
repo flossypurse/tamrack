@@ -37,7 +37,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Chain Reactions — Reading the Signals — Pulse Learn",
+  title: "Chain Reactions — Reading the Signals",
   description:
     "How the Bank of Canada rate decision cascades through mortgages, permits, construction, and rent — traced with live data. Plus building permits as a crystal ball and business licences as a confidence index.",
 };

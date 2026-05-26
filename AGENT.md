@@ -1,6 +1,6 @@
 # Tamrack
 
-Multi-product SaaS platform tracking Alberta's economy (formerly "Alberta Pulse Check"; rebrand in progress, public copy still uses the old name until Phase A3 + cutover). ~320 pages, 50+ live data sources, 4 product surfaces.
+Alberta-data platform with three interfaces (HTTP API, MCP server, Smart UI) and a multi-product web surface. ~320 pages, 50+ live data sources, 4 product surfaces. Public brand: **Tamrack** at [tamrack.ca](https://tamrack.ca). Rebrand cutover from "Alberta Pulse Check" → "Tamrack" complete 2026-05-20 (`albertapulsecheck.ca` no longer routes).
 
 > ## ⚠️ HOSTING DIRECTION CHANGE — 2026-05-22
 >

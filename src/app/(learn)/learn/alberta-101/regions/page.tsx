@@ -11,7 +11,7 @@ import {
 import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 
 export const metadata: Metadata = {
-  title: "The Regions — Alberta 101 — Pulse Learn",
+  title: "The Regions — Alberta 101",
   description:
     "Edmonton Metro, Calgary Metro, and the economic geography of Alberta's distinct regions.",
 };

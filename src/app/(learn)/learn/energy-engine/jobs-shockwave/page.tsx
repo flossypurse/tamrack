@@ -28,7 +28,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "The Jobs Shockwave — The Energy Engine — Pulse Learn",
+  title: "The Jobs Shockwave — The Energy Engine",
   description:
     "From oil price drop to unemployment spike — trace the shockwave through Alberta's labour market.",
 };

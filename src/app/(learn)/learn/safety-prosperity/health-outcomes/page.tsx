@@ -31,7 +31,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Health & Prosperity — Safety & Prosperity — Pulse Learn",
+  title: "Health & Prosperity — Safety & Prosperity",
   description:
     "Life expectancy as the ultimate community health metric. How to read safety data without falling into common pitfalls. What actually reduces crime.",
 };

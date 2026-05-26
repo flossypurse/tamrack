@@ -26,7 +26,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Building the Supply — The Housing Machine — Pulse Learn",
+  title: "Building the Supply — The Housing Machine",
   description:
     "Starts, completions, and the 12-24 month construction pipeline. Live data from CMHC and StatsCan.",
 };

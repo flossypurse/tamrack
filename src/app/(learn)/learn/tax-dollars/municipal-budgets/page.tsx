@@ -26,7 +26,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Municipal Budgets — Your Tax Dollars — Pulse Learn",
+  title: "Municipal Budgets — Your Tax Dollars",
   description:
     "Where your property tax dollars go — police, fire, transit, parks, infrastructure — and why Alberta municipalities cannot run deficits.",
 };

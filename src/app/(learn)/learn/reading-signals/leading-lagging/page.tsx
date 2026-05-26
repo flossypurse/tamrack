@@ -39,7 +39,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Leading vs Lagging — Reading the Signals — Pulse Learn",
+  title: "Leading vs Lagging — Reading the Signals",
   description:
     "Learn the difference between leading, coincident, and lagging indicators. The three speeds of economic data and why knowing which is which changes everything.",
 };

@@ -34,7 +34,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Economic Development — Community Levers — Pulse Learn",
+  title: "Economic Development — Community Levers",
   description:
     "Attracting investment, building economic resilience beyond oil, and the personal dashboard — what indicators to watch for your situation.",
 };

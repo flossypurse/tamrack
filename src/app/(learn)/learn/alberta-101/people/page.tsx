@@ -25,7 +25,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "The People — Alberta 101 — Pulse Learn",
+  title: "The People — Alberta 101",
   description:
     "Who lives in Alberta? Population growth, immigration, interprovincial migration, and urbanization trends with live StatsCan data.",
 };

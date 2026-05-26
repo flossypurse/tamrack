@@ -26,7 +26,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Property Tax 101 — Your Tax Dollars — Pulse Learn",
+  title: "Property Tax 101 — Your Tax Dollars",
   description:
     "How property assessments work, what the mill rate means, and how your tax bill is actually calculated — with live data from Alberta municipalities.",
 };

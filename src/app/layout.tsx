@@ -28,11 +28,11 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Tamrack — Economic Intelligence for Alberta",
-    template: "%s | Tamrack",
+    default: "Tamrack — A data agent for Alberta",
+    template: "%s — Tamrack",
   },
   description:
-    "Real-time economic, real estate, and municipal data for Alberta. Live data from 8+ government sources across 22 municipalities — permits, assessments, energy, labour, migration, and more.",
+    "Ask a question, get the chart. Tamrack reads 185+ feeds across 18 Alberta government sources and renders the dashboard you asked for. The chart catalogue is free.",
   keywords: [
     "Alberta economy", "Alberta real estate data", "Edmonton economic data",
     "Alberta building permits", "Alberta municipal data", "Calgary real estate",
@@ -47,24 +47,24 @@ export const metadata: Metadata = {
     locale: "en_CA",
     url: SITE_URL,
     siteName: "Tamrack",
-    title: "Tamrack — Economic Intelligence for Alberta",
+    title: "Tamrack — A data agent for Alberta",
     description:
-      "Real-time economic, real estate, and municipal data for Alberta. Live data from 8+ government sources across 22 municipalities.",
+      "Ask a question, get the chart. 185+ feeds across 18 Alberta government sources, rendered on demand.",
     images: [
       {
-        url: "/api/og?title=Tamrack+-+Economic+Intelligence+for+Alberta",
+        url: "/api/og?title=Tamrack&subtitle=A+data+agent+for+Alberta",
         width: 1200,
         height: 630,
-        alt: "Tamrack — Economic Intelligence Dashboard",
+        alt: "Tamrack — A data agent for Alberta",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Tamrack — Economic Intelligence for Alberta",
+    title: "Tamrack — A data agent for Alberta",
     description:
-      "Real-time economic, real estate, and municipal data for Alberta. Live data from 8+ government sources across 22 municipalities.",
-    images: ["/api/og?title=Tamrack+-+Economic+Intelligence+for+Alberta"],
+      "Ask a question, get the chart. 185+ feeds across 18 Alberta government sources, rendered on demand.",
+    images: ["/api/og?title=Tamrack&subtitle=A+data+agent+for+Alberta"],
   },
   robots: {
     index: true,

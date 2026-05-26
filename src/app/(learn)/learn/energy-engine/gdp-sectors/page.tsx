@@ -23,7 +23,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "GDP by Sector — The Energy Engine — Pulse Learn",
+  title: "GDP by Sector — The Energy Engine",
   description:
     "How deep does energy go in Alberta's economy? Sector GDP data from StatsCan.",
 };

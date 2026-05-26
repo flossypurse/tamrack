@@ -25,7 +25,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Mortgage Rates Follow — The Housing Machine — Pulse Learn",
+  title: "Mortgage Rates Follow — The Housing Machine",
   description:
     "Fixed vs variable, and why they diverge. How mortgage rates drive buyer demand.",
 };

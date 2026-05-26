@@ -26,10 +26,11 @@ function LoginForm() {
     : rawCallbackUrl;
   const authError = searchParams.get("error");
 
-  // Pulse EDO + Pulse Real Estate sunset to new signups 2026-05-18; login copy
-  // no longer advertises them. Existing subscribers sign in normally.
+  // EDO + Real Estate sunset to new signups 2026-05-18; login copy no longer
+  // advertises them. Existing subscribers sign in normally. Tamrack itself is
+  // currently invite-only — most new users hit /access-request, not here.
   const heading = "Sign in to Tamrack";
-  const subtitle = "Alberta data substrate · returning subscribers";
+  const subtitle = "Alberta data substrate · invite-only access";
 
   async function handleEmail(e: React.FormEvent) {
     e.preventDefault();

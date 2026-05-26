@@ -8,9 +8,10 @@ import { CHART_REGISTRY } from "@/lib/chart-registry";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SectionDividerTerminal } from "@/components/section-divider-terminal";
 import { SITE_URL } from "@/lib/constants/site";
+import { auth } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "Tamrack — A data agent for Alberta",
+  title: { absolute: "Tamrack — A data agent for Alberta" },
   description:
     "Ask a question, get the chart. Tamrack is an invite-only data agent that reads 185+ Alberta government feeds and renders custom dashboards from a sentence. The chart catalogue is free.",
   alternates: { canonical: SITE_URL },
@@ -78,16 +79,25 @@ const agentExchanges = [
 // Page
 // ============================================================
 
-export default function LandingPage() {
+export default async function LandingPage() {
   const liveMunicipalities = MUNICIPALITY_REGISTRY.filter((m) => m.status === "live");
   const chartCount = CHART_REGISTRY.length;
+  const session = await auth();
+  const isLoggedIn = !!session?.user;
 
   return (
     <main className="min-h-screen relative">
       {/* ── Hero ── */}
       <section className="relative">
         <div className="relative max-w-3xl mx-auto px-6 pt-20 sm:pt-28 lg:pt-36 pb-14 space-y-10">
-          <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
+          <div className="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-4">
+            <Link
+              href={isLoggedIn ? "/account" : "/login"}
+              className="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--mid)] hover:text-[var(--amber)] transition-colors"
+              style={{ transitionDuration: "var(--dur-instant)" }}
+            >
+              {isLoggedIn ? "account →" : "sign in →"}
+            </Link>
             <ThemeToggle />
           </div>
 
@@ -282,10 +292,18 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-5">
             <Link href="/charts" className="hover:text-[var(--ink)] transition-colors">Charts</Link>
-            <Link href="/access-request" className="hover:text-[var(--ink)] transition-colors">Request access</Link>
+            <Link href="/learn" className="hover:text-[var(--ink)] transition-colors">Learn</Link>
+            {!isLoggedIn && (
+              <Link href="/access-request" className="hover:text-[var(--ink)] transition-colors">Request access</Link>
+            )}
             <Link href="/terms" className="hover:text-[var(--ink)] transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-[var(--ink)] transition-colors">Privacy</Link>
-            <Link href="/login" className="hover:text-[var(--ink)] transition-colors">Sign in</Link>
+            <Link
+              href={isLoggedIn ? "/account" : "/login"}
+              className="hover:text-[var(--ink)] transition-colors"
+            >
+              {isLoggedIn ? "Account" : "Sign in"}
+            </Link>
           </div>
         </div>
       </footer>

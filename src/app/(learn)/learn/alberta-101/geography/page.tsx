@@ -11,7 +11,7 @@ import {
 import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 
 export const metadata: Metadata = {
-  title: "The Land — Alberta 101 — Pulse Learn",
+  title: "The Land — Alberta 101",
   description:
     "Alberta's six natural regions, 661,848 km² of land, and why geography shapes everything from jobs to housing prices.",
 };

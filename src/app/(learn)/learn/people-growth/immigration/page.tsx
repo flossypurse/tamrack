@@ -29,7 +29,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Immigration Drivers — People & Growth — Pulse Learn",
+  title: "Immigration Drivers — People & Growth",
   description:
     "International immigration, interprovincial migration, and natural increase — the three engines driving Alberta's population growth, traced with live data.",
 };

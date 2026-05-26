@@ -16,7 +16,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 // ============================================================
 
 export const metadata: Metadata = {
-  title: "Municipal Powers — Community Levers — Pulse Learn",
+  title: "Municipal Powers — Community Levers",
   description:
     "What can you actually change? The three types of levers that shape your community — federal, provincial/municipal, and community — and which ones you can pull.",
 };

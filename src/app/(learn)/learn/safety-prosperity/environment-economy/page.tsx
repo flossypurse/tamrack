@@ -27,7 +27,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Environment & Economy — Safety & Prosperity — Pulse Learn",
+  title: "Environment & Economy — Safety & Prosperity",
   description:
     "Wildfire risk, emissions, and economic resilience. What actually reduces crime — the evidence on upstream vs downstream spending.",
 };

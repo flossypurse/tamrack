@@ -29,7 +29,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Zoning & Development — Community Levers — Pulse Learn",
+  title: "Zoning & Development — Community Levers",
   description:
     "How zoning bylaws shape housing supply, affordability, and community character. The single biggest municipal lever for housing — traced from council vote to rent.",
 };

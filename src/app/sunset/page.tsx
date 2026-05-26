@@ -6,9 +6,9 @@ import { TArrowRight } from "@/components/icons/t3";
 // Public sunset notice — T3 Terminal chrome.
 
 export const metadata: Metadata = {
-  title: "Sunset notice — Tamrack",
+  title: "Sunset notice",
   description:
-    "Pulse EDO and Pulse Real Estate are closed to new signups. Existing subscribers continue at their current price.",
+    "The EDO and Real Estate products are closed to new signups. Existing subscribers continue at their current price.",
   alternates: {
     canonical: "https://tamrack.ca/sunset",
   },
@@ -27,7 +27,7 @@ export default function SunsetPage() {
             sunset notice · may 2026 · stony plain
           </p>
           <h1 className="font-mono font-extrabold text-2xl sm:text-3xl leading-tight tracking-tight text-[var(--ink)]">
-            <span className="text-[var(--amber)]">&gt;</span> pulse edo and pulse real estate are closed to new signups.
+            <span className="text-[var(--amber)]">&gt;</span> EDO and Real Estate are closed to new signups.
           </h1>
         </div>
 
@@ -44,9 +44,9 @@ export default function SunsetPage() {
             redirected here. The marketing pages are gone.
           </p>
           <p>
-            The free surface — Pulse Charts and Pulse Learn — keeps running.
-            A paid Tamrack tier (<code className="font-mono text-sm text-[var(--amber)]">$9</code>/mo flat with 50k included units and
-            metered overage) is in the works for API access and higher quotas.
+            The free surface — the chart catalogue and Tamrack Learn — keeps
+            running. A paid Tamrack tier is in the works for API access and
+            higher quotas.
           </p>
         </div>
 
@@ -88,7 +88,7 @@ export default function SunsetPage() {
             className="inline-flex items-center px-5 py-2.5 border border-[var(--ink)] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--ink-inv)] transition-colors text-sm"
             style={{ transitionDuration: "var(--dur-instant)" }}
           >
-            Pulse Learn
+            Tamrack Learn
           </Link>
           <Link
             href="/billing"

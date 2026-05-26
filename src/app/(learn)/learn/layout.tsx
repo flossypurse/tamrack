@@ -215,7 +215,7 @@ function LearnTopBar({
         </button>
         <Link href="/learn" className="flex items-center gap-2">
           <GraduationCap size={18} className="text-amber-500" />
-          <span className="font-semibold text-sm">Pulse Learn</span>
+          <span className="font-semibold text-sm">Tamrack Learn</span>
         </Link>
         <span className="text-muted/40 hidden sm:inline">|</span>
         <span className="text-xs text-muted hidden sm:inline">
@@ -236,10 +236,10 @@ function LearnTopBar({
           FREE
         </span>
         <Link
-          href="/home"
+          href="/"
           className="text-xs text-muted hover:text-foreground transition-colors"
         >
-          Back to Pulse
+          Back to Tamrack
         </Link>
       </div>
     </header>

@@ -14,7 +14,19 @@ function earlyAccessOn(): boolean {
 
 // Strict allow-list while invite wall is on. Anything not in this list and
 // not /invite/<token> requires authentication.
-const EARLY_ACCESS_PUBLIC_ROUTES = ["/", "/sunset", "/login", "/charts", "/access-request"];
+const EARLY_ACCESS_PUBLIC_ROUTES = [
+  "/",
+  "/sunset",
+  "/login",
+  "/charts",
+  "/access-request",
+  // Legal pages must be readable by anyone being asked to agree to them — the
+  // login form links here, so they cannot be auth-walled.
+  "/terms",
+  "/privacy",
+  // Tamrack Learn — free 8-module course; the entry point is public.
+  "/learn",
+];
 const EARLY_ACCESS_PUBLIC_PREFIXES = [
   "/api/auth/",
   "/api/health",
@@ -25,6 +37,9 @@ const EARLY_ACCESS_PUBLIC_PREFIXES = [
   // Chart catalogue — only public/free surface during early access.
   "/charts/",
   "/embed/",
+  // Tamrack Learn — free lessons + quiz API + certificate PDF.
+  "/learn/",
+  "/api/learn/",
 ];
 
 // Tamrack-era surfaces that handle their own access gating internally
@@ -52,7 +67,7 @@ const publicRoutes = [
   "/economy", "/real-estate", "/community", "/environment", "/governance", "/tools",
   // Chart catalogue — public SEO funnel
   "/charts",
-  // Pulse Learn — free course
+  // Tamrack Learn — free course
   "/learn",
 ];
 const publicPrefixes = [
@@ -66,7 +81,7 @@ const publicPrefixes = [
   "/tools/",
   // Chart catalogue — all chart pages are public
   "/charts/",
-  // Pulse Learn — free public course
+  // Tamrack Learn — free public course
   "/learn/",
   "/api/learn/",
 ];

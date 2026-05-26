@@ -254,7 +254,7 @@ export default function LearnHubPage() {
       </div>
 
       <footer className="text-center text-xs text-muted/40 pt-4 pb-8">
-        Pulse Learn — Tamrack — Free forever
+        Tamrack Learn — Free forever
       </footer>
     </main>
   );

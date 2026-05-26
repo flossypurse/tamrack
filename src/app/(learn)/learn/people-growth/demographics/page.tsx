@@ -35,7 +35,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Demographics & Housing — People & Growth — Pulse Learn",
+  title: "Demographics & Housing — People & Growth",
   description:
     "How population growth drives housing demand, what new Albertans need, and whether communities are building fast enough to keep up.",
 };

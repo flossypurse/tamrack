@@ -143,7 +143,7 @@ export function Breadcrumbs() {
   return (
     <nav className="flex items-center gap-1.5 text-xs text-muted mb-4 px-1">
       <Link
-        href="/home/dashboard"
+        href="/"
         className="hover:text-foreground transition-colors"
       >
         Home

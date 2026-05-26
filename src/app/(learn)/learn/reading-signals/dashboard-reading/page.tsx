@@ -29,7 +29,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Reading the Dashboard — Reading the Signals — Pulse Learn",
+  title: "Reading the Dashboard — Reading the Signals",
   description:
     "Put it all together: live data organized by speed. Leading, coincident, and lagging indicators side by side. Common traps and how to avoid them.",
 };

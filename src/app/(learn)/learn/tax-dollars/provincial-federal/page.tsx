@@ -29,7 +29,7 @@ import { LessonCompleteButton } from "@/components/learn-lesson-complete";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Provincial & Federal Fiscal Flows — Your Tax Dollars — Pulse Learn",
+  title: "Provincial & Federal Fiscal Flows — Your Tax Dollars",
   description:
     "Transfer payments, equalization, and fiscal federalism — how money flows between Ottawa, Edmonton, and your municipality.",
 };

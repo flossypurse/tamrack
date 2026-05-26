@@ -7,13 +7,17 @@ export function OrganizationJsonLd() {
     name: "Tamrack",
     url: SITE_URL,
     description:
-      "Real-time economic intelligence dashboard for Alberta — live data from 8+ government sources across 22 municipalities.",
+      "A data agent for Alberta. 185+ live feeds across 18 Alberta government sources, rendered on demand.",
     foundingDate: "2026",
     areaServed: {
       "@type": "AdministrativeArea",
       name: "Alberta, Canada",
     },
-    sameAs: [],
+    sameAs: [
+      "https://x.com/flossypurse",
+      "https://bsky.app/profile/flossypurse.bsky.social",
+      "https://www.linkedin.com/in/cullywakelin/",
+    ],
   };
 
   return (
@@ -31,12 +35,12 @@ export function WebsiteJsonLd() {
     name: "Tamrack",
     url: SITE_URL,
     description:
-      "Real-time economic, real estate, and municipal data for Alberta.",
+      "A data agent for Alberta — 185+ live feeds across 18 government sources.",
     potentialAction: {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: `${SITE_URL}/municipalities?q={search_term_string}`,
+        urlTemplate: `${SITE_URL}/charts?q={search_term_string}`,
       },
       "query-input": "required name=search_term_string",
     },
@@ -127,25 +131,25 @@ export function SoftwareApplicationJsonLd() {
     operatingSystem: "Web",
     url: SITE_URL,
     description:
-      "Community intelligence dashboard for Alberta — real-time data on permits, assessments, energy, labour, migration, and more.",
+      "A data agent for Alberta — type a question, get the chart. 185+ feeds across 18 government sources.",
     offers: [
       {
         "@type": "Offer",
         price: "0",
         priceCurrency: "CAD",
-        name: "Explorer (Free)",
-        description: "Macro economy pages and municipality explorer",
+        name: "Chart catalogue (Free)",
+        description: "110+ live charts, embeds, and the 8-module Tamrack Learn course",
       },
       {
         "@type": "Offer",
-        price: "29",
+        price: "9",
         priceCurrency: "CAD",
-        name: "Pro",
+        name: "Tamrack",
         description:
-          "Municipality deep-dives, API access, and full dashboard",
+          "The agent + HTTP API + MCP server. Invite-only during early access.",
         priceSpecification: {
           "@type": "UnitPriceSpecification",
-          price: "29",
+          price: "9",
           priceCurrency: "CAD",
           billingDuration: "P1M",
         },

@@ -57,8 +57,8 @@ function SubscribeBody() {
     <div className="space-y-6 text-center">
       <h1 className="text-xl font-bold">Nothing to subscribe to right now</h1>
       <p className="text-muted text-sm">
-        Pulse Charts and Pulse Learn are free. A paid Tamrack tier is coming;
-        the pricing page has the latest.
+        The chart catalogue and Tamrack Learn are free. A paid Tamrack tier
+        is coming; the pricing page has the latest.
       </p>
       <Link
         href="/pricing"

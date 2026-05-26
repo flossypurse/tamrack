@@ -445,12 +445,12 @@ export default function SystemPage() {
           subtitle="Hosting, deployment, and services"
         />
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
-          <InfraBox label="Hosting" value="Railway" detail="Auto-deploy from main" />
+          <InfraBox label="Hosting" value="Fly.io" detail="yyz / Toronto · auto-deploy from main" />
           <InfraBox label="Framework" value="Next.js 16" detail="React 19 + App Router" />
-          <InfraBox label="Database" value="PostgreSQL" detail="Railway managed" />
+          <InfraBox label="Database" value="PostgreSQL 17" detail="Crunchy Bridge · ca-central-1 / Montreal" />
           <InfraBox label="Auth" value="NextAuth" detail="Email magic link + Google" />
-          <InfraBox label="Payments" value="Stripe" detail="$29/mo paid tier" />
-          <InfraBox label="Cron" value="Railway Cron" detail="Daily 6:00 AM UTC" />
+          <InfraBox label="Payments" value="Stripe" detail="$9/mo paid tier (invite-only)" />
+          <InfraBox label="Cron" value="Resonate" detail="daily-collection · 06:00 UTC" />
         </div>
       </Card>
     </main>
