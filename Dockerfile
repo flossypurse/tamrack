@@ -30,7 +30,7 @@ COPY . .
 ARG STRIPE_SECRET_KEY=sk_build_placeholder_not_real
 ARG NEXTAUTH_SECRET=build_placeholder_not_real
 ARG AUTH_SECRET=build_placeholder_not_real
-ARG DATABASE_URL=postgresql://postgres:postgres@localhost:5432/tamrack
+ARG DATABASE_URL=postgresql://localhost:5432/tamrack_build
 ENV STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
 ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 ENV AUTH_SECRET=${AUTH_SECRET}
