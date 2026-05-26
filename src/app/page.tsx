@@ -42,7 +42,6 @@ const dataSources = [
   { name: "Alberta Major Projects", feeds: 2 },
   { name: "CMHC Housing", feeds: 6 },
   { name: "AESO Electricity", feeds: 3 },
-  { name: "AER Well Licences", feeds: 1 },
   { name: "CWFIS Wildfire", feeds: 2 },
   { name: "511 Alberta", feeds: 1 },
   { name: "Alberta CKAN Health", feeds: 3 },

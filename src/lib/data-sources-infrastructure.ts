@@ -249,53 +249,70 @@ export async function fetchAlbertaMajorProjects(): Promise<MajorProject[]> {
 // AER Well Licences (Daily fixed-width text)
 // ============================================================
 
+/** Marker thrown when AER's static directory rejects the request. */
+export class AERAccessBlockedError extends Error {
+  constructor(url: string, status: number) {
+    super(`AER static directory blocked (${status}) at ${url}`);
+    this.name = "AERAccessBlockedError";
+  }
+}
+
 /**
  * Fetch AER well licences for a given date (defaults to today).
- * File format is fixed-width text at static.aer.ca.
+ *
+ * The historical source — `static.aer.ca/prd/data/well-lic/WELLS{MMDD}.TXT` —
+ * started returning HTTP 403 around 2026-03-14 and the entire `prd/data/`
+ * tree is now access-walled. No public Open Alberta dataset currently
+ * exposes the daily licence flow as a parseable file; only quarterly PDFs
+ * are published. Until a replacement source is identified, this fetcher
+ * throws AERAccessBlockedError on 403 so the collector can log a real
+ * error row instead of misleading "ok with no data".
  */
 export async function fetchAERWellLicences(
   date?: Date
 ): Promise<WellLicence[]> {
+  const d = date ?? new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const url = `${AER_WELL_BASE}/WELLS${mm}${dd}.TXT`;
+
+  let res: Response;
   try {
-    const d = date ?? new Date();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    const url = `${AER_WELL_BASE}/WELLS${mm}${dd}.TXT`;
-
-    const res = await fetch(url, { next: { revalidate: 86400 } });
-    if (!res.ok) {
-      console.error(`AER well licences fetch failed: ${res.status} for ${url}`);
-      return [];
-    }
-    const text = await res.text();
-    const lines = text.split("\n");
-
-    // Skip header lines (typically first 2-3 lines are headers/dashes)
-    const dataLines = lines.filter(
-      (l) =>
-        l.trim().length > 0 &&
-        !l.startsWith("-") &&
-        !l.startsWith("=") &&
-        !l.toLowerCase().includes("well name") &&
-        !l.toLowerCase().includes("licence")
-    );
-
-    // AER fixed-width format — approximate column positions
-    // Columns vary by year; these are common widths
-    return dataLines.map((line) => ({
-      licenceNumber: line.substring(0, 10).trim(),
-      wellName: line.substring(10, 50).trim(),
-      uniqueId: line.substring(50, 66).trim(),
-      surfaceLocation: line.substring(66, 100).trim(),
-      projectedDepth: parseInt(line.substring(100, 110).trim(), 10) || 0,
-      classification: line.substring(110, 125).trim(),
-      substance: line.substring(125, 145).trim(),
-      licensee: line.substring(145).trim(),
-    }));
+    res = await fetch(url, { next: { revalidate: 86400 } });
   } catch (err) {
     console.error("AER well licences fetch error:", err);
     return [];
   }
+
+  if (res.status === 403) {
+    throw new AERAccessBlockedError(url, res.status);
+  }
+  if (!res.ok) {
+    console.error(`AER well licences fetch failed: ${res.status} for ${url}`);
+    return [];
+  }
+
+  const text = await res.text();
+  const lines = text.split("\n");
+  const dataLines = lines.filter(
+    (l) =>
+      l.trim().length > 0 &&
+      !l.startsWith("-") &&
+      !l.startsWith("=") &&
+      !l.toLowerCase().includes("well name") &&
+      !l.toLowerCase().includes("licence")
+  );
+
+  return dataLines.map((line) => ({
+    licenceNumber: line.substring(0, 10).trim(),
+    wellName: line.substring(10, 50).trim(),
+    uniqueId: line.substring(50, 66).trim(),
+    surfaceLocation: line.substring(66, 100).trim(),
+    projectedDepth: parseInt(line.substring(100, 110).trim(), 10) || 0,
+    classification: line.substring(110, 125).trim(),
+    substance: line.substring(125, 145).trim(),
+    licensee: line.substring(145).trim(),
+  }));
 }
 
 // ============================================================

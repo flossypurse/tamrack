@@ -34,6 +34,7 @@ import {
   fetchAlbertaMajorProjects,
   fetchInfrastructureProjects,
   fetchAERWellLicences,
+  AERAccessBlockedError,
 } from "./data-sources-infrastructure";
 
 import { MUNICIPALITY_REGISTRY } from "./municipality-registry";
@@ -441,7 +442,18 @@ export async function collectMunicipalityData(today: string): Promise<number> {
 
 export async function collectWellLicences(today: string): Promise<number> {
   const pool = await getDb();
-  const licences = await fetchAERWellLicences();
+
+  let licences: Awaited<ReturnType<typeof fetchAERWellLicences>>;
+  try {
+    licences = await fetchAERWellLicences();
+  } catch (e) {
+    if (e instanceof AERAccessBlockedError) {
+      await pool.query(SQL.logEntry, ["well_licences", 0, "error", e.message]);
+      return 0;
+    }
+    throw e;
+  }
+
   if (licences.length === 0) {
     await pool.query(SQL.logEntry, ["well_licences", 0, "ok", "no data for today"]);
     return 0;
