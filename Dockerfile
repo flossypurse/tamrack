@@ -36,6 +36,15 @@ ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 ENV AUTH_SECRET=${AUTH_SECRET}
 ENV DATABASE_URL=${DATABASE_URL}
 
+# NEXT_PUBLIC_* are bundled into the client JS at build time, not read at runtime.
+# Pass via --build-arg on flyctl deploy; fall back to safe defaults for unset values.
+ARG NEXT_PUBLIC_APP_URL=https://tamrack-webui.fly.dev
+ARG NEXT_PUBLIC_GA_MEASUREMENT_ID=
+ARG NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=false
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+ENV NEXT_PUBLIC_GA_MEASUREMENT_ID=${NEXT_PUBLIC_GA_MEASUREMENT_ID}
+ENV NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=${NEXT_PUBLIC_GOOGLE_AUTH_ENABLED}
+
 # Build Next.js.  The --webpack flag is required (see next.config.ts comment).
 RUN npm run build
 
