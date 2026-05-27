@@ -13,7 +13,7 @@ import { auth } from "@/lib/auth";
 export const metadata: Metadata = {
   title: { absolute: "Tamrack — A data agent for Alberta" },
   description:
-    "Ask a question, get the chart. Tamrack is an invite-only data agent that reads 185+ Alberta government feeds and renders custom dashboards from a sentence. The chart catalogue is free.",
+    "Ask a question, get the chart. Tamrack is an invite-only data agent that reads 180+ Alberta government feeds and renders custom dashboards from a sentence. The chart catalogue is free.",
   alternates: { canonical: SITE_URL },
   openGraph: {
     images: [
@@ -41,7 +41,6 @@ const dataSources = [
   { name: "IRCC Immigration", feeds: 5 },
   { name: "Alberta Major Projects", feeds: 2 },
   { name: "CMHC Housing", feeds: 6 },
-  { name: "AESO Electricity", feeds: 3 },
   { name: "CWFIS Wildfire", feeds: 2 },
   { name: "511 Alberta", feeds: 1 },
   { name: "Alberta CKAN Health", feeds: 3 },

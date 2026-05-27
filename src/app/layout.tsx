@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     template: "%s — Tamrack",
   },
   description:
-    "Ask a question, get the chart. Tamrack reads 185+ feeds across 18 Alberta government sources and renders the dashboard you asked for. The chart catalogue is free.",
+    "Ask a question, get the chart. Tamrack reads 180+ feeds across 16 Alberta government sources and renders the dashboard you asked for. The chart catalogue is free.",
   keywords: [
     "Alberta economy", "Alberta real estate data", "Edmonton economic data",
     "Alberta building permits", "Alberta municipal data", "Calgary real estate",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     siteName: "Tamrack",
     title: "Tamrack — A data agent for Alberta",
     description:
-      "Ask a question, get the chart. 185+ feeds across 18 Alberta government sources, rendered on demand.",
+      "Ask a question, get the chart. 180+ feeds across 16 Alberta government sources, rendered on demand.",
     images: [
       {
         url: "/api/og?title=Tamrack&subtitle=A+data+agent+for+Alberta",
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Tamrack — A data agent for Alberta",
     description:
-      "Ask a question, get the chart. 185+ feeds across 18 Alberta government sources, rendered on demand.",
+      "Ask a question, get the chart. 180+ feeds across 16 Alberta government sources, rendered on demand.",
     images: ["/api/og?title=Tamrack&subtitle=A+data+agent+for+Alberta"],
   },
   robots: {

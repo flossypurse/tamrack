@@ -7,7 +7,7 @@ export function OrganizationJsonLd() {
     name: "Tamrack",
     url: SITE_URL,
     description:
-      "A data agent for Alberta. 185+ live feeds across 18 Alberta government sources, rendered on demand.",
+      "A data agent for Alberta. 180+ live feeds across 16 Alberta government sources, rendered on demand.",
     foundingDate: "2026",
     areaServed: {
       "@type": "AdministrativeArea",
@@ -35,7 +35,7 @@ export function WebsiteJsonLd() {
     name: "Tamrack",
     url: SITE_URL,
     description:
-      "A data agent for Alberta — 185+ live feeds across 18 government sources.",
+      "A data agent for Alberta — 180+ live feeds across 16 government sources.",
     potentialAction: {
       "@type": "SearchAction",
       target: {
@@ -131,7 +131,7 @@ export function SoftwareApplicationJsonLd() {
     operatingSystem: "Web",
     url: SITE_URL,
     description:
-      "A data agent for Alberta — type a question, get the chart. 185+ feeds across 18 government sources.",
+      "A data agent for Alberta — type a question, get the chart. 180+ feeds across 16 government sources.",
     offers: [
       {
         "@type": "Offer",
