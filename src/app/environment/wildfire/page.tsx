@@ -157,7 +157,7 @@ async function ActiveFiresTable() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-card-border text-left text-xs text-muted">
-                <th className="pb-2 pr-4">Fire Name</th>
+                <th className="pb-2 pr-4">Fire ID</th>
                 <th className="pb-2 pr-4">Stage of Control</th>
                 <th className="pb-2 pr-4 text-right">Size (ha)</th>
                 <th className="pb-2 pr-4">Start Date</th>
@@ -298,7 +298,7 @@ async function CWFISActiveFiresSection() {
         <MetricCard
           title="Data Source"
           value="CWFIS"
-          source="cwfis.cfs.nrcan.gc.ca"
+          source="cwfif geoserver / NRCan"
         />
       </div>
 
@@ -312,7 +312,7 @@ async function CWFISActiveFiresSection() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-card-border text-left text-xs text-muted">
-                <th className="pb-2 pr-4">Fire Name</th>
+                <th className="pb-2 pr-4">Fire ID</th>
                 <th className="pb-2 pr-4">Stage of Control</th>
                 <th className="pb-2 pr-4 text-right">Size (ha)</th>
                 <th className="pb-2 pr-4">Start Date</th>
