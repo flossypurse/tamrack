@@ -307,7 +307,7 @@ async function ActiveWildfiresSection() {
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-card-border text-muted">
-              <th className="text-left py-2 pr-3 font-medium">Fire Name</th>
+              <th className="text-left py-2 pr-3 font-medium">Fire ID</th>
               <th className="text-right py-2 pr-3 font-medium">Hectares</th>
               <th className="text-left py-2 pr-3 font-medium">Status</th>
               <th className="text-left py-2 pr-3 font-medium hidden sm:table-cell">
