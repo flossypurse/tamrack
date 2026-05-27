@@ -445,23 +445,6 @@ const categories: Category[] = [
         indicator: "Coincident",
       },
       {
-        name: "AESO Electricity Data",
-        url: "https://www.aeso.ca/market/market-and-system-reporting/",
-        access: "Download",
-        frequency: "Minutely to hourly",
-        geo: "Provincial (Alberta grid)",
-        what: "The Alberta Electric System Operator publishes real-time electricity pool prices, demand, generation by fuel type, and system reports. Alberta has a deregulated electricity market — prices move based on supply/demand every minute.",
-        why: "Electricity demand is a real-time proxy for economic activity — factories running, buildings lit, data centres humming. The pool price reflects supply/demand balance. The generation-by-fuel breakdown shows the energy transition in real-time (coal declining, gas/wind/solar growing). Critical for the data centre thesis in Parkland County.",
-        examples: [
-          "Pool price ($/MWh) — minutely",
-          "System demand (MW) — minutely",
-          "Generation by fuel type (coal, gas, wind, solar, hydro)",
-          "Outage reports and capacity",
-          "Historical price and demand data",
-        ],
-        indicator: "Coincident",
-      },
-      {
         name: "Pipeline Throughput (CER)",
         url: "https://www.cer-rec.gc.ca/en/data-analysis/",
         access: "Download",

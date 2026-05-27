@@ -85,7 +85,7 @@ async function QuickStats() {
   const latestPeriod = periods.at(-1) ?? "—";
 
   // Data sources count (approximation of distinct sources wired)
-  const dataSources = 12; // BoC, StatsCan, Edmonton SODA, Calgary Socrata, Regional Dashboard, CER, AER, IRCC, Infrastructure Canada, AB Major Projects, AESO, CKAN
+  const dataSources = 11; // BoC, StatsCan, Edmonton SODA, Calgary Socrata, Regional Dashboard, CER, AER, IRCC, Infrastructure Canada, AB Major Projects, CKAN
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">

@@ -31,8 +31,8 @@ export default function TermsPage() {
         <p>
           Tamrack provides economic data dashboards, embeddable charts, and APIs aggregating
           publicly available data from government sources including but not limited to: Bank of Canada,
-          Statistics Canada, Alberta Open Data, the Canada Energy Regulator (CER), Alberta Electric System
-          Operator (AESO), Immigration Refugees and Citizenship Canada (IRCC), Infrastructure Canada,
+          Statistics Canada, Alberta Open Data, the Canada Energy Regulator (CER),
+          Immigration Refugees and Citizenship Canada (IRCC), Infrastructure Canada,
           Alberta Energy Regulator (AER), and municipal open data portals across Alberta.
         </p>
         <p>

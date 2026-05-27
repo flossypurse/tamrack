@@ -35,7 +35,7 @@ All 4 product phases complete. Deployed live on Railway (auto-deploy from `main`
 | Path | Contents |
 |------|----------|
 | `src/app/` | Next.js app router pages (~320 across 7 sections + 4 products) |
-| `src/lib/data-sources*.ts` | 16+ data fetcher modules (StatsCan, BoC, Socrata, CKAN, ArcGIS, CER, AESO, IRCC, CMHC, ECCC, WCB, CRA, etc.) |
+| `src/lib/data-sources*.ts` | 16+ data fetcher modules (StatsCan, BoC, Socrata, CKAN, ArcGIS, CER, IRCC, CMHC, ECCC, WCB, CRA, etc.) |
 | `src/lib/municipality-registry.ts` | Config-driven registry for 30 municipalities across 7 regions |
 | `src/lib/municipality-data.ts` | Generic municipality data fetcher |
 | `src/lib/data-fallback.ts` | PostgreSQL fallback for upstream outages |
@@ -65,7 +65,7 @@ Hosted MCP endpoint at `/api/mcp` exposes the substrate to AI agents over Stream
 
 50+ live sources across 16 fetcher modules. Key upstream providers:
 - **Government**: StatsCan WDS, Alberta CKAN (AAX), regionaldashboard.alberta.ca (54 indicators, ~340 municipalities), Edmonton/Calgary Socrata
-- **Energy**: CER Open Data (16 CSV endpoints), AESO Electricity API (pool price, supply/demand, forecast)
+- **Energy**: CER Open Data (16 CSV endpoints)
 - **Real Estate**: CMHC via StatsCan, UAlberta Open Data Centre, ArcGIS (20 municipalities), Google Maps Platform
 - **Immigration**: IRCC (5 CSV endpoints)
 - **Federal**: Infrastructure Canada, Elections Canada, OpenParliament.ca, open.canada.ca

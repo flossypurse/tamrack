@@ -69,8 +69,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ status: "ok", timestamp: new Date().toISOString() });
   }
 
-  const aesoKey = process.env.AESO_API_KEY;
-
   const probes: { source: string; url: string; headers?: Record<string, string> }[] = [
     {
       source: "Bank of Canada Valet",
@@ -116,15 +114,6 @@ export async function GET(request: Request) {
       source: "Alberta CKAN (Fiscal)",
       url: "https://open.alberta.ca/api/3/action/package_show?id=grant-disclosure",
     },
-    ...(aesoKey
-      ? [
-          {
-            source: "AESO Electricity",
-            url: "https://api.aeso.ca/report/v1.1/price/poolPrice?startDate=2026-03-12&endDate=2026-03-13",
-            headers: { "X-API-Key": aesoKey },
-          },
-        ]
-      : []),
   ];
 
   const results = await Promise.all(

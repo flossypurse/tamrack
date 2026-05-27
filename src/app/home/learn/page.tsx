@@ -465,7 +465,7 @@ const lessons: LessonCardProps[] = [
     description:
       "Trace how energy prices ripple through every corner of the province — jobs, government revenue, housing, migration. And why diversification matters.",
     icon: <Flame size={18} />,
-    dataSources: ["CER", "AESO", "StatsCan", "Regional Dashboard"],
+    dataSources: ["CER", "StatsCan", "Regional Dashboard"],
     color: "#f97316",
   },
   {
