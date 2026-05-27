@@ -164,6 +164,52 @@ export async function loadDashboardBySlug(
   };
 }
 
+export async function updateDashboardTitle(
+  id: string,
+  title: string,
+): Promise<void> {
+  const pool = await getDb();
+  await pool.query(
+    `UPDATE smart_dashboards SET title = $1 WHERE id = $2`,
+    [title, id],
+  );
+}
+
+export interface DashboardListItem {
+  id: string;
+  slug: string;
+  query: string;
+  title: string | null;
+  created_at: string;
+}
+
+export async function listDashboardsForUser(
+  userId: string,
+  opts: { limit?: number; offset?: number } = {},
+): Promise<DashboardListItem[]> {
+  const pool = await getDb();
+  const limit = Math.min(Math.max(opts.limit ?? 20, 1), 200);
+  const offset = Math.max(opts.offset ?? 0, 0);
+  const { rows } = await pool.query(
+    `SELECT id, slug, query, title, created_at
+       FROM smart_dashboards
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+      LIMIT $2 OFFSET $3`,
+    [userId, limit, offset],
+  );
+  return rows as DashboardListItem[];
+}
+
+export async function countDashboardsForUser(userId: string): Promise<number> {
+  const pool = await getDb();
+  const { rows } = await pool.query(
+    `SELECT COUNT(*)::int AS n FROM smart_dashboards WHERE user_id = $1`,
+    [userId],
+  );
+  return (rows[0] as { n: number }).n;
+}
+
 export interface LogQueryEventInput {
   dashboardId: string | null;
   userId: string | null;

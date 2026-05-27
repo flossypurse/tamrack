@@ -544,6 +544,7 @@ const MIGRATION_SQL = `
       user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
       query TEXT NOT NULL,
       query_hash TEXT NOT NULL,
+      title TEXT,
       plan JSONB NOT NULL,
       config JSONB NOT NULL,
       tool_args JSONB NOT NULL,
@@ -553,6 +554,7 @@ const MIGRATION_SQL = `
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       last_viewed TIMESTAMPTZ
     );
+    ALTER TABLE smart_dashboards ADD COLUMN IF NOT EXISTS title TEXT;
     CREATE INDEX IF NOT EXISTS idx_smart_dashboards_user
       ON smart_dashboards(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_smart_dashboards_query_hash

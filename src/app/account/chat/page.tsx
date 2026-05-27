@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { AccountSubnav } from "@/components/account-subnav";
+import { ChatHistorySidebar } from "@/components/chat-history-sidebar";
 
 import { ChatClient } from "./chat-client";
 
@@ -20,9 +21,10 @@ export default async function AccountChatPage() {
   if (!session?.user?.id) {
     redirect("/login?callbackUrl=/account/chat");
   }
+  const userId = session.user.id;
 
   return (
-    <main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
+    <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
       <AccountSubnav active="chat" />
 
       <header className="flex flex-col gap-2">
@@ -38,7 +40,12 @@ export default async function AccountChatPage() {
         </p>
       </header>
 
-      <ChatClient />
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-[220px_1fr]">
+        <div className="md:sticky md:top-6 md:self-start">
+          <ChatHistorySidebar userId={userId} />
+        </div>
+        <ChatClient />
+      </div>
     </main>
   );
 }

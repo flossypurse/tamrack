@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { SmartUiDashboard } from "@/components/smart-ui/dashboard";
 import { SmartUiSkeleton } from "@/components/smart-ui/skeleton";
@@ -49,6 +50,7 @@ const INITIAL_STATE: ChatState = {
 };
 
 export function ChatClient() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [state, setState] = useState<ChatState>(INITIAL_STATE);
   const abortRef = useRef<AbortController | null>(null);
@@ -132,6 +134,10 @@ export function ChatClient() {
               // history API can fail in restricted environments; ignore.
             }
           }
+          // Refresh server components so the sidebar reflects the new
+          // entry. Haiku-generated title may not be in yet — a second
+          // refresh on next interaction will pick it up.
+          router.refresh();
           return s;
         case "done":
           return { ...s, status: "done" };
@@ -141,7 +147,7 @@ export function ChatClient() {
           return s;
       }
     });
-  }, []);
+  }, [router]);
 
   const runQuery = useCallback(
     async (q: string) => {

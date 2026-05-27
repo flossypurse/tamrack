@@ -28,8 +28,10 @@ import { createInProcessMcpClient } from "@/lib/smart-ui/mcp-client";
 import {
   logQueryEvent,
   saveDashboard,
+  updateDashboardTitle,
 } from "@/lib/smart-ui/persistence";
 import { planQuery, type PlannerUsage } from "@/lib/smart-ui/planner";
+import { generateTitle } from "@/lib/smart-ui/title";
 import type { SmartQueryEvent, ToolCallResult } from "@/lib/smart-ui/types";
 
 // Node runtime — needed for `pg`, `better-sqlite3`, and the MCP SDK's
@@ -183,6 +185,19 @@ export async function POST(req: NextRequest): Promise<Response> {
             slug: saved.slug,
             url: saved.url,
           });
+          // Fire-and-forget: one Haiku call to summarize the query into a
+          // 4-6 word title for the history sidebar. Never blocks the
+          // user's "done" event; failure leaves title NULL and the
+          // sidebar falls back to truncated query text.
+          const savedId = saved.id;
+          void generateTitle(query)
+            .then((title) => updateDashboardTitle(savedId, title))
+            .catch((titleErr) => {
+              console.warn(
+                "smart_query_title_failed",
+                titleErr instanceof Error ? titleErr.message : titleErr,
+              );
+            });
         } catch (persistErr) {
           // Persistence failure is non-fatal for the user — they still
           // see their dashboard, they just lose the shareable URL.
