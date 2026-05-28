@@ -126,6 +126,26 @@ function resolveIndicator(indicator: string): string {
   return encodeURIComponent(indicator);
 }
 
+// Normalize an indicator argument to the canonical human-readable key. Callers
+// across the app pass either the human form ("Total Equalized Assessment")
+// or the encoded form (REGIONAL_INDICATORS["Total Equalized Assessment"] →
+// "Total%20Equalized%20Assessment"). Without canonicalization the writer
+// downstream of fetchRegionalIndicator would persist URL-encoded indicator
+// names as ghost rows on every page render that happened to use the encoded
+// form. Canonicalizing at the boundary keeps the DB schema consistent and
+// lets the fallback query do an exact-match `WHERE indicator = $1`.
+function canonicalIndicatorName(input: string): string {
+  if (REGIONAL_INDICATORS[input]) return input;
+  for (const [key, encoded] of Object.entries(REGIONAL_INDICATORS)) {
+    if (encoded === input) return key;
+  }
+  try {
+    return decodeURIComponent(input);
+  } catch {
+    return input;
+  }
+}
+
 function parseRecord(raw: RawRegionalRecord): RegionalDataPoint {
   return {
     csduid: raw.CSDUID ?? "",
@@ -181,7 +201,8 @@ async function runWithConcurrency<T>(
 export async function fetchRegionalIndicator(
   indicator: string,
 ): Promise<RegionalDataPoint[]> {
-  const encoded = resolveIndicator(indicator);
+  const canonical = canonicalIndicatorName(indicator);
+  const encoded = resolveIndicator(canonical);
   const url = buildUrl(encoded);
 
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -191,7 +212,7 @@ export async function fetchRegionalIndicator(
       }
       const res = await fetch(url, { next: { revalidate: 86400 } });
       if (!res.ok) {
-        console.warn(`[regional] ${indicator}: HTTP ${res.status} (attempt ${attempt + 1})`);
+        console.warn(`[regional] ${canonical}: HTTP ${res.status} (attempt ${attempt + 1})`);
         continue;
       }
 
@@ -200,12 +221,12 @@ export async function fetchRegionalIndicator(
       const body = await res.text();
 
       if (!body || body.length === 0) {
-        console.warn(`[regional] ${indicator}: empty response (attempt ${attempt + 1})`);
+        console.warn(`[regional] ${canonical}: empty response (attempt ${attempt + 1})`);
         continue;
       }
 
       if (!contentType.includes("json") && !body.startsWith("[")) {
-        console.warn(`[regional] ${indicator}: non-JSON response (${contentType}) (attempt ${attempt + 1})`);
+        console.warn(`[regional] ${canonical}: non-JSON response (${contentType}) (attempt ${attempt + 1})`);
         continue;
       }
 
@@ -216,16 +237,16 @@ export async function fetchRegionalIndicator(
       }
 
       // Persist to DB in the background so future fallbacks have data
-      persistToDb(indicator, parsed).catch(() => {});
+      persistToDb(canonical, parsed).catch(() => {});
 
       return parsed;
     } catch (err) {
-      console.warn(`[regional] ${indicator}: fetch error (attempt ${attempt + 1}):`, err);
+      console.warn(`[regional] ${canonical}: fetch error (attempt ${attempt + 1}):`, err);
     }
   }
 
-  console.error(`[regional] ${indicator}: all attempts failed — trying DB fallback`);
-  return dbFallback(indicator);
+  console.error(`[regional] ${canonical}: all attempts failed — trying DB fallback`);
+  return dbFallback(canonical);
 }
 
 /** Persist fetched data to PostgreSQL so future fallbacks have data */
