@@ -612,6 +612,60 @@ const MIGRATION_SQL = `
     CREATE INDEX IF NOT EXISTS idx_access_requests_status ON access_requests(status, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_access_requests_pending ON access_requests(created_at) WHERE status = 'pending';
     CREATE INDEX IF NOT EXISTS idx_access_requests_source_ip ON access_requests(source_ip, created_at DESC);
+
+    -- ============================================================
+    -- substrate schema — unified data layer scaffolding
+    -- ============================================================
+    -- Shell only: dimension + sources + series_metadata. Observations and
+    -- the latest-value materialized view land in a follow-up PR (they need
+    -- PARTITION BY RANGE on period, which deserves its own review pass).
+    CREATE SCHEMA IF NOT EXISTS substrate;
+
+    CREATE TABLE IF NOT EXISTS substrate.sources (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name        TEXT NOT NULL UNIQUE,
+      base_url    TEXT,
+      auth_type   TEXT,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS substrate.geo_dimension (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug          TEXT NOT NULL UNIQUE,
+      name          TEXT NOT NULL,
+      geo_type      TEXT NOT NULL,
+      csduid        TEXT,
+      parent_id     UUID REFERENCES substrate.geo_dimension(id),
+      centroid_lat  NUMERIC(9, 6),
+      centroid_lon  NUMERIC(9, 6),
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_substrate_geo_parent
+      ON substrate.geo_dimension(parent_id);
+    CREATE INDEX IF NOT EXISTS idx_substrate_geo_type
+      ON substrate.geo_dimension(geo_type);
+
+    CREATE TABLE IF NOT EXISTS substrate.series_metadata (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug          TEXT NOT NULL UNIQUE,
+      domain        TEXT NOT NULL,
+      name          TEXT NOT NULL,
+      source_id     UUID REFERENCES substrate.sources(id),
+      unit          TEXT,
+      unit_type     TEXT,
+      cadence       TEXT,
+      geo_id        UUID REFERENCES substrate.geo_dimension(id),
+      description   TEXT,
+      tags          TEXT[],
+      upstream_key  JSONB,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_substrate_series_upstream_key
+      ON substrate.series_metadata USING GIN (upstream_key);
+    CREATE INDEX IF NOT EXISTS idx_substrate_series_tags
+      ON substrate.series_metadata USING GIN (tags);
+    CREATE INDEX IF NOT EXISTS idx_substrate_series_domain
+      ON substrate.series_metadata(domain);
 `;
 
 /**
