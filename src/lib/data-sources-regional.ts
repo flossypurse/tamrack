@@ -129,12 +129,14 @@ function resolveIndicator(indicator: string): string {
 // Normalize an indicator argument to the canonical human-readable key. Callers
 // across the app pass either the human form ("Total Equalized Assessment")
 // or the encoded form (REGIONAL_INDICATORS["Total Equalized Assessment"] →
-// "Total%20Equalized%20Assessment"). Without canonicalization the writer
-// downstream of fetchRegionalIndicator would persist URL-encoded indicator
-// names as ghost rows on every page render that happened to use the encoded
-// form. Canonicalizing at the boundary keeps the DB schema consistent and
-// lets the fallback query do an exact-match `WHERE indicator = $1`.
-function canonicalIndicatorName(input: string): string {
+// "Total%20Equalized%20Assessment"). The worker also writes regional_indicators
+// rows directly from collector.ts where the upstream API's
+// IndicatorSummaryDescription is sometimes a generic category
+// ("Property Assessments") rather than the per-key name we requested. Both
+// writers need to land on the same canonical label or the DB ends up with
+// multiple labels for the same underlying series. Exported so collector.ts
+// can apply the same normalization to its aggregation key + insert.
+export function canonicalIndicatorName(input: string): string {
   if (REGIONAL_INDICATORS[input]) return input;
   for (const [key, encoded] of Object.entries(REGIONAL_INDICATORS)) {
     if (encoded === input) return key;

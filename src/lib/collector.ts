@@ -13,6 +13,7 @@ import type pg from "pg";
 
 import {
   REGIONAL_INDICATORS,
+  canonicalIndicatorName,
   fetchRegionalIndicator,
 } from "./data-sources-regional";
 
@@ -188,6 +189,13 @@ const SQL = {
  * only one payload in memory at a time (each payload can be 23–34 MB).
  */
 export async function collectOneRegionalIndicator(name: string): Promise<number> {
+  // Persisted indicator label must match what fetchRegionalIndicator's own
+  // side-effect persist uses — otherwise the same upstream dataset lands in
+  // the DB twice under two different names (e.g. "Total Equalized Assessment"
+  // from persistToDb and "Property Assessments" from this loop, because
+  // Alberta's API returns the latter as IndicatorSummaryDescription for the
+  // former endpoint).
+  const canonical = canonicalIndicatorName(name);
   const data = await fetchRegionalIndicator(name);
   if (data.length === 0) return 0;
 
@@ -198,7 +206,7 @@ export async function collectOneRegionalIndicator(name: string): Promise<number>
 
   for (const pt of data) {
     if (!pt.csduid || !pt.period) continue;
-    const key = `${pt.csduid}|${pt.indicator}|${pt.period}`;
+    const key = `${pt.csduid}|${canonical}|${pt.period}`;
     const existing = aggregated.get(key);
     if (existing) {
       existing.value += pt.value;
@@ -206,7 +214,7 @@ export async function collectOneRegionalIndicator(name: string): Promise<number>
       aggregated.set(key, {
         csduid: pt.csduid,
         municipality: pt.municipality,
-        indicator: pt.indicator,
+        indicator: canonical,
         period: pt.period,
         value: pt.value,
         unit: pt.unit,
