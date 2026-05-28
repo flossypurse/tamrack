@@ -31,6 +31,7 @@ import {
 } from "./src/lib/collector";
 
 import { getDb } from "./src/lib/db";
+import { captureError, initObservability } from "./src/lib/observability";
 
 // ---------------------------------------------------------------------------
 // Phase definitions
@@ -97,6 +98,7 @@ function* dailyCollection(ctx: Context): Generator<any, PhaseResult[], any> {
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
             console.error(`[worker] Indicator ${slug} failed: ${msg}`);
+            captureError(e, { phase: "regional", indicator: slug, today });
             return { rows: 0, error: msg };
           }
         },
@@ -129,6 +131,7 @@ function* dailyCollection(ctx: Context): Generator<any, PhaseResult[], any> {
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
           console.error(`[worker] Phase ${phase.name} failed: ${msg}`);
+          captureError(e, { phase: phase.name, today });
 
           // Log error to snapshot_log
           try {
@@ -162,6 +165,9 @@ function* dailyCollection(ctx: Context): Generator<any, PhaseResult[], any> {
 // ---------------------------------------------------------------------------
 
 async function main() {
+  // Init observability first so uncaught/unhandled handlers cover the rest of main().
+  initObservability();
+
   const resonateUrl = process.env.RESONATE_URL;
   if (!resonateUrl) {
     console.error("RESONATE_URL is required");
@@ -229,5 +235,6 @@ async function main() {
 
 main().catch((err) => {
   console.error("[worker] Fatal error:", err);
+  captureError(err, { phase: "bootstrap" });
   process.exit(1);
 });

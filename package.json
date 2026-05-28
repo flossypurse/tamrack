@@ -24,6 +24,8 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@react-pdf/renderer": "^4.3.2",
     "@resonatehq/sdk": "^0.10.2",
+    "@sentry/nextjs": "^10.54.0",
+    "@sentry/node": "^10.54.0",
     "@types/pg": "^8.18.0",
     "better-sqlite3": "^12.6.2",
     "date-fns": "^4.1.0",
