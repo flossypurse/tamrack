@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { createMDX } from "fumadocs-mdx/next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 // Build uses --webpack flag (see package.json) because Turbopack production
 // builds in Next.js 16.1.x have a chunk-loading race condition that causes
@@ -18,15 +19,15 @@ const withMDX = createMDX();
 // - Google Analytics (script + img + connect) is whitelisted because GA4 is
 //   wired in the analytics component when NEXT_PUBLIC_GA_MEASUREMENT_ID is set.
 // - Stripe (script + frame) reserved for when the paid tier ships.
-// Tighten further (nonce, no unsafe-inline) when we ship a Sentry/observability
-// pass — context-wide tracking will need similar audit.
+// - Sentry ingest (*.sentry.io) is reachable for client-side error reporting
+//   when NEXT_PUBLIC_SENTRY_DSN is set.
 const CSP_DIRECTIVES = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://js.stripe.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: blob: https:",
   "font-src 'self' https://fonts.gstatic.com data:",
-  "connect-src 'self' https://api.mailgun.net https://www.google-analytics.com https://analytics.google.com https://api.stripe.com",
+  "connect-src 'self' https://api.mailgun.net https://www.google-analytics.com https://analytics.google.com https://api.stripe.com https://*.sentry.io",
   "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
   "frame-ancestors 'none'",
   "object-src 'none'",
@@ -133,4 +134,15 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withMDX(nextConfig);
+// withSentryConfig wraps the build to:
+// (1) upload source maps when SENTRY_AUTH_TOKEN + SENTRY_ORG + SENTRY_PROJECT are set,
+// (2) hide source maps from the public build output.
+// All three options are no-ops without the env vars, so the build still ships
+// cleanly before the Sentry project is provisioned.
+export default withSentryConfig(withMDX(nextConfig), {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  disableLogger: true,
+});
