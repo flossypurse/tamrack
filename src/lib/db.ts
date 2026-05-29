@@ -666,6 +666,96 @@ const MIGRATION_SQL = `
       ON substrate.series_metadata USING GIN (tags);
     CREATE INDEX IF NOT EXISTS idx_substrate_series_domain
       ON substrate.series_metadata(domain);
+
+    -- Major projects, versioned. Each stage change retires the prior row
+    -- (is_current=FALSE, keeps last-seen snapshot_date) and inserts a new
+    -- v_n+1 with today's snapshot_date. No-stage-change days only update
+    -- snapshot_date on the current row, so 'when did this project last
+    -- advance in stage' is answerable from version > 1 rows alone.
+    CREATE TABLE IF NOT EXISTS substrate.major_projects_versioned (
+      id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_name     TEXT NOT NULL,
+      developer        TEXT,
+      municipality     TEXT,
+      csduid           TEXT,
+      estimated_cost   NUMERIC(14,2),
+      stage            TEXT NOT NULL,
+      stage_changed_at DATE,
+      version          INTEGER NOT NULL DEFAULT 1,
+      snapshot_date    DATE NOT NULL DEFAULT CURRENT_DATE,
+      is_current       BOOLEAN NOT NULL DEFAULT TRUE,
+      geo_id           UUID REFERENCES substrate.geo_dimension(id),
+      UNIQUE (project_name, municipality, snapshot_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_substrate_mpv_muni_snapshot
+      ON substrate.major_projects_versioned (municipality, snapshot_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_substrate_mpv_stage_current
+      ON substrate.major_projects_versioned (stage, is_current) WHERE is_current = TRUE;
+    -- Belt-and-suspenders: enforce at most one current row per (project, municipality).
+    -- The procedure already serializes via SELECT … FOR UPDATE, but a partial unique
+    -- index catches any out-of-band write (manual SQL, future bulk insert).
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_substrate_mpv_one_current
+      ON substrate.major_projects_versioned (project_name, municipality)
+      WHERE is_current = TRUE;
+
+    CREATE OR REPLACE PROCEDURE substrate.upsert_major_project(
+      p_project_name   TEXT,
+      p_developer      TEXT,
+      p_municipality   TEXT,
+      p_csduid         TEXT,
+      p_estimated_cost NUMERIC,
+      p_stage          TEXT,
+      p_snapshot_date  DATE
+    ) LANGUAGE plpgsql AS $proc$
+    DECLARE
+      v_current_id      UUID;
+      v_current_stage   TEXT;
+      v_current_version INTEGER;
+    BEGIN
+      SELECT id, stage, version
+        INTO v_current_id, v_current_stage, v_current_version
+        FROM substrate.major_projects_versioned
+        WHERE project_name = p_project_name
+          AND municipality IS NOT DISTINCT FROM p_municipality
+          AND is_current = TRUE
+        FOR UPDATE;
+
+      IF v_current_id IS NULL THEN
+        -- ON CONFLICT closes the race where two concurrent callers both see
+        -- v_current_id = NULL and both try to insert v1. SELECT FOR UPDATE
+        -- only locks rows that exist; it doesn't prevent inserts of new rows.
+        -- The partial unique index idx_substrate_mpv_one_current catches the
+        -- collision; DO NOTHING absorbs it. The loser's params match the
+        -- winner's (same upstream fetch), so no data is lost.
+        INSERT INTO substrate.major_projects_versioned
+          (project_name, developer, municipality, csduid, estimated_cost,
+           stage, stage_changed_at, version, snapshot_date, is_current)
+        VALUES
+          (p_project_name, p_developer, p_municipality, p_csduid, p_estimated_cost,
+           p_stage, p_snapshot_date, 1, p_snapshot_date, TRUE)
+        ON CONFLICT (project_name, municipality) WHERE is_current = TRUE DO NOTHING;
+      ELSIF v_current_stage IS DISTINCT FROM p_stage THEN
+        UPDATE substrate.major_projects_versioned
+          SET is_current = FALSE
+          WHERE id = v_current_id;
+        INSERT INTO substrate.major_projects_versioned
+          (project_name, developer, municipality, csduid, estimated_cost,
+           stage, stage_changed_at, version, snapshot_date, is_current)
+        VALUES
+          (p_project_name, p_developer, p_municipality, p_csduid, p_estimated_cost,
+           p_stage, p_snapshot_date, v_current_version + 1, p_snapshot_date, TRUE);
+      ELSE
+        -- Same stage as last seen: refresh snapshot_date + non-stage fields
+        -- (developer, cost, csduid may drift over time without a stage change).
+        UPDATE substrate.major_projects_versioned
+          SET snapshot_date   = p_snapshot_date,
+              developer       = p_developer,
+              csduid          = p_csduid,
+              estimated_cost  = p_estimated_cost
+          WHERE id = v_current_id;
+      END IF;
+    END;
+    $proc$;
 `;
 
 /**

@@ -565,7 +565,8 @@ export async function collectImmigration(): Promise<number> {
 
 export async function collectMajorProjects(today: string): Promise<number> {
   const pool = await getDb();
-  let totalRows = 0;
+  let albertaRows = 0;
+  let federalRows = 0;
 
   try {
     const abProjects = await fetchAlbertaMajorProjects();
@@ -573,16 +574,43 @@ export async function collectMajorProjects(today: string): Promise<number> {
       await withTransaction(async (client: pg.PoolClient) => {
         for (const p of abProjects) {
           if (!p.name) continue;
-          await client.query(SQL.upsertProject, [
-            today, "alberta", p.name, p.sector, p.type,
-            p.stage, p.cost, p.location, p.municipality,
-          ]);
+          // upsert_major_project handles version-bump-on-stage-change. The
+          // legacy `major_projects` table is no longer written for Alberta
+          // (federal projects still use it below).
+          await client.query(
+            `CALL substrate.upsert_major_project($1, $2, $3, $4, $5, $6, $7::date)`,
+            [p.name, null, p.municipality, null, p.cost, p.stage, today]
+          );
         }
       });
-      totalRows += abProjects.length;
+      albertaRows = abProjects.length;
     }
-  } catch {
-    // Non-fatal
+  } catch (err) {
+    // Log the error explicitly so a procedure raise doesn't fail silently —
+    // snapshot_log is the only signal the morning audit checks.
+    const msg = err instanceof Error ? err.message : String(err);
+    await pool
+      .query(SQL.logEntry, ["substrate.major_projects_versioned", 0, "error", msg])
+      .catch(() => {});
+  }
+
+  // Daily reconciliation: how many rows landed for today's snapshot. Runs
+  // outside the try/catch above so it always logs, even if the upsert loop
+  // partially succeeded before throwing (committed rows still count).
+  try {
+    const countRes = await pool.query<{ n: number }>(
+      `SELECT COUNT(*)::int AS n
+         FROM substrate.major_projects_versioned
+         WHERE snapshot_date = $1::date`,
+      [today]
+    );
+    const n = countRes.rows[0]?.n ?? 0;
+    await pool.query(SQL.logEntry, ["substrate.major_projects_versioned", n, "ok", null]);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    await pool
+      .query(SQL.logEntry, ["substrate.major_projects_versioned", 0, "error", msg])
+      .catch(() => {});
   }
 
   try {
@@ -597,14 +625,16 @@ export async function collectMajorProjects(today: string): Promise<number> {
           ]);
         }
       });
-      totalRows += fedProjects.length;
+      federalRows = fedProjects.length;
     }
   } catch {
     // Non-fatal
   }
 
-  await pool.query(SQL.logEntry, ["major_projects", totalRows, "ok", null]);
-  return totalRows;
+  // Legacy snapshot_log row now reflects only what actually wrote to
+  // `major_projects` (federal). Alberta has its own reconciliation row above.
+  await pool.query(SQL.logEntry, ["major_projects", federalRows, "ok", null]);
+  return albertaRows + federalRows;
 }
 
 // ---------------------------------------------------------------------------
