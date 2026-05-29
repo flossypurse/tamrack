@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowLeft, ArrowRight, Code, ExternalLink } from "lucide-react";
 import {
-  CHART_REGISTRY,
   CATEGORY_LABELS,
   CATEGORY_COLORS,
   getChartById,
@@ -16,15 +15,11 @@ import { BreadcrumbJsonLd } from "@/components/json-ld";
 import { ChartPageActions } from "./chart-actions";
 import { SITE_URL } from "@/lib/constants/site";
 
-export const revalidate = 3600; // ISR: 1 hour
-
-// ============================================================
-// Static params — pre-render all catalogue charts
-// ============================================================
-
-export function generateStaticParams() {
-  return CHART_REGISTRY.map((c) => ({ chartId: c.id }));
-}
+// Render on demand: chart resolvers call StatsCan / CMHC / Edmonton Socrata
+// during render, and prerendering all 110+ chartIds at build time made the CI
+// build hostage to upstream uptime. Force-dynamic shifts the cost to the first
+// request after deploy; that response is cached at the edge for typical TTLs.
+export const dynamic = "force-dynamic";
 
 // ============================================================
 // Metadata

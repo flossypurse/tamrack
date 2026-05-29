@@ -19,6 +19,10 @@ import {
 } from "@/lib/data-sources-fire";
 import { SITE_URL } from "@/lib/constants/site";
 
+// Render on demand: Edmonton Socrata + CWFIS + 511 fetches happen during
+// render, and prerendering at build time was making CI hostage to upstream uptime.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Alberta Fire & Emergency Response Data",
   description:

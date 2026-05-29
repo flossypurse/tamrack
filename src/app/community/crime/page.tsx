@@ -22,6 +22,10 @@ import {
 } from "@/lib/data-sources-crime";
 import { SITE_URL } from "@/lib/constants/site";
 
+// Render on demand: StatsCan + Calgary Socrata fetches happen during render,
+// and prerendering at build time was making CI hostage to upstream uptime.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title:
     "Alberta Crime & Safety Data — Crime Severity Index & Community Crime Stats",
