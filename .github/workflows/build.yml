@@ -46,6 +46,12 @@ jobs:
           key: next-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.{ts,tsx}', 'app/**/*.{ts,tsx}') }}
           restore-keys: next-${{ hashFiles('package-lock.json') }}-
 
+      # ── codegen (fumadocs-mdx writes .source/{server,browser,dynamic}.ts) ────
+      # next build runs this implicitly via createMDX() in next.config.ts, but
+      # tsc runs first and would otherwise fail importing ../../.source/server.
+      - name: Generate fumadocs source
+        run: npx fumadocs-mdx
+
       # ── gates (fail fast) ────────────────────────────────────────────────────
       - name: Type-check
         run: npx tsc --noEmit
