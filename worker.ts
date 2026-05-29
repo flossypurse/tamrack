@@ -117,6 +117,23 @@ function* dailyCollection(ctx: Context): Generator<any, PhaseResult[], any> {
 
     console.log(`[worker] Phase regional: ${regionalRows} rows (${regionalErrors} errors)`);
     results.push({ phase: "regional", rows: regionalRows, status: regionalErrors === 0 ? "ok" : "error" });
+
+    // Write a single regional_indicators row to snapshot_log. The per-indicator
+    // ctx.run steps above never touch snapshot_log, and collectRegionalIndicators
+    // (which does) isn't on this code path — so without this step the regional
+    // phase silently looks like it never ran when scanning snapshot_log.
+    yield* ctx.run(
+      async () => {
+        const status = regionalErrors === 0 ? "ok" : "error";
+        const error = regionalErrors > 0 ? `${regionalErrors} indicator(s) failed` : null;
+        const pool = await getDb();
+        await pool.query(
+          `INSERT INTO snapshot_log (taken_at, source, records_inserted, status, error) VALUES (NOW(), $1, $2, $3, $4)`,
+          ["regional_indicators", regionalRows, status, error],
+        );
+      },
+      (ctx as any).options({ id: stepId("regional-snapshot-log") }),
+    );
   }
 
   // --- Remaining phases (one step each) ---
