@@ -15,6 +15,7 @@ import {
   REGIONAL_INDICATORS,
   canonicalIndicatorName,
   fetchRegionalIndicator,
+  regionalIndicatorUrl,
 } from "./data-sources-regional";
 
 export { REGIONAL_INDICATORS };
@@ -203,6 +204,21 @@ export async function collectOneRegionalIndicator(name: string): Promise<number>
     string,
     { csduid: string; municipality: string; indicator: string; period: string; value: number; unit: string }
   >();
+
+  // Drift detection: Alberta's API returns IndicatorSummaryDescription per row,
+  // which can diverge from the canonical key we requested (e.g. requesting
+  // Total%20Equalized%20Assessment returns rows labelled "Property Assessments").
+  // Warn loudly when that happens so future label drift surfaces in logs/Sentry
+  // before it silently creates orphan rows.
+  const upstreamLabels = new Set<string>();
+  for (const pt of data) {
+    if (pt.indicator && pt.indicator !== canonical) upstreamLabels.add(pt.indicator);
+  }
+  if (upstreamLabels.size > 0) {
+    console.warn(
+      `[regional] indicator drift: requested "${canonical}", upstream returned [${[...upstreamLabels].map((l) => `"${l}"`).join(", ")}] from ${regionalIndicatorUrl(canonical)}`,
+    );
+  }
 
   for (const pt of data) {
     if (!pt.csduid || !pt.period) continue;

@@ -114,6 +114,10 @@ function buildUrl(indicatorEncoded: string): string {
   return `${BASE_URL}/${indicatorEncoded}/jsons`;
 }
 
+export function regionalIndicatorUrl(indicator: string): string {
+  return buildUrl(resolveIndicator(canonicalIndicatorName(indicator)));
+}
+
 function resolveIndicator(indicator: string): string {
   // Accept either human-readable name or pre-encoded value
   if (REGIONAL_INDICATORS[indicator]) {
