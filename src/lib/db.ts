@@ -721,12 +721,19 @@ const MIGRATION_SQL = `
         FOR UPDATE;
 
       IF v_current_id IS NULL THEN
+        -- ON CONFLICT closes the race where two concurrent callers both see
+        -- v_current_id = NULL and both try to insert v1. SELECT FOR UPDATE
+        -- only locks rows that exist; it doesn't prevent inserts of new rows.
+        -- The partial unique index idx_substrate_mpv_one_current catches the
+        -- collision; DO NOTHING absorbs it. The loser's params match the
+        -- winner's (same upstream fetch), so no data is lost.
         INSERT INTO substrate.major_projects_versioned
           (project_name, developer, municipality, csduid, estimated_cost,
            stage, stage_changed_at, version, snapshot_date, is_current)
         VALUES
           (p_project_name, p_developer, p_municipality, p_csduid, p_estimated_cost,
-           p_stage, p_snapshot_date, 1, p_snapshot_date, TRUE);
+           p_stage, p_snapshot_date, 1, p_snapshot_date, TRUE)
+        ON CONFLICT (project_name, municipality) WHERE is_current = TRUE DO NOTHING;
       ELSIF v_current_stage IS DISTINCT FROM p_stage THEN
         UPDATE substrate.major_projects_versioned
           SET is_current = FALSE
