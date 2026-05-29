@@ -573,16 +573,35 @@ export async function collectMajorProjects(today: string): Promise<number> {
       await withTransaction(async (client: pg.PoolClient) => {
         for (const p of abProjects) {
           if (!p.name) continue;
-          await client.query(SQL.upsertProject, [
-            today, "alberta", p.name, p.sector, p.type,
-            p.stage, p.cost, p.location, p.municipality,
-          ]);
+          // upsert_major_project handles version-bump-on-stage-change. The
+          // legacy `major_projects` table is no longer written for Alberta
+          // (federal projects still use it below).
+          await client.query(
+            `CALL substrate.upsert_major_project($1, $2, $3, $4, $5, $6, $7::date)`,
+            [p.name, null, p.municipality, null, p.cost, p.stage, today]
+          );
         }
       });
       totalRows += abProjects.length;
     }
+
+    // Daily reconciliation: how many rows landed for today's snapshot.
+    // Counts both v1 inserts and snapshot_date-bump UPDATEs.
+    try {
+      const countRes = await pool.query<{ n: number }>(
+        `SELECT COUNT(*)::int AS n
+           FROM substrate.major_projects_versioned
+           WHERE snapshot_date = $1::date`,
+        [today]
+      );
+      const n = countRes.rows[0]?.n ?? 0;
+      await pool.query(SQL.logEntry, ["substrate.major_projects_versioned", n, "ok", null]);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      await pool.query(SQL.logEntry, ["substrate.major_projects_versioned", 0, "error", msg]).catch(() => {});
+    }
   } catch {
-    // Non-fatal
+    // Non-fatal — the daily snapshot survives a major-projects failure.
   }
 
   try {
