@@ -1,0 +1,71 @@
+name: build
+
+on:
+  pull_request:
+    branches: [main, fly-migration]
+  push:
+    branches: [main]
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # ── native toolchain (better-sqlite3 requires python3 + g++ + make) ──────
+      - name: Install native build toolchain
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends python3 make g++
+
+      # ── dependency cache ──────────────────────────────────────────────────────
+      - name: Cache node_modules
+        id: cache-node
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node22-${{ hashFiles('package-lock.json') }}
+          restore-keys: node22-
+
+      - name: Install dependencies
+        if: steps.cache-node.outputs.cache-hit != 'true'
+        run: npm ci
+
+      # ── Next.js build cache ───────────────────────────────────────────────────
+      - name: Cache .next/cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.{ts,tsx}', 'app/**/*.{ts,tsx}') }}
+          restore-keys: next-${{ hashFiles('package-lock.json') }}-
+
+      # ── codegen (fumadocs-mdx writes .source/{server,browser,dynamic}.ts) ────
+      # next build runs this implicitly via createMDX() in next.config.ts, but
+      # tsc runs first and would otherwise fail importing ../../.source/server.
+      - name: Generate fumadocs source
+        run: npx fumadocs-mdx
+
+      # ── gates (fail fast) ────────────────────────────────────────────────────
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Build
+        env:
+          # Mirrors the Dockerfile ARG defaults — no real secrets needed.
+          STRIPE_SECRET_KEY: sk_build_placeholder_not_real
+          NEXTAUTH_SECRET: build_placeholder_not_real
+          AUTH_SECRET: build_placeholder_not_real
+          DATABASE_URL: postgresql://localhost:5432/tamrack_build
+          NEXT_PUBLIC_APP_URL: https://tamrack-webui.fly.dev
+          NEXT_PUBLIC_GA_MEASUREMENT_ID: ""
+          NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: "false"
+          NEXT_PUBLIC_SENTRY_DSN: ""
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
