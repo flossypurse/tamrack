@@ -776,6 +776,17 @@ const MIGRATION_SQL = `
     );
     CREATE INDEX IF NOT EXISTS idx_signals_ldt_category
       ON signals.licence_dietary_taxonomy(dietary_category);
+    -- Enum guard. ADD CONSTRAINT isn't idempotent, so gate on pg_constraint.
+    DO $cnstr$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'licence_dietary_taxonomy_category_check'
+      ) THEN
+        ALTER TABLE signals.licence_dietary_taxonomy
+          ADD CONSTRAINT licence_dietary_taxonomy_category_check
+          CHECK (dietary_category IN ('gf_friendly','allergen_friendly','standard','unknown'));
+      END IF;
+    END $cnstr$;
 `;
 
 /**
