@@ -101,7 +101,8 @@ async function classifyBatch(
   try {
     response = await client.messages.create({
       model: MODEL,
-      max_tokens: 4096,
+      // 200 rows × ~29 output tokens/row ≈ 5800; 4096 was truncating mid-array.
+      max_tokens: 8192,
       system: [
         {
           type: "text",
