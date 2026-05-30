@@ -69,6 +69,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next        ./.next
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 COPY --from=builder --chown=nextjs:nodejs /app/public        ./public
+# scripts/ + src/ ship in the runtime image so one-off ops jobs (geo backfill,
+# G4 dietary taxonomy, etc.) can run via `flyctl ssh console -C 'npx tsx
+# scripts/<name>.ts'` without a separate builder image. The scripts import
+# from src/lib/*, so we need both trees. Adds ~3 MB to the image.
+COPY --from=builder --chown=nextjs:nodejs /app/scripts       ./scripts
+COPY --from=builder --chown=nextjs:nodejs /app/src           ./src
+COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
 
 USER nextjs
 

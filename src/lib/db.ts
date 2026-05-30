@@ -756,6 +756,26 @@ const MIGRATION_SQL = `
       END IF;
     END;
     $proc$;
+
+    -- ============================================================
+    -- signals schema — derived analytic tables and classification caches.
+    -- ============================================================
+    CREATE SCHEMA IF NOT EXISTS signals;
+
+    -- G4 dietary-taxonomy cache: one row per Edmonton business licence.
+    -- Food-service rows are LLM-classified; all other categories carry
+    -- dietary_category='unknown' (rule-tagged, no model call) so downstream
+    -- signal queries can LEFT JOIN against the full licence universe.
+    CREATE TABLE IF NOT EXISTS signals.licence_dietary_taxonomy (
+      licence_id         TEXT PRIMARY KEY,
+      trade_name         TEXT,
+      raw_category       TEXT,
+      dietary_category   TEXT NOT NULL,
+      dietary_confidence NUMERIC(3, 2),
+      classified_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_ldt_category
+      ON signals.licence_dietary_taxonomy(dietary_category);
 `;
 
 /**
