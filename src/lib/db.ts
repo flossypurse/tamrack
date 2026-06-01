@@ -616,9 +616,6 @@ const MIGRATION_SQL = `
     -- ============================================================
     -- substrate schema — unified data layer scaffolding
     -- ============================================================
-    -- Shell only: dimension + sources + series_metadata. Observations and
-    -- the latest-value materialized view land in a follow-up PR (they need
-    -- PARTITION BY RANGE on period, which deserves its own review pass).
     CREATE SCHEMA IF NOT EXISTS substrate;
 
     CREATE TABLE IF NOT EXISTS substrate.sources (
@@ -666,6 +663,81 @@ const MIGRATION_SQL = `
       ON substrate.series_metadata USING GIN (tags);
     CREATE INDEX IF NOT EXISTS idx_substrate_series_domain
       ON substrate.series_metadata(domain);
+
+    -- Time-series fact table. Native PG range partitioning on period
+    -- (monthly children). pgvector and pg_partman are intentionally NOT
+    -- used here: observations carry no embeddings (those live on
+    -- corpus.narrative_fragments in Phase 2) and partition rollover is
+    -- cheap enough to drive from a monthly Resonate cron rather than
+    -- pg_cron + partman.run_maintenance(). The application role on
+    -- Crunchy can't CREATE EXTENSION, so anything that needs one is
+    -- deferred to an admin-run migration.
+    CREATE TABLE IF NOT EXISTS substrate.observations (
+      series_id     UUID NOT NULL REFERENCES substrate.series_metadata(id),
+      period        DATE NOT NULL,
+      geo_id        UUID NOT NULL REFERENCES substrate.geo_dimension(id),
+      value         DOUBLE PRECISION,
+      raw_value     TEXT,
+      qualifier     TEXT,
+      collected_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (series_id, period, geo_id)
+    ) PARTITION BY RANGE (period);
+    -- Partitioned index — PG cascades it onto every child partition.
+    CREATE INDEX IF NOT EXISTS idx_substrate_obs_series_geo_period
+      ON substrate.observations (series_id, geo_id, period DESC);
+
+    -- Pre-create monthly partitions: 12 back + current + 12 forward
+    -- (25 children). Loop is idempotent (IF NOT EXISTS). A monthly
+    -- Resonate cron will top up the leading edge — until then, fresh
+    -- partitions get added by re-running the boot DDL after a deploy.
+    DO $obs_part$
+    DECLARE
+      v_start DATE;
+      v_end   DATE;
+      v_name  TEXT;
+      i       INT;
+    BEGIN
+      FOR i IN -12..12 LOOP
+        v_start := (date_trunc('month', CURRENT_DATE)::date + make_interval(months => i))::date;
+        v_end   := (v_start + INTERVAL '1 month')::date;
+        v_name  := format('observations_%s', to_char(v_start, 'YYYY_MM'));
+        EXECUTE format(
+          'CREATE TABLE IF NOT EXISTS substrate.%I PARTITION OF substrate.observations
+             FOR VALUES FROM (%L) TO (%L)',
+          v_name, v_start, v_end
+        );
+      END LOOP;
+    END $obs_part$;
+    -- Default partition catches any out-of-range period (typo'd date,
+    -- forgotten rollover). Without it the INSERT would error with
+    -- "no partition of relation found for row" and the collector run aborts.
+    CREATE TABLE IF NOT EXISTS substrate.observations_default
+      PARTITION OF substrate.observations DEFAULT;
+
+    -- Latest observation per (series, geo). Collectors call
+    -- REFRESH MATERIALIZED VIEW CONCURRENTLY at end-of-run so scorecards
+    -- never block on a writer. The first refresh after creation MUST be
+    -- non-concurrent (matview is unpopulated until then), so seed it here
+    -- once if pg_class.relispopulated says it hasn't been refreshed yet.
+    CREATE MATERIALIZED VIEW IF NOT EXISTS substrate.latest_observations AS
+      SELECT DISTINCT ON (series_id, geo_id)
+        series_id, geo_id, period, value, collected_at
+      FROM substrate.observations
+      ORDER BY series_id, geo_id, period DESC
+    WITH NO DATA;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_substrate_latest_obs_series_geo
+      ON substrate.latest_observations (series_id, geo_id);
+    DO $matview_seed$
+    BEGIN
+      IF NOT (
+        SELECT relispopulated
+        FROM pg_class
+        WHERE relnamespace = 'substrate'::regnamespace
+          AND relname = 'latest_observations'
+      ) THEN
+        REFRESH MATERIALIZED VIEW substrate.latest_observations;
+      END IF;
+    END $matview_seed$;
 
     -- Major projects, versioned. Each stage change retires the prior row
     -- (is_current=FALSE, keeps last-seen snapshot_date) and inserts a new
