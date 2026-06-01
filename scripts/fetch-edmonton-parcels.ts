@@ -43,6 +43,7 @@
  *   DATABASE_URL=... npx tsx scripts/fetch-edmonton-parcels.ts --start-offset=125000
  */
 import { getDb } from "../src/lib/db";
+import { fetchWithRetry } from "../src/lib/fetch-utils";
 
 const DATASET = "q7d6-ambg";
 const SOURCE_NAME = "Edmonton Open Data";
@@ -83,40 +84,12 @@ function parseArgs(): CliOpts {
   return { dryRun, limitPages, startOffset };
 }
 
-// Exponential backoff against transient 5xx and 429.
-async function fetchWithRetry(url: string, attempts = 3, baseMs = 1000): Promise<Response> {
-  let lastErr: unknown;
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    try {
-      const res = await fetch(url, {
-        headers: { "User-Agent": "tamrack-edmonton-parcels" },
-      });
-      if (res.ok) return res;
-      if (res.status >= 500 || res.status === 429) {
-        lastErr = new Error(`HTTP ${res.status}`);
-        const wait = baseMs * 2 ** (attempt - 1);
-        console.warn(`[retry] ${res.status} on attempt ${attempt}/${attempts}; sleeping ${wait}ms`);
-        await new Promise((r) => setTimeout(r, wait));
-        continue;
-      }
-      throw new Error(`HTTP ${res.status}`);
-    } catch (err) {
-      lastErr = err;
-      if (attempt === attempts) break;
-      const wait = baseMs * 2 ** (attempt - 1);
-      console.warn(`[retry] ${(err as Error).message} on attempt ${attempt}/${attempts}; sleeping ${wait}ms`);
-      await new Promise((r) => setTimeout(r, wait));
-    }
-  }
-  throw lastErr ?? new Error("fetchWithRetry exhausted attempts");
-}
-
 async function fetchPage(offset: number): Promise<SocrataParcel[]> {
   const url =
     `${SOURCE_BASE}/resource/${DATASET}.json` +
     `?$select=account_number,neighbourhood_id,assessed_value,tax_class,latitude,longitude` +
     `&$limit=${PAGE_SIZE}&$offset=${offset}&$order=account_number`;
-  const res = await fetchWithRetry(url);
+  const res = await fetchWithRetry(url, { userAgent: "tamrack-edmonton-parcels" });
   const body = (await res.json()) as SocrataParcel[];
   if (!Array.isArray(body)) throw new Error(`Socrata returned non-array at offset=${offset}`);
   return body;
@@ -178,25 +151,28 @@ async function main() {
       const ser = await setupClient.query(
         `INSERT INTO substrate.series_metadata
            (slug, domain, name, source_id, unit, unit_type, cadence, geo_id,
-            description, tags, upstream_key)
+            description, tags, upstream_key, storage_kind, entity_kind)
          VALUES
            ($1, 'parcel', 'Edmonton parcel assessed value (record-level)',
             $2, 'CAD', 'currency', 'daily', $3,
             'Per-parcel assessed value from Edmonton open data q7d6-ambg. Each parcel is a substrate.entities row (kind=parcel); each observation references the parcel via entity_id. value=assessed_value, qualifier=tax_class.',
             ARRAY['edmonton','parcel','record-level','assessment']::text[],
-            $4::jsonb)
+            $4::jsonb, 'entity+observation', $5)
          ON CONFLICT (slug) DO UPDATE SET
            name = EXCLUDED.name,
            source_id = EXCLUDED.source_id,
            description = EXCLUDED.description,
            tags = EXCLUDED.tags,
-           upstream_key = EXCLUDED.upstream_key
+           upstream_key = EXCLUDED.upstream_key,
+           storage_kind = EXCLUDED.storage_kind,
+           entity_kind = EXCLUDED.entity_kind
          RETURNING id`,
         [
           SERIES_SLUG,
           sourceId,
           edmontonId,
           JSON.stringify({ kind: "socrata", dataset: DATASET, url: `${SOURCE_BASE}/resource/${DATASET}.json` }),
+          ENTITY_KIND,
         ]
       );
       seriesId = ser.rows[0].id;
@@ -350,6 +326,18 @@ async function main() {
           obsQualifiers.push(qualifiers[i]);
         }
 
+        // Parity assertion for the obs arrays. unnest() raises at SQL
+        // execution time if these arrays drift in length; assert here so a
+        // future conditional-push bug surfaces at the obvious source line.
+        const obsN = obsEntityIds.length;
+        if (
+          obsGeoIds.length !== obsN ||
+          obsValues.length !== obsN ||
+          obsQualifiers.length !== obsN
+        ) {
+          throw new Error(`obs-array parity broken at page ${pageIdx} (n=${obsN})`);
+        }
+
         if (obsEntityIds.length > 0) {
           const obsResult = await writeClient.query(
             `INSERT INTO substrate.observations
@@ -389,16 +377,29 @@ async function main() {
     throw err;
   }
 
+  // Cumulative debt: parcels in the table with geo_id=NULL across all
+  // historical runs (this run's unmatchedNbhdCount is just today's slice).
+  // Visibility surface for "how much backfill is pending."
+  let cumulativeNullGeo = 0;
+  if (!opts.dryRun) {
+    const cumulative = await pool.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM substrate.entities WHERE kind = $1 AND geo_id IS NULL`,
+      [ENTITY_KIND]
+    );
+    cumulativeNullGeo = cumulative.rows[0].n;
+  }
+
   console.log("");
   console.log(`[summary] fetched parcels:           ${totalParcels}`);
   console.log(`[summary] entity upserts:            ${totalEntityUpserts}`);
   console.log(`[summary] observation upserts:       ${totalObsUpserts}`);
   console.log(`[summary] skipped (no account_num):  ${skippedNoAccount}`);
   console.log(`[summary] skipped (bad assessed_v):  ${skippedBadValue}`);
-  console.log(`[summary] unmatched neighbourhood:   ${unmatchedNbhdCount}`);
-  if (unmatchedNbhdCount > 0) {
+  console.log(`[summary] unmatched nbhd this run:   ${unmatchedNbhdCount}`);
+  console.log(`[summary] cumulative geo_id=NULL:    ${cumulativeNullGeo}`);
+  if (unmatchedNbhdCount > 0 || cumulativeNullGeo > 0) {
     console.warn(
-      `[warn] ${unmatchedNbhdCount} parcels had a neighbourhood_id not present in substrate.geo_dimension — those parcels were stored with geo_id=NULL and produced no observation row. Re-run backfill-substrate-geo-dimension.ts and then this script to backfill.`
+      `[warn] parcels with geo_id=NULL produce no observation row. Re-run backfill-substrate-geo-dimension.ts (if a new neighbourhood appeared upstream) and then this script to backfill.`
     );
   }
 
