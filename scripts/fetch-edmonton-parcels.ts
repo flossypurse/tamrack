@@ -2,43 +2,45 @@
 /**
  * Edmonton record-level parcel fetcher (Phase 0 §0.2).
  *
- * Replaces the legacy aggregate `q7d6-ambg` fetcher (which rolled up to
- * per-neighbourhood `avg_assessment` / `min_assessment` / `max_assessment`
- * in `neighbourhood_metrics`) with a record-level snapshot in
- * `substrate.observations`. Each parcel is materialized as a
- * `geo_dimension` row (geo_type='parcel'); each daily run writes one
- * observation per parcel into the partitioned `observations` table.
+ * Each parcel is a row in substrate.entities (kind='parcel'); each daily
+ * run writes one observation per parcel into the partitioned
+ * substrate.observations table (series='edm-parcel-assessed-value',
+ * value=assessed_value, qualifier=tax_class, entity_id=parcel).
  *
- * Why record-level: aggregate signals lose the long tail. With per-parcel
- * data, downstream queries can answer "which parcels' assessed_value
- * changed > N% YoY", "show me the top-decile residential parcels in
- * Westmount", "diff yesterday's snapshot vs today to detect new builds",
- * etc. The aggregate path stays in place for the existing scorecards.
+ * Why entities + observations: parcels are slow-changing identities
+ * (account_number is stable) but assessed_value is a time-series. The
+ * entity row carries identity + geometry; observations carry the value
+ * over time. New parcels (subdivisions, new builds) show up as
+ * first_seen=today entities; removed parcels (merges, decommissions)
+ * stop getting last_seen updates.
  *
  * Source: data.edmonton.ca/resource/q7d6-ambg.json (Edmonton open data,
- * Socrata). Paginated by `$offset` / `$limit=50000`. ~440K parcels total
- * → ~9 pages. Each page commits independently — partial runs leave a
- * consistent intermediate state and a re-run picks up where it stopped
- * via the idempotent UPSERT pattern.
+ * Socrata). Paginated by `$offset` / `$limit=25000`. ~440K parcels
+ * total → ~18 pages. Each page commits independently — partial runs
+ * leave a consistent intermediate state and re-runs are idempotent.
  *
- * Parcel identity: `account_number` is the assessment roll number, stable
- * across snapshots. Slug = `edm-parcel-${account_number}`. Parent geo is
- * the Edmonton neighbourhood (by `edm-nbhd-${neighbourhood_id}`) if it
- * exists in geo_dimension, otherwise the `edmonton` muni row, otherwise
- * NULL (defensive fallback — shouldn't happen after the geo-dimension
- * backfill).
+ * Parcel identity: `account_number` (the assessment roll number) is the
+ * stable identifier. Slug = `edm-parcel-${account_number}`. Geo parent:
+ * the Edmonton neighbourhood if `neighbourhood_id` matches an
+ * `edm-nbhd-${id}` row in geo_dimension; NULL otherwise (script warns
+ * with the unmatched count at end-of-run so backfill gaps are visible).
  *
- * Series:
- *   `edm-parcel-assessed-value` — value = Number(assessed_value),
- *                                  qualifier = tax_class
+ * Matview refresh: NOT triggered in-script. A 440K-row refresh is too
+ * expensive to run after every parcel snapshot — it stacks with other
+ * collector runs and stalls them. Pin the refresh to a nightly cron via
+ * `SELECT substrate.refresh_latest_observations();`.
  *
- * Idempotent: per-page UPSERTs on (slug) for geo_dimension and
- * (series_id, period, geo_id) for observations. Includes --dry-run.
+ * Idempotent: per-page UPSERTs on (slug) for entities and
+ * (series_id, period, geo_id, entity_id) for observations. Includes
+ * --dry-run, --limit-pages=N (smoke-test), and --start-offset=N
+ * (resume after a partial failure — see snapshot_log for the last
+ * successful offset).
  *
  * Usage:
  *   DATABASE_URL=... npx tsx scripts/fetch-edmonton-parcels.ts
  *   DATABASE_URL=... npx tsx scripts/fetch-edmonton-parcels.ts --dry-run
- *   DATABASE_URL=... npx tsx scripts/fetch-edmonton-parcels.ts --limit-pages=1   # smoke-test
+ *   DATABASE_URL=... npx tsx scripts/fetch-edmonton-parcels.ts --limit-pages=1
+ *   DATABASE_URL=... npx tsx scripts/fetch-edmonton-parcels.ts --start-offset=125000
  */
 import { getDb } from "../src/lib/db";
 
@@ -46,11 +48,12 @@ const DATASET = "q7d6-ambg";
 const SOURCE_NAME = "Edmonton Open Data";
 const SOURCE_BASE = "https://data.edmonton.ca";
 const SERIES_SLUG = "edm-parcel-assessed-value";
+const ENTITY_KIND = "parcel";
 const EDMONTON_MUNI_SLUG = "edmonton";
+
 // 25_000 keeps the per-page array footprint (~6 parallel arrays, ~40 MB
 // peak after JSON parse) safely below the Fly machine's headroom alongside
-// the resident Next.js app. The script is paginated regardless, so trading
-// off page count for memory is essentially free.
+// the resident Next.js app.
 const PAGE_SIZE = 25_000;
 
 interface SocrataParcel {
@@ -65,17 +68,22 @@ interface SocrataParcel {
 interface CliOpts {
   dryRun: boolean;
   limitPages: number | null;
+  startOffset: number;
 }
 
 function parseArgs(): CliOpts {
   const dryRun = process.argv.includes("--dry-run");
   const limitArg = process.argv.find((a) => a.startsWith("--limit-pages="));
   const limitPages = limitArg ? Number(limitArg.split("=")[1]) : null;
-  return { dryRun, limitPages };
+  const startArg = process.argv.find((a) => a.startsWith("--start-offset="));
+  const startOffset = startArg ? Number(startArg.split("=")[1]) : 0;
+  if (!Number.isInteger(startOffset) || startOffset < 0) {
+    throw new Error(`--start-offset must be a non-negative integer, got ${startArg}`);
+  }
+  return { dryRun, limitPages, startOffset };
 }
 
-// Exponential backoff against transient 5xx and 429. Socrata generally
-// returns 503 under load and 429 if we exceed an unauthenticated rate limit.
+// Exponential backoff against transient 5xx and 429.
 async function fetchWithRetry(url: string, attempts = 3, baseMs = 1000): Promise<Response> {
   let lastErr: unknown;
   for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -123,7 +131,9 @@ function roundCoord(s: string | undefined): number | null {
 
 async function main() {
   const opts = parseArgs();
-  console.log(`[opts] dry-run=${opts.dryRun} limit-pages=${opts.limitPages ?? "all"}`);
+  console.log(
+    `[opts] dry-run=${opts.dryRun} limit-pages=${opts.limitPages ?? "all"} start-offset=${opts.startOffset}`
+  );
 
   const pool = await getDb();
   const setupClient = await pool.connect();
@@ -172,7 +182,7 @@ async function main() {
          VALUES
            ($1, 'parcel', 'Edmonton parcel assessed value (record-level)',
             $2, 'CAD', 'currency', 'daily', $3,
-            'Per-parcel assessed value from Edmonton open data q7d6-ambg. value=assessed_value, qualifier=tax_class. Each parcel is a geo_dimension row (geo_type=parcel).',
+            'Per-parcel assessed value from Edmonton open data q7d6-ambg. Each parcel is a substrate.entities row (kind=parcel); each observation references the parcel via entity_id. value=assessed_value, qualifier=tax_class.',
             ARRAY['edmonton','parcel','record-level','assessment']::text[],
             $4::jsonb)
          ON CONFLICT (slug) DO UPDATE SET
@@ -193,9 +203,7 @@ async function main() {
       console.log(`[setup] source_id=${sourceId} series_id=${seriesId}`);
 
       // Heartbeat: open a `running` snapshot_log row before the long
-      // page loop. A mid-run failure now leaves a visible incident
-      // marker in the DB even if the console output is lost. Pattern
-      // matches scripts/run-g4-dietary-taxonomy.ts.
+      // page loop so a mid-run failure leaves an audit trail.
       const runLog = await setupClient.query(
         `INSERT INTO snapshot_log (taken_at, source, records_inserted, status, error)
          VALUES (NOW(), $1, 0, 'running', NULL)
@@ -210,139 +218,165 @@ async function main() {
   }
 
   let totalParcels = 0;
-  let totalGeoUpserts = 0;
+  let totalEntityUpserts = 0;
   let totalObsUpserts = 0;
   let skippedNoAccount = 0;
   let skippedBadValue = 0;
   let pageIdx = 0;
-  let lastSuccessfulOffset = -1;
+  let lastSuccessfulOffset = opts.startOffset - 1;
 
   try {
-  for (let offset = 0; ; offset += PAGE_SIZE) {
-    pageIdx++;
-    if (opts.limitPages !== null && pageIdx > opts.limitPages) {
-      console.log(`[stop] hit --limit-pages=${opts.limitPages}`);
-      break;
-    }
+    for (let offset = opts.startOffset; ; offset += PAGE_SIZE) {
+      pageIdx++;
+      if (opts.limitPages !== null && pageIdx > opts.limitPages) {
+        console.log(`[stop] hit --limit-pages=${opts.limitPages}`);
+        break;
+      }
 
-    const t0 = Date.now();
-    const page = await fetchPage(offset);
-    console.log(`[fetch] page ${pageIdx} offset=${offset} rows=${page.length} (${Date.now() - t0}ms)`);
-    if (page.length === 0) break;
+      const t0 = Date.now();
+      const page = await fetchPage(offset);
+      console.log(`[fetch] page ${pageIdx} offset=${offset} rows=${page.length} (${Date.now() - t0}ms)`);
+      if (page.length === 0) break;
 
-    totalParcels += page.length;
+      totalParcels += page.length;
 
-    // Filter to rows with a usable account_number — that's our slug key.
-    const valid = page.filter((p) => p.account_number && p.account_number.length > 0);
-    skippedNoAccount += page.length - valid.length;
+      const valid = page.filter((p) => p.account_number && p.account_number.length > 0);
+      skippedNoAccount += page.length - valid.length;
 
-    if (opts.dryRun) {
-      console.log(`[dry-run] page ${pageIdx} sample:`, JSON.stringify(valid[0]));
-      if (page.length < PAGE_SIZE) break;
-      continue;
-    }
+      if (opts.dryRun) {
+        console.log(`[dry-run] page ${pageIdx} sample:`, JSON.stringify(valid[0]));
+        if (page.length < PAGE_SIZE) break;
+        continue;
+      }
 
-    if (sourceId === null || seriesId === null) {
-      throw new Error("setup failed: sourceId/seriesId not set");
-    }
+      if (sourceId === null || seriesId === null) {
+        throw new Error("setup failed: sourceId/seriesId not set");
+      }
 
-    // ---- Bulk upsert geo_dimension via unnest() ----
-    // parent_id: nbhd row if neighbourhood_id matches geo_dimension; NULL
-    // otherwise. We deliberately do NOT fall back to edmontonId — silently
-    // bucketing unmatched parcels under the muni would make "parcels in
-    // nbhd X" queries undercount permanently. Tracking the count instead
-    // surfaces gaps in the geo_dimension backfill at run-end.
-    const slugs: string[] = [];
-    const names: string[] = [];
-    const parentIds: (string | null)[] = [];
-    const lats: (number | null)[] = [];
-    const lons: (number | null)[] = [];
-    for (const p of valid) {
-      const slug = `edm-parcel-${p.account_number}`;
-      const nbhdSlug = p.neighbourhood_id ? `edm-nbhd-${p.neighbourhood_id}` : null;
-      const parentId = (nbhdSlug && nbhdBySlug.get(nbhdSlug)) ?? null;
-      if (parentId === null) unmatchedNbhdCount++;
-      slugs.push(slug);
-      names.push(slug); // No human-readable name in the dataset; slug doubles as display.
-      parentIds.push(parentId);
-      lats.push(roundCoord(p.latitude));
-      lons.push(roundCoord(p.longitude));
-    }
+      // Build parallel arrays for unnest()-based bulk upsert. parent_id is
+      // the nbhd if matched, NULL otherwise — silently bucketing under the
+      // muni would make "parcels in nbhd X" queries undercount permanently.
+      const slugs: string[] = [];
+      const names: string[] = [];
+      const geoIds: (string | null)[] = [];
+      const lats: (number | null)[] = [];
+      const lons: (number | null)[] = [];
+      const attrs: string[] = [];
+      const values: (number | null)[] = [];
+      const qualifiers: (string | null)[] = [];
 
-    const writeClient = await pool.connect();
-    try {
-      await writeClient.query("BEGIN");
-
-      const geoResult = await writeClient.query(
-        `INSERT INTO substrate.geo_dimension
-           (slug, name, geo_type, parent_id, centroid_lat, centroid_lon)
-         SELECT u.slug, u.name, 'parcel', u.parent_id::uuid, u.lat, u.lon
-         FROM unnest($1::text[], $2::text[], $3::text[], $4::numeric[], $5::numeric[])
-           AS u(slug, name, parent_id, lat, lon)
-         ON CONFLICT (slug) DO UPDATE SET
-           parent_id = EXCLUDED.parent_id,
-           centroid_lat = EXCLUDED.centroid_lat,
-           centroid_lon = EXCLUDED.centroid_lon`,
-        [slugs, names, parentIds, lats, lons]
-      );
-      totalGeoUpserts += geoResult.rowCount ?? 0;
-
-      // Resolve geo_ids for the parcels we just upserted.
-      const geoLookup = await writeClient.query(
-        `SELECT slug, id FROM substrate.geo_dimension WHERE slug = ANY($1::text[])`,
-        [slugs]
-      );
-      const geoIdBySlug = new Map<string, string>(
-        geoLookup.rows.map((r: { slug: string; id: string }) => [r.slug, r.id])
-      );
-
-      // ---- Bulk upsert observations via unnest() ----
-      const obsGeoIds: string[] = [];
-      const obsValues: (number | null)[] = [];
-      const obsQualifiers: (string | null)[] = [];
       for (const p of valid) {
         const slug = `edm-parcel-${p.account_number}`;
-        const geoId = geoIdBySlug.get(slug);
-        if (!geoId) continue;
+        const nbhdSlug = p.neighbourhood_id ? `edm-nbhd-${p.neighbourhood_id}` : null;
+        const geoId = (nbhdSlug && nbhdBySlug.get(nbhdSlug)) ?? null;
+        if (geoId === null) unmatchedNbhdCount++;
         const value = p.assessed_value !== undefined ? Number(p.assessed_value) : NaN;
-        if (!Number.isFinite(value)) {
-          skippedBadValue++;
-          continue;
-        }
-        obsGeoIds.push(geoId);
-        obsValues.push(value);
-        obsQualifiers.push(p.tax_class ?? null);
+        const numericValue = Number.isFinite(value) ? value : null;
+        if (numericValue === null) skippedBadValue++;
+        slugs.push(slug);
+        names.push(slug);
+        geoIds.push(geoId);
+        lats.push(roundCoord(p.latitude));
+        lons.push(roundCoord(p.longitude));
+        attrs.push(JSON.stringify({
+          account_number: p.account_number,
+          neighbourhood_id: p.neighbourhood_id ?? null,
+          tax_class: p.tax_class ?? null,
+        }));
+        values.push(numericValue);
+        qualifiers.push(p.tax_class ?? null);
       }
 
-      if (obsGeoIds.length > 0) {
-        const obsResult = await writeClient.query(
-          `INSERT INTO substrate.observations
-             (series_id, period, geo_id, value, raw_value, qualifier, collected_at)
-           SELECT $1::uuid, CURRENT_DATE, u.geo_id::uuid, u.value, NULL, u.qualifier, NOW()
-           FROM unnest($2::text[], $3::numeric[], $4::text[])
-             AS u(geo_id, value, qualifier)
-           ON CONFLICT (series_id, period, geo_id) DO UPDATE SET
-             value = EXCLUDED.value, qualifier = EXCLUDED.qualifier, collected_at = EXCLUDED.collected_at`,
-          [seriesId, obsGeoIds, obsValues, obsQualifiers]
+      // Pre-flight: array length parity. unnest() in PG raises if arrays
+      // differ in length; assert here so a future edit catches it earlier.
+      const n = slugs.length;
+      if (
+        names.length !== n || geoIds.length !== n || lats.length !== n ||
+        lons.length !== n || attrs.length !== n || values.length !== n ||
+        qualifiers.length !== n
+      ) {
+        throw new Error(`array-length parity broken at page ${pageIdx} (n=${n})`);
+      }
+
+      const writeClient = await pool.connect();
+      try {
+        await writeClient.query("BEGIN");
+
+        // Bulk upsert entities (parcels). first_seen DEFAULT CURRENT_DATE
+        // on insert; last_seen refreshes to CURRENT_DATE on every upsert.
+        const entityResult = await writeClient.query(
+          `INSERT INTO substrate.entities
+             (slug, kind, name, geo_id, attrs, centroid_lat, centroid_lon, source_id, first_seen, last_seen)
+           SELECT u.slug, $1, u.name, u.geo_id::uuid, u.attrs::jsonb, u.lat, u.lon, $2::uuid, CURRENT_DATE, CURRENT_DATE
+           FROM unnest($3::text[], $4::text[], $5::text[], $6::numeric[], $7::numeric[], $8::text[])
+             AS u(slug, name, geo_id, lat, lon, attrs)
+           ON CONFLICT (slug) DO UPDATE SET
+             name = EXCLUDED.name,
+             geo_id = EXCLUDED.geo_id,
+             attrs = EXCLUDED.attrs,
+             centroid_lat = EXCLUDED.centroid_lat,
+             centroid_lon = EXCLUDED.centroid_lon,
+             source_id = EXCLUDED.source_id,
+             last_seen = CURRENT_DATE`,
+          [ENTITY_KIND, sourceId, slugs, names, geoIds, lats, lons, attrs]
         );
-        totalObsUpserts += obsResult.rowCount ?? 0;
+        totalEntityUpserts += entityResult.rowCount ?? 0;
+
+        // Resolve entity_ids + parent geo_ids for the rows we just upserted.
+        const lookup = await writeClient.query(
+          `SELECT slug, id, geo_id FROM substrate.entities WHERE slug = ANY($1::text[])`,
+          [slugs]
+        );
+        const entityRowBySlug = new Map<string, { id: string; geo_id: string | null }>(
+          lookup.rows.map((r: { slug: string; id: string; geo_id: string | null }) => [r.slug, { id: r.id, geo_id: r.geo_id }])
+        );
+
+        // Bulk upsert observations. Only parcels with both a numeric value
+        // AND a resolved geo_id produce an observation row — observations
+        // require NOT NULL geo_id. Parcels without a matched nbhd skip the
+        // observation but the entity itself is preserved.
+        const obsEntityIds: string[] = [];
+        const obsGeoIds: string[] = [];
+        const obsValues: number[] = [];
+        const obsQualifiers: (string | null)[] = [];
+        for (let i = 0; i < slugs.length; i++) {
+          const entRow = entityRowBySlug.get(slugs[i]);
+          if (!entRow) continue;
+          if (values[i] === null) continue;
+          if (entRow.geo_id === null) continue;
+          obsEntityIds.push(entRow.id);
+          obsGeoIds.push(entRow.geo_id);
+          obsValues.push(values[i]!);
+          obsQualifiers.push(qualifiers[i]);
+        }
+
+        if (obsEntityIds.length > 0) {
+          const obsResult = await writeClient.query(
+            `INSERT INTO substrate.observations
+               (series_id, period, geo_id, entity_id, value, raw_value, qualifier, collected_at)
+             SELECT $1::uuid, CURRENT_DATE, u.geo_id::uuid, u.entity_id::uuid, u.value, NULL, u.qualifier, NOW()
+             FROM unnest($2::text[], $3::text[], $4::numeric[], $5::text[])
+               AS u(geo_id, entity_id, value, qualifier)
+             ON CONFLICT (series_id, period, geo_id, entity_id) DO UPDATE SET
+               value = EXCLUDED.value, qualifier = EXCLUDED.qualifier, collected_at = EXCLUDED.collected_at`,
+            [seriesId, obsGeoIds, obsEntityIds, obsValues, obsQualifiers]
+          );
+          totalObsUpserts += obsResult.rowCount ?? 0;
+        }
+
+        await writeClient.query("COMMIT");
+        lastSuccessfulOffset = offset;
+        console.log(`[upsert] page ${pageIdx}: entities=${entityResult.rowCount} obs=${obsEntityIds.length}`);
+      } catch (err) {
+        await writeClient.query("ROLLBACK");
+        throw err;
+      } finally {
+        writeClient.release();
       }
 
-      await writeClient.query("COMMIT");
-      lastSuccessfulOffset = offset;
-      console.log(`[upsert] page ${pageIdx}: geo=${geoResult.rowCount} obs=${obsGeoIds.length}`);
-    } catch (err) {
-      await writeClient.query("ROLLBACK");
-      throw err;
-    } finally {
-      writeClient.release();
+      if (page.length < PAGE_SIZE) break;
     }
-
-    if (page.length < PAGE_SIZE) break;
-  }
   } catch (err) {
-    // Update the heartbeat row to 'error' before re-throwing. The message
-    // includes the last successful offset so the operator can resume.
     if (runLogId !== null) {
       const msg = `${(err as Error).message} | last_successful_offset=${lastSuccessfulOffset}`;
       await pool.query(
@@ -350,33 +384,34 @@ async function main() {
         [msg, totalObsUpserts, runLogId]
       );
       console.error(`[heartbeat] snapshot_log id=${runLogId} marked 'error'; last_successful_offset=${lastSuccessfulOffset}`);
+      console.error(`[resume]    re-run with --start-offset=${lastSuccessfulOffset + PAGE_SIZE}`);
     }
     throw err;
   }
 
   console.log("");
   console.log(`[summary] fetched parcels:           ${totalParcels}`);
-  console.log(`[summary] geo_dimension upserts:     ${totalGeoUpserts}`);
-  console.log(`[summary] observations upserts:      ${totalObsUpserts}`);
+  console.log(`[summary] entity upserts:            ${totalEntityUpserts}`);
+  console.log(`[summary] observation upserts:       ${totalObsUpserts}`);
   console.log(`[summary] skipped (no account_num):  ${skippedNoAccount}`);
   console.log(`[summary] skipped (bad assessed_v):  ${skippedBadValue}`);
   console.log(`[summary] unmatched neighbourhood:   ${unmatchedNbhdCount}`);
   if (unmatchedNbhdCount > 0) {
     console.warn(
-      `[warn] ${unmatchedNbhdCount} parcels had a neighbourhood_id not present in substrate.geo_dimension — those parcels were stored with parent_id=NULL. Re-run backfill-substrate-geo-dimension.ts and then this script to backfill the parent links.`
+      `[warn] ${unmatchedNbhdCount} parcels had a neighbourhood_id not present in substrate.geo_dimension — those parcels were stored with geo_id=NULL and produced no observation row. Re-run backfill-substrate-geo-dimension.ts and then this script to backfill.`
     );
   }
 
-  if (!opts.dryRun) {
-    if (runLogId !== null) {
-      await pool.query(
-        `UPDATE snapshot_log SET status = 'ok', records_inserted = $1 WHERE id = $2`,
-        [totalObsUpserts, runLogId]
-      );
-      console.log(`[heartbeat] snapshot_log id=${runLogId} marked 'ok'`);
-    }
-    await pool.query(`REFRESH MATERIALIZED VIEW CONCURRENTLY substrate.latest_observations`);
-    console.log(`[refresh] substrate.latest_observations refreshed concurrently`);
+  if (!opts.dryRun && runLogId !== null) {
+    await pool.query(
+      `UPDATE snapshot_log SET status = 'ok', records_inserted = $1 WHERE id = $2`,
+      [totalObsUpserts, runLogId]
+    );
+    console.log(`[heartbeat] snapshot_log id=${runLogId} marked 'ok'`);
+    // Matview refresh is intentionally NOT triggered here. A 440K-row
+    // CONCURRENT refresh costs ~5 min and stacks with other collectors —
+    // pin it to a nightly cron via SELECT substrate.refresh_latest_observations().
+    console.log(`[refresh] skipped in-script — pinned to nightly cron`);
   }
 
   console.log("[done] parcel snapshot complete");
