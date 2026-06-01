@@ -30,11 +30,13 @@
  *   DATABASE_URL=... npx tsx scripts/fetch-stony-plain-businesses.ts --dry-run
  */
 import { getDb } from "../src/lib/db";
+import { fetchWithRetry } from "../src/lib/fetch-utils";
 
 const SOURCE_NAME = "Stony Plain ArcGIS Online";
 const SOURCE_BASE = "https://services.arcgis.com/ScgF04sks0ZKbWe3";
 const ENTITY_KIND = "business";
 const STONY_PLAIN_SLUG = "stony-plain";
+const SERIES_SLUG = "stony-plain-businesses";
 
 const QUERY_URL =
   `${SOURCE_BASE}/arcgis/rest/services/ToSP_Businesses/FeatureServer/0/query` +
@@ -56,41 +58,13 @@ interface ArcgisQueryResponse {
   exceededTransferLimit?: boolean;
 }
 
-// Exponential backoff against transient 5xx and 429.
-async function fetchWithRetry(url: string, attempts = 3, baseMs = 1000): Promise<Response> {
-  let lastErr: unknown;
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    try {
-      const res = await fetch(url, {
-        headers: { "User-Agent": "tamrack-stony-plain-businesses" },
-      });
-      if (res.ok) return res;
-      if (res.status >= 500 || res.status === 429) {
-        lastErr = new Error(`HTTP ${res.status}`);
-        const wait = baseMs * 2 ** (attempt - 1);
-        console.warn(`[retry] ${res.status} on attempt ${attempt}/${attempts}; sleeping ${wait}ms`);
-        await new Promise((r) => setTimeout(r, wait));
-        continue;
-      }
-      throw new Error(`HTTP ${res.status}`);
-    } catch (err) {
-      lastErr = err;
-      if (attempt === attempts) break;
-      const wait = baseMs * 2 ** (attempt - 1);
-      console.warn(`[retry] ${(err as Error).message} on attempt ${attempt}/${attempts}; sleeping ${wait}ms`);
-      await new Promise((r) => setTimeout(r, wait));
-    }
-  }
-  throw lastErr ?? new Error("fetchWithRetry exhausted attempts");
-}
-
 async function fetchAllFeatures(): Promise<ArcgisFeature[]> {
   const all: ArcgisFeature[] = [];
   const pageSize = 2000;
   let offset = 0;
   while (offset < 50_000) {
     const url = `${QUERY_URL}&resultOffset=${offset}&resultRecordCount=${pageSize}`;
-    const res = await fetchWithRetry(url);
+    const res = await fetchWithRetry(url, { userAgent: "tamrack-stony-plain-businesses" });
     const body = (await res.json()) as ArcgisQueryResponse;
     if (!Array.isArray(body.features)) {
       throw new Error(`ArcGIS query returned no features array at offset=${offset}`);
@@ -147,6 +121,41 @@ async function main() {
     );
     const sourceId: string = src.rows[0].id;
 
+    // Series_metadata row: storage_kind='entity+observation' because we
+    // maintain both the entity dimension (one row per business) AND a
+    // daily count observation (one row per day with value=count(active)).
+    // Without the count observation, the composer can't answer "how many
+    // businesses in Stony Plain over time?" — entities alone don't
+    // expose a time-series.
+    const ser = await client.query(
+      `INSERT INTO substrate.series_metadata
+         (slug, domain, name, source_id, unit, unit_type, cadence, geo_id,
+          description, tags, upstream_key, storage_kind, entity_kind)
+       VALUES
+         ($1, 'business_directory', 'Stony Plain active businesses',
+          $2, 'businesses', 'count', 'daily', $3,
+          'Per-business entities (kind=business) with first_seen/last_seen presence, plus one daily count observation (value=count(active entities in Stony Plain)). Diff queries against entities; count time-series against observations.',
+          ARRAY['tri-region','business-directory','direct-fetch']::text[],
+          $4::jsonb, 'entity+observation', $5)
+       ON CONFLICT (slug) DO UPDATE SET
+         name = EXCLUDED.name,
+         source_id = EXCLUDED.source_id,
+         description = EXCLUDED.description,
+         tags = EXCLUDED.tags,
+         upstream_key = EXCLUDED.upstream_key,
+         storage_kind = EXCLUDED.storage_kind,
+         entity_kind = EXCLUDED.entity_kind
+       RETURNING id`,
+      [
+        SERIES_SLUG,
+        sourceId,
+        stonyId,
+        JSON.stringify({ kind: "arcgis", url: QUERY_URL }),
+        ENTITY_KIND,
+      ]
+    );
+    const seriesId: string = ser.rows[0].id;
+
     // Upsert one entity row per business. ON CONFLICT (slug) DO UPDATE
     // refreshes last_seen + mutable attrs but leaves first_seen at the
     // initial-discovery date. A subsequent run that misses a business
@@ -190,6 +199,25 @@ async function main() {
       [ENTITY_KIND, stonyId]
     );
 
+    // Daily count observation: one row per run-day with value =
+    // count(active entities seen today). Gives the composer a normal
+    // time-series to plot ("Stony Plain businesses over time") without
+    // requiring it to aggregate entities at query time.
+    const activeCount = await client.query(
+      `SELECT count(*)::int AS n
+         FROM substrate.entities
+         WHERE kind = $1 AND geo_id = $2 AND last_seen = CURRENT_DATE`,
+      [ENTITY_KIND, stonyId]
+    );
+    await client.query(
+      `INSERT INTO substrate.observations
+         (series_id, period, geo_id, entity_id, value, raw_value, qualifier, collected_at)
+       VALUES ($1, CURRENT_DATE, $2, NULL, $3, NULL, NULL, NOW())
+       ON CONFLICT (series_id, period, geo_id, entity_id) DO UPDATE SET
+         value = EXCLUDED.value, collected_at = EXCLUDED.collected_at`,
+      [seriesId, stonyId, activeCount.rows[0].n]
+    );
+
     await client.query(
       `INSERT INTO snapshot_log (taken_at, source, records_inserted, status, error)
        VALUES (NOW(), $1, $2, 'ok', NULL)`,
@@ -198,7 +226,16 @@ async function main() {
 
     await client.query("COMMIT");
     console.log(`[upsert] entities: ${entityUpserts} rows touched (today's directory)`);
+    console.log(`[count]  active businesses today: ${activeCount.rows[0].n}`);
     console.log(`[diff]   stale (last_seen < today): ${staleCount.rows[0].n}`);
+
+    // Refresh the matview so today's count observation is visible to scorecards.
+    const refreshResult = await pool.query<{ refresh_latest_observations: boolean }>(
+      `SELECT substrate.refresh_latest_observations()`
+    );
+    const refreshed = refreshResult.rows[0]?.refresh_latest_observations;
+    console.log(`[refresh] latest_observations: ${refreshed ? "refreshed" : "skipped (advisory lock held)"}`);
+
     console.log("[done]   snapshot committed");
   } catch (err) {
     await client.query("ROLLBACK");
