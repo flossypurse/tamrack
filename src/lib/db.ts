@@ -687,15 +687,29 @@ const MIGRATION_SQL = `
       upstream_key        JSONB,
       is_derived          BOOLEAN NOT NULL DEFAULT FALSE,
       derivation_lineage  JSONB,
-      created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      storage_kind        TEXT NOT NULL DEFAULT 'observation',
+      entity_kind         TEXT,
+      created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT series_metadata_storage_kind_check
+        CHECK (storage_kind IN ('observation', 'entity', 'entity+observation')),
+      CONSTRAINT series_metadata_entity_kind_required
+        CHECK (storage_kind = 'observation' OR entity_kind IS NOT NULL)
     );
     -- is_derived + derivation_lineage are the typed signal the composer
     -- uses to credit proxy series differently from direct-fetch series.
     -- derivation_lineage shape (when is_derived=TRUE):
-    --   { "kind": "proxy" | "rollup" | "join",
+    --   { "v": 1,
+    --     "kind": "proxy" | "rollup" | "join",
     --     "upstream": [{ "table": "...", "filter": {...} }, ...] }
-    -- Backwards-compat for rows that predate the column: the default
-    -- FALSE keeps non-derived series unaffected.
+    -- The "v" field is a schema version so future shape changes can be
+    -- migrated without ambiguity.
+    --
+    -- storage_kind drives the composer's dispatch:
+    --   'observation'         → query substrate.observations (geo-keyed time-series)
+    --   'entity'              → query substrate.entities (presence dimension)
+    --   'entity+observation'  → both (e.g. parcels: per-entity values over time)
+    -- entity_kind is the substrate.entities.kind value the series refers to
+    -- (NULL for storage_kind='observation'; CHECK enforces this).
     CREATE INDEX IF NOT EXISTS idx_substrate_series_upstream_key
       ON substrate.series_metadata USING GIN (upstream_key);
     CREATE INDEX IF NOT EXISTS idx_substrate_series_tags
@@ -704,24 +718,41 @@ const MIGRATION_SQL = `
       ON substrate.series_metadata(domain);
     CREATE INDEX IF NOT EXISTS idx_substrate_series_is_derived
       ON substrate.series_metadata(is_derived) WHERE is_derived = TRUE;
+    CREATE INDEX IF NOT EXISTS idx_substrate_series_storage_kind
+      ON substrate.series_metadata(storage_kind);
     -- Idempotent ALTER for any deploy where the table already exists
     -- without the new columns (covers a future where this DDL is
     -- relocated from boot-block to a versioned migration).
     ALTER TABLE substrate.series_metadata
       ADD COLUMN IF NOT EXISTS is_derived BOOLEAN NOT NULL DEFAULT FALSE,
-      ADD COLUMN IF NOT EXISTS derivation_lineage JSONB;
+      ADD COLUMN IF NOT EXISTS derivation_lineage JSONB,
+      ADD COLUMN IF NOT EXISTS storage_kind TEXT NOT NULL DEFAULT 'observation',
+      ADD COLUMN IF NOT EXISTS entity_kind TEXT;
 
     -- Slow-changing dimension: entities are "things that live at a geo"
     -- (businesses, parcels, projects, wells). Distinct from geo_dimension,
-    -- which is administrative geography. first_seen / last_seen capture
-    -- presence over time without writing N obs/day into the fact table.
+    -- which is administrative geography.
     --
-    -- Diff queries:
-    --   new openings:   WHERE first_seen = CURRENT_DATE AND kind = 'business'
-    --   recent closures: WHERE last_seen < CURRENT_DATE - INTERVAL '1 day'
-    --                      AND last_seen >= CURRENT_DATE - INTERVAL '7 days'
-    -- Historical presence:
-    --   "was X open on D?"  WHERE first_seen <= D AND last_seen >= D
+    -- first_seen: the run-day this slug was first inserted (immutable
+    -- after INSERT).
+    -- last_seen: the run-day this slug was most recently observed in an
+    -- upstream snapshot (overwritten on each refresh).
+    --
+    -- These two columns answer freshness questions about the LATEST run
+    -- and the original-discovery date — they do NOT preserve a closed
+    -- interval of historical presence. Specifically:
+    --
+    --   Supported queries:
+    --     new openings  → WHERE first_seen = CURRENT_DATE AND kind = 'business'
+    --     stale/closed  → WHERE last_seen < CURRENT_DATE - INTERVAL '1 day'
+    --     longevity     → CURRENT_DATE - first_seen (entity's age in days)
+    --
+    --   NOT supported by these columns alone:
+    --     "was X open on 2024-06-15?" — last_seen is overwritten on every
+    --     run, so for any active entity it equals the latest run-day.
+    --     To answer historical-presence queries, pair this with the
+    --     entity-presence count series in substrate.observations (one
+    --     row per geo + kind + period) or a separate presence-log table.
     CREATE TABLE IF NOT EXISTS substrate.entities (
       id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       slug          TEXT NOT NULL UNIQUE,
@@ -753,6 +784,14 @@ const MIGRATION_SQL = `
     -- UNIQUE uses NULLS NOT DISTINCT (PG 15+) so two NULL entity_ids
     -- for the same (series, period, geo) are treated as a collision
     -- rather than two distinct rows.
+    --
+    -- Bulk-insert caveat: a single INSERT with multiple rows that share
+    -- (series_id, period, geo_id, NULL) errors out with PG 21000
+    -- ("ON CONFLICT DO UPDATE command cannot affect row a second time")
+    -- because NULLS NOT DISTINCT collapses them into one conflict target.
+    -- Verified against prod 2026-06-01. Bulk loaders should either supply
+    -- a non-NULL entity_id per row, dedupe before INSERT, or use per-row
+    -- INSERTs for the NULL-entity case.
     CREATE TABLE IF NOT EXISTS substrate.observations (
       series_id     UUID NOT NULL REFERENCES substrate.series_metadata(id),
       period        DATE NOT NULL,
@@ -838,6 +877,15 @@ const MIGRATION_SQL = `
     -- caller cleanly with a warning. Callers handle the FALSE return by
     -- logging and continuing — the matview will be refreshed by whoever
     -- holds the lock.
+    --
+    -- Why session-scoped (pg_advisory_lock) and not transaction-scoped
+    -- (pg_advisory_xact_lock): REFRESH MATERIALIZED VIEW CONCURRENTLY
+    -- cannot run inside a transaction block, so a transaction-scoped
+    -- lock would have nothing to bind to. Session-scoped is correct here.
+    -- On client disconnect / connection drop PG releases all session
+    -- locks automatically — no leak path. Both EXCEPTION-handled SQL
+    -- errors and the happy path explicitly unlock; only a backend SIGKILL
+    -- skips the unlock, and PG cleans up on disconnect in that case too.
     CREATE OR REPLACE FUNCTION substrate.refresh_latest_observations()
     RETURNS BOOLEAN LANGUAGE plpgsql AS $refresh$
     DECLARE
@@ -858,6 +906,20 @@ const MIGRATION_SQL = `
         RAISE;
       END;
     END $refresh$;
+
+    -- Forward-compat note for Phase 2 (corpus.narrative_fragments):
+    --
+    --   When the corpus schema lands, narrative_fragments needs an
+    --   entity_kind TEXT column (nullable) so corpus authors can mark
+    --   fragments that describe entity-presence rather than numeric
+    --   observations. Without it, fragments authored for an entity-only
+    --   series (e.g. Stony Plain businesses) will pass through the
+    --   composer's data_threshold check against an empty value column
+    --   and silently fail to fire. Add the column at fragment-table
+    --   creation time, while the table is still empty — zero migration
+    --   cost. The composer reads (series.storage_kind, fragment.entity_kind)
+    --   to dispatch its threshold evaluation against either
+    --   latest_observations.value or count(*) FROM entities.
 
     -- Major projects, versioned. Each stage change retires the prior row
     -- (is_current=FALSE, keeps last-seen snapshot_date) and inserts a new
