@@ -11,7 +11,9 @@
  * Source: services.arcgis.com/ScgF04sks0ZKbWe3 — Stony Plain's hosted
  * ArcGIS Online org. The dataset is a directory snapshot, not a licence
  * log: there are no issue or expiry fields, so we treat presence-on-the-day
- * as the observation (value=NULL, raw_value=NAME, qualifier=CATEGORY).
+ * as the observation (value=1.0 = present, raw_value=NAME, qualifier=CATEGORY).
+ * Using 1.0 (not NULL) lets the latest_observations matview return a usable
+ * scalar and lets `WHERE value IS NOT NULL` filters keep these rows.
  *
  * Slug for each business: `stony-plain-biz-${FID}`. FID is ArcGIS's stable
  * dataset-internal ID. If the Town ever republishes from scratch and FIDs
@@ -52,6 +54,35 @@ interface ArcgisQueryResponse {
   exceededTransferLimit?: boolean;
 }
 
+// Exponential backoff + retry against transient 5xx. ArcGIS in particular
+// throws intermittent 502/503; a single failure shouldn't abort the snapshot.
+async function fetchWithRetry(url: string, attempts = 3, baseMs = 1000): Promise<Response> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "tamrack-stony-plain-businesses" },
+      });
+      if (res.ok) return res;
+      if (res.status >= 500 || res.status === 429) {
+        lastErr = new Error(`HTTP ${res.status}`);
+        const wait = baseMs * 2 ** (attempt - 1);
+        console.warn(`[retry] ${res.status} on attempt ${attempt}/${attempts}; sleeping ${wait}ms`);
+        await new Promise((r) => setTimeout(r, wait));
+        continue;
+      }
+      throw new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      lastErr = err;
+      if (attempt === attempts) break;
+      const wait = baseMs * 2 ** (attempt - 1);
+      console.warn(`[retry] ${(err as Error).message} on attempt ${attempt}/${attempts}; sleeping ${wait}ms`);
+      await new Promise((r) => setTimeout(r, wait));
+    }
+  }
+  throw lastErr ?? new Error("fetchWithRetry exhausted attempts");
+}
+
 async function fetchAllFeatures(): Promise<ArcgisFeature[]> {
   const all: ArcgisFeature[] = [];
   const pageSize = 2000;
@@ -61,10 +92,7 @@ async function fetchAllFeatures(): Promise<ArcgisFeature[]> {
   // ~425 row dataset.
   while (offset < 50_000) {
     const url = `${QUERY_URL}&resultOffset=${offset}&resultRecordCount=${pageSize}`;
-    const res = await fetch(url, {
-      headers: { "User-Agent": "tamrack-stony-plain-businesses" },
-    });
-    if (!res.ok) throw new Error(`ArcGIS query ${res.status} at offset=${offset}`);
+    const res = await fetchWithRetry(url);
     const body = (await res.json()) as ArcgisQueryResponse;
     if (!Array.isArray(body.features)) {
       throw new Error(`ArcGIS query returned no features array at offset=${offset}`);
@@ -137,7 +165,7 @@ async function main() {
        VALUES
          ($1, 'business_directory', 'Stony Plain active businesses (directory snapshot)',
           $2, NULL, 'presence', 'daily', $3,
-          'One observation per business per run-day. value=NULL, raw_value=NAME, qualifier=CATEGORY.',
+          'One observation per business per run-day. value=1.0 (present), raw_value=NAME, qualifier=CATEGORY.',
           ARRAY['tri-region','business-directory','direct-fetch']::text[], $4::jsonb)
        ON CONFLICT (slug) DO UPDATE SET
          name = EXCLUDED.name,
@@ -199,8 +227,9 @@ async function main() {
       const r = await client.query(
         `INSERT INTO substrate.observations
            (series_id, period, geo_id, value, raw_value, qualifier, collected_at)
-         VALUES ($1, CURRENT_DATE, $2, NULL, $3, $4, NOW())
+         VALUES ($1, CURRENT_DATE, $2, 1.0, $3, $4, NOW())
          ON CONFLICT (series_id, period, geo_id) DO UPDATE SET
+           value = EXCLUDED.value,
            raw_value = EXCLUDED.raw_value,
            qualifier = EXCLUDED.qualifier,
            collected_at = EXCLUDED.collected_at`,
