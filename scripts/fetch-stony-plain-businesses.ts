@@ -3,25 +3,27 @@
  * Stony Plain business directory snapshot (Phase 0 §0.1).
  *
  * Fetches the Town of Stony Plain ArcGIS Online layer `ToSP_Businesses`
- * (~425 active businesses) and writes one observation per business per
- * run-day into substrate.observations. Each business is materialized as
- * a geo_dimension row (geo_type='business') so day-over-day diffs reveal
- * openings and closures.
+ * (~425 active businesses) and upserts each as a row in substrate.entities
+ * (kind='business'). The business directory is a slow-changing dimension,
+ * not a time-series fact, so it lives in entities rather than observations:
+ *
+ *   * `first_seen` / `last_seen` capture presence over time without
+ *     writing 425 obs/day into the fact table (~155K rows/year saved).
+ *   * Diff queries become simple WHERE clauses:
+ *       new openings:    first_seen = CURRENT_DATE
+ *       recent closures: last_seen < CURRENT_DATE - INTERVAL '1 day'
  *
  * Source: services.arcgis.com/ScgF04sks0ZKbWe3 — Stony Plain's hosted
- * ArcGIS Online org. The dataset is a directory snapshot, not a licence
- * log: there are no issue or expiry fields, so we treat presence-on-the-day
- * as the observation (value=1.0 = present, raw_value=NAME, qualifier=CATEGORY).
- * Using 1.0 (not NULL) lets the latest_observations matview return a usable
- * scalar and lets `WHERE value IS NOT NULL` filters keep these rows.
+ * ArcGIS Online org. The dataset has no issue/expiry fields, just NAME,
+ * CATEGORY, Linc, Roll, and point geometry. Captured as entity attrs.
  *
- * Slug for each business: `stony-plain-biz-${FID}`. FID is ArcGIS's stable
- * dataset-internal ID. If the Town ever republishes from scratch and FIDs
- * regenerate we'll get a one-time apparent churn — flag at that point and
- * switch to a composite (Linc, Roll) key.
+ * Slug per business: `stony-plain-biz-${FID}`. FID is ArcGIS's stable
+ * dataset-internal ID. A republish-from-scratch would regenerate FIDs and
+ * produce one-time apparent churn (all old entities go stale, all new ones
+ * appear); swap to a composite (Linc, Roll) key at that point.
  *
- * Idempotent: re-running the same day upserts onto (series_id, period, geo_id).
- * Writes one snapshot_log row per run.
+ * Idempotent: re-running the same day refreshes last_seen on all 425
+ * entities without affecting first_seen. Includes --dry-run.
  *
  * Usage:
  *   DATABASE_URL=... npx tsx scripts/fetch-stony-plain-businesses.ts
@@ -31,7 +33,7 @@ import { getDb } from "../src/lib/db";
 
 const SOURCE_NAME = "Stony Plain ArcGIS Online";
 const SOURCE_BASE = "https://services.arcgis.com/ScgF04sks0ZKbWe3";
-const SERIES_SLUG = "stony-plain-businesses";
+const ENTITY_KIND = "business";
 const STONY_PLAIN_SLUG = "stony-plain";
 
 const QUERY_URL =
@@ -54,8 +56,7 @@ interface ArcgisQueryResponse {
   exceededTransferLimit?: boolean;
 }
 
-// Exponential backoff + retry against transient 5xx. ArcGIS in particular
-// throws intermittent 502/503; a single failure shouldn't abort the snapshot.
+// Exponential backoff against transient 5xx and 429.
 async function fetchWithRetry(url: string, attempts = 3, baseMs = 1000): Promise<Response> {
   let lastErr: unknown;
   for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -87,9 +88,6 @@ async function fetchAllFeatures(): Promise<ArcgisFeature[]> {
   const all: ArcgisFeature[] = [];
   const pageSize = 2000;
   let offset = 0;
-  // Hard cap protects against an infinite loop if the server keeps returning
-  // exceededTransferLimit=true without advancing. 50K is well past the real
-  // ~425 row dataset.
   while (offset < 50_000) {
     const url = `${QUERY_URL}&resultOffset=${offset}&resultRecordCount=${pageSize}`;
     const res = await fetchWithRetry(url);
@@ -115,16 +113,12 @@ async function main() {
   const features = await fetchAllFeatures();
   console.log(`[fetch] ${features.length} features`);
 
-  // Drop rows without a NAME — those are useless for a directory snapshot
-  // and the geo_dimension slug needs FID anyway.
   const valid = features.filter((f) => f.attributes && typeof f.attributes.FID === "number");
   console.log(`[fetch] ${valid.length} features with valid FID`);
 
   if (dryRun) {
     console.log("[dry-run] sample feature:", JSON.stringify(valid[0], null, 2));
-    console.log(
-      `[dry-run] would upsert: 1 source, 1 series_metadata, ${valid.length} geo_dimension rows, ${valid.length} observations`
-    );
+    console.log(`[dry-run] would upsert: 1 source, ${valid.length} entities (kind='${ENTITY_KIND}')`);
     return;
   }
 
@@ -133,7 +127,6 @@ async function main() {
   try {
     await client.query("BEGIN");
 
-    // 1. Look up Stony Plain's geo_dimension id so series_metadata.geo_id is set.
     const parent = await client.query(
       `SELECT id FROM substrate.geo_dimension WHERE slug = $1`,
       [STONY_PLAIN_SLUG]
@@ -145,7 +138,6 @@ async function main() {
     }
     const stonyId: string = parent.rows[0].id;
 
-    // 2. Upsert source row.
     const src = await client.query(
       `INSERT INTO substrate.sources (name, base_url, auth_type)
        VALUES ($1, $2, 'public')
@@ -155,106 +147,59 @@ async function main() {
     );
     const sourceId: string = src.rows[0].id;
 
-    // 3. Upsert series_metadata. The upstream_key is a stable provenance
-    //    pointer to the underlying ArcGIS query; downstream consumers can
-    //    re-issue or compare against newer queries via this descriptor.
-    const ser = await client.query(
-      `INSERT INTO substrate.series_metadata
-         (slug, domain, name, source_id, unit, unit_type, cadence, geo_id,
-          description, tags, upstream_key)
-       VALUES
-         ($1, 'business_directory', 'Stony Plain active businesses (directory snapshot)',
-          $2, NULL, 'presence', 'daily', $3,
-          'One observation per business per run-day. value=1.0 (present), raw_value=NAME, qualifier=CATEGORY.',
-          ARRAY['tri-region','business-directory','direct-fetch']::text[], $4::jsonb)
-       ON CONFLICT (slug) DO UPDATE SET
-         name = EXCLUDED.name,
-         source_id = EXCLUDED.source_id,
-         description = EXCLUDED.description,
-         tags = EXCLUDED.tags,
-         upstream_key = EXCLUDED.upstream_key
-       RETURNING id`,
-      [
-        SERIES_SLUG,
-        sourceId,
-        stonyId,
-        JSON.stringify({ kind: "arcgis", url: QUERY_URL }),
-      ]
-    );
-    const seriesId: string = ser.rows[0].id;
-
-    // 4. Upsert one geo_dimension row per business. Centroid comes from the
-    //    feature geometry (lon/lat in spatialReference 4269 = NAD83 ≈ WGS84
-    //    for display purposes — sub-metre offset, negligible at our zoom).
-    let geoUpserts = 0;
+    // Upsert one entity row per business. ON CONFLICT (slug) DO UPDATE
+    // refreshes last_seen + mutable attrs but leaves first_seen at the
+    // initial-discovery date. A subsequent run that misses a business
+    // (the directory removed it) leaves that entity's last_seen at its
+    // prior value — that's how we detect closures.
+    let entityUpserts = 0;
     for (const f of valid) {
       const slug = `stony-plain-biz-${f.attributes.FID}`;
       const name = (f.attributes.NAME ?? "(unnamed)").trim() || "(unnamed)";
       const lon = roundCoord(f.geometry?.x ?? null);
       const lat = roundCoord(f.geometry?.y ?? null);
+      const attrs = {
+        FID: f.attributes.FID,
+        NAME: f.attributes.NAME,
+        CATEGORY: f.attributes.CATEGORY,
+        Linc: f.attributes.Linc,
+        Roll: f.attributes.Roll,
+      };
       const r = await client.query(
-        `INSERT INTO substrate.geo_dimension
-           (slug, name, geo_type, csduid, parent_id, centroid_lat, centroid_lon)
-         VALUES ($1, $2, 'business', NULL, $3, $4, $5)
+        `INSERT INTO substrate.entities
+           (slug, kind, name, geo_id, attrs, centroid_lat, centroid_lon, source_id, first_seen, last_seen)
+         VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, CURRENT_DATE, CURRENT_DATE)
          ON CONFLICT (slug) DO UPDATE SET
            name = EXCLUDED.name,
-           parent_id = EXCLUDED.parent_id,
+           geo_id = EXCLUDED.geo_id,
+           attrs = EXCLUDED.attrs,
            centroid_lat = EXCLUDED.centroid_lat,
-           centroid_lon = EXCLUDED.centroid_lon`,
-        [slug, name, stonyId, lat, lon]
+           centroid_lon = EXCLUDED.centroid_lon,
+           source_id = EXCLUDED.source_id,
+           last_seen = CURRENT_DATE`,
+        [slug, ENTITY_KIND, name, stonyId, JSON.stringify(attrs), lat, lon, sourceId]
       );
-      geoUpserts += r.rowCount ?? 0;
+      entityUpserts += r.rowCount ?? 0;
     }
 
-    // 5. Resolve the geo_ids we just upserted in one round-trip.
-    const slugs = valid.map((f) => `stony-plain-biz-${f.attributes.FID}`);
-    const geoLookup = await client.query(
-      `SELECT slug, id FROM substrate.geo_dimension WHERE slug = ANY($1::text[])`,
-      [slugs]
-    );
-    const geoIdBySlug = new Map<string, string>(
-      geoLookup.rows.map((r: { slug: string; id: string }) => [r.slug, r.id])
+    // Sanity report: how many businesses haven't been seen today (potential closures).
+    const staleCount = await client.query(
+      `SELECT count(*)::int AS n
+         FROM substrate.entities
+         WHERE kind = $1 AND geo_id = $2 AND last_seen < CURRENT_DATE`,
+      [ENTITY_KIND, stonyId]
     );
 
-    // 6. Write observations: one row per business for today's period.
-    let obsInserted = 0;
-    for (const f of valid) {
-      const slug = `stony-plain-biz-${f.attributes.FID}`;
-      const geoId = geoIdBySlug.get(slug);
-      if (!geoId) continue; // shouldn't happen — we just inserted it
-      const category = f.attributes.CATEGORY ?? null;
-      const name = (f.attributes.NAME ?? "(unnamed)").trim() || "(unnamed)";
-      const r = await client.query(
-        `INSERT INTO substrate.observations
-           (series_id, period, geo_id, value, raw_value, qualifier, collected_at)
-         VALUES ($1, CURRENT_DATE, $2, 1.0, $3, $4, NOW())
-         ON CONFLICT (series_id, period, geo_id) DO UPDATE SET
-           value = EXCLUDED.value,
-           raw_value = EXCLUDED.raw_value,
-           qualifier = EXCLUDED.qualifier,
-           collected_at = EXCLUDED.collected_at`,
-        [seriesId, geoId, name, category]
-      );
-      obsInserted += r.rowCount ?? 0;
-    }
-
-    // 7. snapshot_log row + matview refresh.
     await client.query(
       `INSERT INTO snapshot_log (taken_at, source, records_inserted, status, error)
        VALUES (NOW(), $1, $2, 'ok', NULL)`,
-      [`substrate.observations.${SERIES_SLUG}`, obsInserted]
+      [`substrate.entities.${ENTITY_KIND}.stony-plain`, entityUpserts]
     );
 
     await client.query("COMMIT");
-    console.log(`[upsert] geo_dimension: ${geoUpserts} rows touched`);
-    console.log(`[upsert] observations: ${obsInserted} rows touched`);
-
-    // Refresh the latest-value scorecard. CONCURRENTLY is safe because PR #23
-    // seeded the matview non-concurrently during boot DDL.
-    await pool.query(`REFRESH MATERIALIZED VIEW CONCURRENTLY substrate.latest_observations`);
-    console.log(`[refresh] substrate.latest_observations refreshed concurrently`);
-
-    console.log("[done] snapshot committed");
+    console.log(`[upsert] entities: ${entityUpserts} rows touched (today's directory)`);
+    console.log(`[diff]   stale (last_seen < today): ${staleCount.rows[0].n}`);
+    console.log("[done]   snapshot committed");
   } catch (err) {
     await client.query("ROLLBACK");
     throw err;
