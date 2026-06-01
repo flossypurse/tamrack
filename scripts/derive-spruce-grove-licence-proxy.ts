@@ -149,8 +149,10 @@ async function main() {
     // Granularity-collision guard: warn if two distinct upstream period strings
     // map to the same observation DATE (e.g. "2024" and "2024-Q1" both →
     // 2024-01-01). The DB UNIQUE on (series_id, period, geo_id) would silently
-    // pick one — surfacing the collision lets the operator decide whether to
-    // split into multiple series.
+    // pick one — surfacing the collision aborts the run rather than silently
+    // letting last-write-wins corrupt the time-series. Operators must then
+    // either split the series by granularity OR pre-filter the source to one
+    // granularity before re-running.
     const periodToOriginals = new Map<string, Set<string>>();
     for (const r of incorp.rows) {
       const mapped = periodToDate(r.period);
@@ -162,18 +164,20 @@ async function main() {
       }
       set.add(r.period);
     }
-    let collisionCount = 0;
+    const collisions: Array<{ date: string; originals: string[] }> = [];
     for (const [date, originals] of periodToOriginals) {
       if (originals.size > 1) {
-        collisionCount++;
-        console.warn(
-          `[guard] period collision: incorporations source rows ${[...originals].map((o) => `"${o}"`).join(", ")} all map to ${date} — only the last-written value will survive the upsert`
-        );
+        collisions.push({ date, originals: [...originals] });
       }
     }
-    if (collisionCount > 0) {
-      console.warn(
-        `[guard] ${collisionCount} colliding observation DATEs — consider splitting the series by granularity (annual / quarterly / monthly)`
+    if (collisions.length > 0) {
+      for (const c of collisions) {
+        console.error(
+          `[guard] period collision: incorporations source rows ${c.originals.map((o) => `"${o}"`).join(", ")} all map to ${c.date}`
+        );
+      }
+      throw new Error(
+        `${collisions.length} period collision(s) detected in incorporations source data. Split the series by granularity (annual / quarterly / monthly) or pre-filter the source before re-running. See [guard] log lines above for details.`
       );
     }
 
@@ -221,6 +225,7 @@ async function main() {
         spruceId,
         JSON.stringify({ kind: "derived", upstream_table: "municipality_permits", municipality: SPRUCE_GROVE_MUNICIPALITY }),
         JSON.stringify({
+          v: 1,
           kind: "rollup",
           upstream: [{ table: "municipality_permits", filter: { municipality: SPRUCE_GROVE_MUNICIPALITY }, aggregate: "SUM(count) per snapshot_date" }],
         }),
@@ -253,6 +258,7 @@ async function main() {
         spruceId,
         JSON.stringify({ kind: "derived", upstream_table: "regional_indicators", csduid: spruceCsduid, indicator: "Incorporations" }),
         JSON.stringify({
+          v: 1,
           kind: "proxy",
           upstream: [{ table: "regional_indicators", filter: { csduid: spruceCsduid, indicator: "Incorporations" } }],
         }),
