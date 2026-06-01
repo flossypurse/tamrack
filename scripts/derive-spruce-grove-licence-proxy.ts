@@ -199,25 +199,31 @@ async function main() {
     const permitsSer = await client.query(
       `INSERT INTO substrate.series_metadata
          (slug, domain, name, source_id, unit, unit_type, cadence, geo_id,
-          description, tags, upstream_key)
+          description, tags, upstream_key, is_derived, derivation_lineage)
        VALUES
          ($1, 'business_licence_proxy', 'Spruce Grove dev-permit count (licence proxy)',
           $2, 'permits', 'count', 'daily', $3,
           'PROXY: derived from municipality_permits aggregated to total count per snapshot_date for Spruce Grove. Forward-leaning proxy for licence flow — commercial dev permits typically precede licences by 3-6 months.',
           ARRAY['tri-region','licence-proxy','spruce-grove','derived']::text[],
-          $4::jsonb)
+          $4::jsonb, TRUE, $5::jsonb)
        ON CONFLICT (slug) DO UPDATE SET
          name = EXCLUDED.name,
          source_id = EXCLUDED.source_id,
          description = EXCLUDED.description,
          tags = EXCLUDED.tags,
-         upstream_key = EXCLUDED.upstream_key
+         upstream_key = EXCLUDED.upstream_key,
+         is_derived = EXCLUDED.is_derived,
+         derivation_lineage = EXCLUDED.derivation_lineage
        RETURNING id`,
       [
         PERMITS_SERIES_SLUG,
         sourceId,
         spruceId,
         JSON.stringify({ kind: "derived", upstream_table: "municipality_permits", municipality: SPRUCE_GROVE_MUNICIPALITY }),
+        JSON.stringify({
+          kind: "rollup",
+          upstream: [{ table: "municipality_permits", filter: { municipality: SPRUCE_GROVE_MUNICIPALITY }, aggregate: "SUM(count) per snapshot_date" }],
+        }),
       ]
     );
     const permitsSeriesId: string = permitsSer.rows[0].id;
@@ -225,25 +231,31 @@ async function main() {
     const incorpSer = await client.query(
       `INSERT INTO substrate.series_metadata
          (slug, domain, name, source_id, unit, unit_type, cadence, geo_id,
-          description, tags, upstream_key)
+          description, tags, upstream_key, is_derived, derivation_lineage)
        VALUES
          ($1, 'business_licence_proxy', 'Spruce Grove incorporations (licence proxy)',
           $2, 'incorporations', 'count', 'period', $3,
           'PROXY: regional_indicators.Incorporations for Spruce Grove CSDUID. Concurrent proxy — new corporations typically file a licence within the same period.',
           ARRAY['tri-region','licence-proxy','spruce-grove','derived']::text[],
-          $4::jsonb)
+          $4::jsonb, TRUE, $5::jsonb)
        ON CONFLICT (slug) DO UPDATE SET
          name = EXCLUDED.name,
          source_id = EXCLUDED.source_id,
          description = EXCLUDED.description,
          tags = EXCLUDED.tags,
-         upstream_key = EXCLUDED.upstream_key
+         upstream_key = EXCLUDED.upstream_key,
+         is_derived = EXCLUDED.is_derived,
+         derivation_lineage = EXCLUDED.derivation_lineage
        RETURNING id`,
       [
         INCORP_SERIES_SLUG,
         sourceId,
         spruceId,
         JSON.stringify({ kind: "derived", upstream_table: "regional_indicators", csduid: spruceCsduid, indicator: "Incorporations" }),
+        JSON.stringify({
+          kind: "proxy",
+          upstream: [{ table: "regional_indicators", filter: { csduid: spruceCsduid, indicator: "Incorporations" } }],
+        }),
       ]
     );
     const incorpSeriesId: string = incorpSer.rows[0].id;
@@ -255,9 +267,9 @@ async function main() {
       if (!Number.isFinite(value)) continue;
       const result = await client.query(
         `INSERT INTO substrate.observations
-           (series_id, period, geo_id, value, raw_value, qualifier, collected_at)
-         VALUES ($1, $2::date, $3, $4, NULL, NULL, NOW())
-         ON CONFLICT (series_id, period, geo_id) DO UPDATE SET
+           (series_id, period, geo_id, entity_id, value, raw_value, qualifier, collected_at)
+         VALUES ($1, $2::date, $3, NULL, $4, NULL, NULL, NOW())
+         ON CONFLICT (series_id, period, geo_id, entity_id) DO UPDATE SET
            value = EXCLUDED.value, collected_at = EXCLUDED.collected_at`,
         [permitsSeriesId, r.snapshot_date, spruceId, value]
       );
@@ -277,9 +289,9 @@ async function main() {
       if (!Number.isFinite(value)) continue;
       const result = await client.query(
         `INSERT INTO substrate.observations
-           (series_id, period, geo_id, value, raw_value, qualifier, collected_at)
-         VALUES ($1, $2::date, $3, $4, $5, NULL, NOW())
-         ON CONFLICT (series_id, period, geo_id) DO UPDATE SET
+           (series_id, period, geo_id, entity_id, value, raw_value, qualifier, collected_at)
+         VALUES ($1, $2::date, $3, NULL, $4, $5, NULL, NOW())
+         ON CONFLICT (series_id, period, geo_id, entity_id) DO UPDATE SET
            value = EXCLUDED.value, raw_value = EXCLUDED.raw_value, collected_at = EXCLUDED.collected_at`,
         [incorpSeriesId, periodDate, spruceId, value, r.period]
       );
@@ -304,8 +316,11 @@ async function main() {
     console.log(`[upsert] dev-permits observations: ${permitsObs}`);
     console.log(`[upsert] incorporations observations: ${incorpObs}`);
 
-    await pool.query(`REFRESH MATERIALIZED VIEW CONCURRENTLY substrate.latest_observations`);
-    console.log(`[refresh] substrate.latest_observations refreshed concurrently`);
+    const refreshResult = await pool.query<{ refresh_latest_observations: boolean }>(
+      `SELECT substrate.refresh_latest_observations()`
+    );
+    const refreshed = refreshResult.rows[0]?.refresh_latest_observations;
+    console.log(`[refresh] substrate.latest_observations: ${refreshed ? "refreshed" : "skipped (advisory lock held by another caller)"}`);
 
     console.log("[done] proxy derivation committed");
   } catch (err) {
