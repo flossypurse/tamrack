@@ -33,6 +33,12 @@
  * Usage:
  *   DATABASE_URL=... npx tsx scripts/derive-spruce-grove-licence-proxy.ts
  *   DATABASE_URL=... npx tsx scripts/derive-spruce-grove-licence-proxy.ts --dry-run
+ *   DATABASE_URL=... npx tsx scripts/derive-spruce-grove-licence-proxy.ts --since=2024-01-01
+ *
+ * --since caps the upstream lookup window — without it the script re-derives
+ * every historical observation on each run. Default is unbounded (full
+ * history) for backfill; in scheduled production use the cron should pass
+ * --since=<yesterday> so frozen history isn't re-written daily.
  */
 import { getDb } from "../src/lib/db";
 
@@ -76,8 +82,20 @@ function periodToDate(period: string): string | null {
   return null;
 }
 
+function parseSince(): string | null {
+  const arg = process.argv.find((a) => a.startsWith("--since="));
+  if (!arg) return null;
+  const v = arg.split("=")[1];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    throw new Error(`--since must be YYYY-MM-DD, got ${v}`);
+  }
+  return v;
+}
+
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
+  const since = parseSince();
+  if (since) console.log(`[opts] --since=${since} (upstream rows older than this are skipped)`);
   const pool = await getDb();
   const client = await pool.connect();
   try {
@@ -100,25 +118,64 @@ async function main() {
     console.log(`[lookup] spruce-grove geo_id=${spruceId} csduid=${spruceCsduid}`);
 
     // --- Permits proxy: aggregate municipality_permits → one row per snapshot_date ---
+    // snapshot_date is stored as TEXT; `>= $2` works as a string compare since
+    // the YYYY-MM-DD format sorts lexicographically.
     const permits = await client.query<PermitRow>(
       `SELECT snapshot_date, SUM(count)::text AS total_count
          FROM municipality_permits
          WHERE municipality = $1
+           AND ($2::text IS NULL OR snapshot_date >= $2)
          GROUP BY snapshot_date
          ORDER BY snapshot_date`,
-      [SPRUCE_GROVE_MUNICIPALITY]
+      [SPRUCE_GROVE_MUNICIPALITY, since]
     );
     console.log(`[derive] dev-permits proxy: ${permits.rowCount} distinct snapshot_dates`);
 
     // --- Incorporations proxy: regional_indicators filtered to Spruce csduid ---
+    // `period` here is the free-form TEXT we'll later parse via periodToDate;
+    // string >= compare is safe for the period formats we accept (year, quarter,
+    // month, day all sort sensibly within their own formats — mixed-format
+    // ordering is fine since we only need to drop ANCIENT rows).
     const incorp = await client.query<IncorpRow>(
       `SELECT period, value::text AS value
          FROM regional_indicators
          WHERE csduid = $1 AND indicator = 'Incorporations'
+           AND ($2::text IS NULL OR period >= $2)
          ORDER BY period`,
-      [spruceCsduid]
+      [spruceCsduid, since ? since.slice(0, 4) : null]
     );
     console.log(`[derive] incorporations proxy: ${incorp.rowCount} distinct periods`);
+
+    // Granularity-collision guard: warn if two distinct upstream period strings
+    // map to the same observation DATE (e.g. "2024" and "2024-Q1" both →
+    // 2024-01-01). The DB UNIQUE on (series_id, period, geo_id) would silently
+    // pick one — surfacing the collision lets the operator decide whether to
+    // split into multiple series.
+    const periodToOriginals = new Map<string, Set<string>>();
+    for (const r of incorp.rows) {
+      const mapped = periodToDate(r.period);
+      if (!mapped) continue;
+      let set = periodToOriginals.get(mapped);
+      if (!set) {
+        set = new Set();
+        periodToOriginals.set(mapped, set);
+      }
+      set.add(r.period);
+    }
+    let collisionCount = 0;
+    for (const [date, originals] of periodToOriginals) {
+      if (originals.size > 1) {
+        collisionCount++;
+        console.warn(
+          `[guard] period collision: incorporations source rows ${[...originals].map((o) => `"${o}"`).join(", ")} all map to ${date} — only the last-written value will survive the upsert`
+        );
+      }
+    }
+    if (collisionCount > 0) {
+      console.warn(
+        `[guard] ${collisionCount} colliding observation DATEs — consider splitting the series by granularity (annual / quarterly / monthly)`
+      );
+    }
 
     if (dryRun) {
       console.log("[dry-run] sample permits row:", permits.rows[0] ?? "(none)");
