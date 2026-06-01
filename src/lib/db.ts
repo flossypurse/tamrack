@@ -616,6 +616,36 @@ const MIGRATION_SQL = `
     -- ============================================================
     -- substrate schema — unified data layer scaffolding
     -- ============================================================
+    --
+    -- Three orthogonal axes:
+    --
+    --   geo_dimension  — political / administrative geography:
+    --                    province, municipality, neighbourhood. Rarely
+    --                    changes; finite cardinality (~1K rows).
+    --
+    --   entities       — slow-changing dimensions located within a geo:
+    --                    businesses, parcels, projects, wells, etc.
+    --                    Higher cardinality (~440K parcels alone).
+    --                    first_seen / last_seen track presence over time
+    --                    without forcing presence into observations.
+    --
+    --   observations   — time-series facts: a value at a (series, period,
+    --                    geo, [entity]) tuple. High-cardinality fact
+    --                    table; partitioned by period.
+    --
+    -- Slug-naming convention (all schemas):
+    --   geo:        ARD-derived (alberta, edmonton, edm-nbhd-2010)
+    --   entities:   <source-abbrev>-<kind>-<natural-key>
+    --                 (stony-plain-biz-<FID>, edm-parcel-<account_number>)
+    --   series:     <scope>-<metric>  OR
+    --               <geo>-<source>-<metric>  for derived/proxy series
+    --                 (edm-parcel-assessed-value,
+    --                  spruce-grove-licence-proxy-dev-permits)
+    --   sources:    human-readable name (UNIQUE on name)
+    --
+    -- The application role on Crunchy can't CREATE EXTENSION, so
+    -- anything that needs one (pgvector for corpus, pg_partman for
+    -- partman.run_maintenance()) is deferred to an admin-run migration.
     CREATE SCHEMA IF NOT EXISTS substrate;
 
     CREATE TABLE IF NOT EXISTS substrate.sources (
@@ -643,48 +673,103 @@ const MIGRATION_SQL = `
       ON substrate.geo_dimension(geo_type);
 
     CREATE TABLE IF NOT EXISTS substrate.series_metadata (
-      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      slug          TEXT NOT NULL UNIQUE,
-      domain        TEXT NOT NULL,
-      name          TEXT NOT NULL,
-      source_id     UUID REFERENCES substrate.sources(id),
-      unit          TEXT,
-      unit_type     TEXT,
-      cadence       TEXT,
-      geo_id        UUID REFERENCES substrate.geo_dimension(id),
-      description   TEXT,
-      tags          TEXT[],
-      upstream_key  JSONB,
-      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug                TEXT NOT NULL UNIQUE,
+      domain              TEXT NOT NULL,
+      name                TEXT NOT NULL,
+      source_id           UUID REFERENCES substrate.sources(id),
+      unit                TEXT,
+      unit_type           TEXT,
+      cadence             TEXT,
+      geo_id              UUID REFERENCES substrate.geo_dimension(id),
+      description         TEXT,
+      tags                TEXT[],
+      upstream_key        JSONB,
+      is_derived          BOOLEAN NOT NULL DEFAULT FALSE,
+      derivation_lineage  JSONB,
+      created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    -- is_derived + derivation_lineage are the typed signal the composer
+    -- uses to credit proxy series differently from direct-fetch series.
+    -- derivation_lineage shape (when is_derived=TRUE):
+    --   { "kind": "proxy" | "rollup" | "join",
+    --     "upstream": [{ "table": "...", "filter": {...} }, ...] }
+    -- Backwards-compat for rows that predate the column: the default
+    -- FALSE keeps non-derived series unaffected.
     CREATE INDEX IF NOT EXISTS idx_substrate_series_upstream_key
       ON substrate.series_metadata USING GIN (upstream_key);
     CREATE INDEX IF NOT EXISTS idx_substrate_series_tags
       ON substrate.series_metadata USING GIN (tags);
     CREATE INDEX IF NOT EXISTS idx_substrate_series_domain
       ON substrate.series_metadata(domain);
+    CREATE INDEX IF NOT EXISTS idx_substrate_series_is_derived
+      ON substrate.series_metadata(is_derived) WHERE is_derived = TRUE;
+    -- Idempotent ALTER for any deploy where the table already exists
+    -- without the new columns (covers a future where this DDL is
+    -- relocated from boot-block to a versioned migration).
+    ALTER TABLE substrate.series_metadata
+      ADD COLUMN IF NOT EXISTS is_derived BOOLEAN NOT NULL DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS derivation_lineage JSONB;
+
+    -- Slow-changing dimension: entities are "things that live at a geo"
+    -- (businesses, parcels, projects, wells). Distinct from geo_dimension,
+    -- which is administrative geography. first_seen / last_seen capture
+    -- presence over time without writing N obs/day into the fact table.
+    --
+    -- Diff queries:
+    --   new openings:   WHERE first_seen = CURRENT_DATE AND kind = 'business'
+    --   recent closures: WHERE last_seen < CURRENT_DATE - INTERVAL '1 day'
+    --                      AND last_seen >= CURRENT_DATE - INTERVAL '7 days'
+    -- Historical presence:
+    --   "was X open on D?"  WHERE first_seen <= D AND last_seen >= D
+    CREATE TABLE IF NOT EXISTS substrate.entities (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug          TEXT NOT NULL UNIQUE,
+      kind          TEXT NOT NULL,
+      name          TEXT,
+      geo_id        UUID REFERENCES substrate.geo_dimension(id),
+      attrs         JSONB NOT NULL DEFAULT '{}'::jsonb,
+      centroid_lat  NUMERIC(9, 6),
+      centroid_lon  NUMERIC(9, 6),
+      source_id     UUID REFERENCES substrate.sources(id),
+      first_seen    DATE NOT NULL DEFAULT CURRENT_DATE,
+      last_seen     DATE NOT NULL DEFAULT CURRENT_DATE,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_substrate_entities_kind
+      ON substrate.entities(kind);
+    CREATE INDEX IF NOT EXISTS idx_substrate_entities_geo
+      ON substrate.entities(geo_id);
+    CREATE INDEX IF NOT EXISTS idx_substrate_entities_last_seen
+      ON substrate.entities(last_seen);
+    CREATE INDEX IF NOT EXISTS idx_substrate_entities_attrs
+      ON substrate.entities USING GIN (attrs);
 
     -- Time-series fact table. Native PG range partitioning on period
-    -- (monthly children). pgvector and pg_partman are intentionally NOT
-    -- used here: observations carry no embeddings (those live on
-    -- corpus.narrative_fragments in Phase 2) and partition rollover is
-    -- cheap enough to drive from a monthly Resonate cron rather than
-    -- pg_cron + partman.run_maintenance(). The application role on
-    -- Crunchy can't CREATE EXTENSION, so anything that needs one is
-    -- deferred to an admin-run migration.
+    -- (monthly children). entity_id is nullable: when set, the
+    -- observation is keyed on a specific entity (e.g. a parcel's
+    -- assessed_value); when NULL, the observation is at geo-level
+    -- (e.g. Spruce Grove dev-permit count for a snapshot_date). The
+    -- UNIQUE uses NULLS NOT DISTINCT (PG 15+) so two NULL entity_ids
+    -- for the same (series, period, geo) are treated as a collision
+    -- rather than two distinct rows.
     CREATE TABLE IF NOT EXISTS substrate.observations (
       series_id     UUID NOT NULL REFERENCES substrate.series_metadata(id),
       period        DATE NOT NULL,
       geo_id        UUID NOT NULL REFERENCES substrate.geo_dimension(id),
+      entity_id     UUID REFERENCES substrate.entities(id),
       value         DOUBLE PRECISION,
       raw_value     TEXT,
       qualifier     TEXT,
       collected_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      UNIQUE (series_id, period, geo_id)
+      UNIQUE NULLS NOT DISTINCT (series_id, period, geo_id, entity_id)
     ) PARTITION BY RANGE (period);
     -- Partitioned index — PG cascades it onto every child partition.
     CREATE INDEX IF NOT EXISTS idx_substrate_obs_series_geo_period
       ON substrate.observations (series_id, geo_id, period DESC);
+    CREATE INDEX IF NOT EXISTS idx_substrate_obs_entity_period
+      ON substrate.observations (entity_id, period DESC)
+      WHERE entity_id IS NOT NULL;
 
     -- Pre-create monthly partitions: 12 back + current + 12 forward
     -- (25 children). Loop is idempotent (IF NOT EXISTS). A monthly
@@ -714,19 +799,27 @@ const MIGRATION_SQL = `
     CREATE TABLE IF NOT EXISTS substrate.observations_default
       PARTITION OF substrate.observations DEFAULT;
 
-    -- Latest observation per (series, geo). Collectors call
+    -- Latest observation per (series, geo, entity). Collectors call
     -- REFRESH MATERIALIZED VIEW CONCURRENTLY at end-of-run so scorecards
     -- never block on a writer. The first refresh after creation MUST be
     -- non-concurrent (matview is unpopulated until then), so seed it here
     -- once if pg_class.relispopulated says it hasn't been refreshed yet.
+    -- High-cardinality writers (e.g. the parcel fetcher, 440K rows) should
+    -- NOT trigger a per-run refresh — pin that to a nightly cron instead;
+    -- see substrate.refresh_latest_observations() below for the wrapped
+    -- entry point that takes an advisory lock to serialize concurrent
+    -- refresh attempts.
     CREATE MATERIALIZED VIEW IF NOT EXISTS substrate.latest_observations AS
-      SELECT DISTINCT ON (series_id, geo_id)
-        series_id, geo_id, period, value, collected_at
+      SELECT DISTINCT ON (series_id, geo_id, entity_id)
+        series_id, geo_id, entity_id, period, value, collected_at
       FROM substrate.observations
-      ORDER BY series_id, geo_id, period DESC
+      ORDER BY series_id, geo_id, entity_id, period DESC
     WITH NO DATA;
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_substrate_latest_obs_series_geo
-      ON substrate.latest_observations (series_id, geo_id);
+    -- UNIQUE INDEX needs NULLS NOT DISTINCT so geo-only observations
+    -- (entity_id IS NULL) get a single matview row instead of one per NULL.
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_substrate_latest_obs_series_geo_entity
+      ON substrate.latest_observations (series_id, geo_id, entity_id)
+      NULLS NOT DISTINCT;
     DO $matview_seed$
     BEGIN
       IF NOT (
@@ -738,6 +831,33 @@ const MIGRATION_SQL = `
         REFRESH MATERIALIZED VIEW substrate.latest_observations;
       END IF;
     END $matview_seed$;
+
+    -- Advisory-locked refresh entry point. Two concurrent collectors that
+    -- both want to refresh end up queued in PG's matview lock chain (~2-5 min
+    -- on a 440K-row matview); the advisory lock short-circuits the second
+    -- caller cleanly with a warning. Callers handle the FALSE return by
+    -- logging and continuing — the matview will be refreshed by whoever
+    -- holds the lock.
+    CREATE OR REPLACE FUNCTION substrate.refresh_latest_observations()
+    RETURNS BOOLEAN LANGUAGE plpgsql AS $refresh$
+    DECLARE
+      v_got_lock BOOLEAN;
+    BEGIN
+      SELECT pg_try_advisory_lock(hashtext('substrate.latest_observations')::bigint)
+        INTO v_got_lock;
+      IF NOT v_got_lock THEN
+        RAISE NOTICE 'substrate.latest_observations refresh skipped — already running';
+        RETURN FALSE;
+      END IF;
+      BEGIN
+        REFRESH MATERIALIZED VIEW CONCURRENTLY substrate.latest_observations;
+        PERFORM pg_advisory_unlock(hashtext('substrate.latest_observations')::bigint);
+        RETURN TRUE;
+      EXCEPTION WHEN OTHERS THEN
+        PERFORM pg_advisory_unlock(hashtext('substrate.latest_observations')::bigint);
+        RAISE;
+      END;
+    END $refresh$;
 
     -- Major projects, versioned. Each stage change retires the prior row
     -- (is_current=FALSE, keeps last-seen snapshot_date) and inserts a new
