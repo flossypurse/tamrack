@@ -47,7 +47,11 @@ const SOURCE_NAME = "Edmonton Open Data";
 const SOURCE_BASE = "https://data.edmonton.ca";
 const SERIES_SLUG = "edm-parcel-assessed-value";
 const EDMONTON_MUNI_SLUG = "edmonton";
-const PAGE_SIZE = 50_000;
+// 25_000 keeps the per-page array footprint (~6 parallel arrays, ~40 MB
+// peak after JSON parse) safely below the Fly machine's headroom alongside
+// the resident Next.js app. The script is paginated regardless, so trading
+// off page count for memory is essentially free.
+const PAGE_SIZE = 25_000;
 
 interface SocrataParcel {
   account_number?: string;
@@ -70,15 +74,41 @@ function parseArgs(): CliOpts {
   return { dryRun, limitPages };
 }
 
+// Exponential backoff against transient 5xx and 429. Socrata generally
+// returns 503 under load and 429 if we exceed an unauthenticated rate limit.
+async function fetchWithRetry(url: string, attempts = 3, baseMs = 1000): Promise<Response> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "tamrack-edmonton-parcels" },
+      });
+      if (res.ok) return res;
+      if (res.status >= 500 || res.status === 429) {
+        lastErr = new Error(`HTTP ${res.status}`);
+        const wait = baseMs * 2 ** (attempt - 1);
+        console.warn(`[retry] ${res.status} on attempt ${attempt}/${attempts}; sleeping ${wait}ms`);
+        await new Promise((r) => setTimeout(r, wait));
+        continue;
+      }
+      throw new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      lastErr = err;
+      if (attempt === attempts) break;
+      const wait = baseMs * 2 ** (attempt - 1);
+      console.warn(`[retry] ${(err as Error).message} on attempt ${attempt}/${attempts}; sleeping ${wait}ms`);
+      await new Promise((r) => setTimeout(r, wait));
+    }
+  }
+  throw lastErr ?? new Error("fetchWithRetry exhausted attempts");
+}
+
 async function fetchPage(offset: number): Promise<SocrataParcel[]> {
   const url =
     `${SOURCE_BASE}/resource/${DATASET}.json` +
     `?$select=account_number,neighbourhood_id,assessed_value,tax_class,latitude,longitude` +
     `&$limit=${PAGE_SIZE}&$offset=${offset}&$order=account_number`;
-  const res = await fetch(url, {
-    headers: { "User-Agent": "tamrack-edmonton-parcels" },
-  });
-  if (!res.ok) throw new Error(`Socrata ${res.status} at offset=${offset}`);
+  const res = await fetchWithRetry(url);
   const body = (await res.json()) as SocrataParcel[];
   if (!Array.isArray(body)) throw new Error(`Socrata returned non-array at offset=${offset}`);
   return body;
@@ -101,6 +131,8 @@ async function main() {
   let nbhdBySlug: Map<string, string>;
   let sourceId: string | null = null;
   let seriesId: string | null = null;
+  let runLogId: number | null = null;
+  let unmatchedNbhdCount = 0;
 
   try {
     const muni = await setupClient.query(
@@ -159,6 +191,19 @@ async function main() {
       );
       seriesId = ser.rows[0].id;
       console.log(`[setup] source_id=${sourceId} series_id=${seriesId}`);
+
+      // Heartbeat: open a `running` snapshot_log row before the long
+      // page loop. A mid-run failure now leaves a visible incident
+      // marker in the DB even if the console output is lost. Pattern
+      // matches scripts/run-g4-dietary-taxonomy.ts.
+      const runLog = await setupClient.query(
+        `INSERT INTO snapshot_log (taken_at, source, records_inserted, status, error)
+         VALUES (NOW(), $1, 0, 'running', NULL)
+         RETURNING id`,
+        [`substrate.observations.${SERIES_SLUG}`]
+      );
+      runLogId = runLog.rows[0].id;
+      console.log(`[heartbeat] snapshot_log id=${runLogId} marked 'running'`);
     }
   } finally {
     setupClient.release();
@@ -170,7 +215,9 @@ async function main() {
   let skippedNoAccount = 0;
   let skippedBadValue = 0;
   let pageIdx = 0;
+  let lastSuccessfulOffset = -1;
 
+  try {
   for (let offset = 0; ; offset += PAGE_SIZE) {
     pageIdx++;
     if (opts.limitPages !== null && pageIdx > opts.limitPages) {
@@ -200,15 +247,21 @@ async function main() {
     }
 
     // ---- Bulk upsert geo_dimension via unnest() ----
+    // parent_id: nbhd row if neighbourhood_id matches geo_dimension; NULL
+    // otherwise. We deliberately do NOT fall back to edmontonId — silently
+    // bucketing unmatched parcels under the muni would make "parcels in
+    // nbhd X" queries undercount permanently. Tracking the count instead
+    // surfaces gaps in the geo_dimension backfill at run-end.
     const slugs: string[] = [];
     const names: string[] = [];
-    const parentIds: string[] = [];
+    const parentIds: (string | null)[] = [];
     const lats: (number | null)[] = [];
     const lons: (number | null)[] = [];
     for (const p of valid) {
       const slug = `edm-parcel-${p.account_number}`;
       const nbhdSlug = p.neighbourhood_id ? `edm-nbhd-${p.neighbourhood_id}` : null;
-      const parentId = (nbhdSlug && nbhdBySlug.get(nbhdSlug)) || edmontonId;
+      const parentId = (nbhdSlug && nbhdBySlug.get(nbhdSlug)) ?? null;
+      if (parentId === null) unmatchedNbhdCount++;
       slugs.push(slug);
       names.push(slug); // No human-readable name in the dataset; slug doubles as display.
       parentIds.push(parentId);
@@ -276,6 +329,7 @@ async function main() {
       }
 
       await writeClient.query("COMMIT");
+      lastSuccessfulOffset = offset;
       console.log(`[upsert] page ${pageIdx}: geo=${geoResult.rowCount} obs=${obsGeoIds.length}`);
     } catch (err) {
       await writeClient.query("ROLLBACK");
@@ -286,6 +340,19 @@ async function main() {
 
     if (page.length < PAGE_SIZE) break;
   }
+  } catch (err) {
+    // Update the heartbeat row to 'error' before re-throwing. The message
+    // includes the last successful offset so the operator can resume.
+    if (runLogId !== null) {
+      const msg = `${(err as Error).message} | last_successful_offset=${lastSuccessfulOffset}`;
+      await pool.query(
+        `UPDATE snapshot_log SET status = 'error', error = $1, records_inserted = $2 WHERE id = $3`,
+        [msg, totalObsUpserts, runLogId]
+      );
+      console.error(`[heartbeat] snapshot_log id=${runLogId} marked 'error'; last_successful_offset=${lastSuccessfulOffset}`);
+    }
+    throw err;
+  }
 
   console.log("");
   console.log(`[summary] fetched parcels:           ${totalParcels}`);
@@ -293,13 +360,21 @@ async function main() {
   console.log(`[summary] observations upserts:      ${totalObsUpserts}`);
   console.log(`[summary] skipped (no account_num):  ${skippedNoAccount}`);
   console.log(`[summary] skipped (bad assessed_v):  ${skippedBadValue}`);
+  console.log(`[summary] unmatched neighbourhood:   ${unmatchedNbhdCount}`);
+  if (unmatchedNbhdCount > 0) {
+    console.warn(
+      `[warn] ${unmatchedNbhdCount} parcels had a neighbourhood_id not present in substrate.geo_dimension — those parcels were stored with parent_id=NULL. Re-run backfill-substrate-geo-dimension.ts and then this script to backfill the parent links.`
+    );
+  }
 
   if (!opts.dryRun) {
-    await pool.query(
-      `INSERT INTO snapshot_log (taken_at, source, records_inserted, status, error)
-       VALUES (NOW(), $1, $2, 'ok', NULL)`,
-      [`substrate.observations.${SERIES_SLUG}`, totalObsUpserts]
-    );
+    if (runLogId !== null) {
+      await pool.query(
+        `UPDATE snapshot_log SET status = 'ok', records_inserted = $1 WHERE id = $2`,
+        [totalObsUpserts, runLogId]
+      );
+      console.log(`[heartbeat] snapshot_log id=${runLogId} marked 'ok'`);
+    }
     await pool.query(`REFRESH MATERIALIZED VIEW CONCURRENTLY substrate.latest_observations`);
     console.log(`[refresh] substrate.latest_observations refreshed concurrently`);
   }
