@@ -21,6 +21,12 @@ import {
   MCP_KEY_CAP,
   listActiveMcpKeys,
 } from "@/lib/mcp-tokens";
+import {
+  HTTP_SCOPES,
+  HTTP_NAME_PREFIX,
+  HTTP_KEY_CAP,
+  listActiveHttpKeys,
+} from "@/lib/http-keys";
 
 const WORKSPACE = "/account/chat";
 
@@ -61,6 +67,48 @@ export async function issueMcpToken(): Promise<void> {
   });
 
   // Cookie reveal (rail shows the one-shot card) is the confirmation.
+  redirect(WORKSPACE);
+}
+
+export async function issueHttpKey(): Promise<void> {
+  const userId = await requireUserId();
+
+  // Cap mirrors MCP: enforced in the UI (button disabled) and here as a
+  // guard. At cap we bounce back — the rail shows the count + disabled mint.
+  const active = await listActiveHttpKeys(userId);
+  if (active.length >= HTTP_KEY_CAP) {
+    redirect(WORKSPACE);
+  }
+
+  const issuedAt = new Date().toISOString().slice(0, 10);
+  const { key } = await createApiKey(
+    userId,
+    `${HTTP_NAME_PREFIX} ${issuedAt}`,
+    [...HTTP_SCOPES],
+  );
+
+  const jar = await cookies();
+  jar.set({
+    name: ONCE_KEY_COOKIE,
+    value: key,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: "/account",
+    maxAge: 60 * 5,
+  });
+
+  // Cookie reveal (rail shows the one-shot card) is the confirmation.
+  redirect(WORKSPACE);
+}
+
+export async function revokeHttpKey(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
+  const keyId = formData.get("keyId");
+  if (typeof keyId !== "string" || !keyId) {
+    redirect(WORKSPACE);
+  }
+  await revokeApiKey(keyId as string, userId);
   redirect(WORKSPACE);
 }
 
