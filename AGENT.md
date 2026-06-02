@@ -1,128 +1,129 @@
 # Tamrack
 
-Alberta-data platform with three interfaces (HTTP API, MCP server, Smart UI) and a multi-product web surface. ~320 pages, 50+ live data sources, 4 product surfaces. Public brand: **Tamrack** at [tamrack.ca](https://tamrack.ca). Rebrand cutover from "Alberta Pulse Check" → "Tamrack" complete 2026-05-20 (`albertapulsecheck.ca` no longer routes).
-
-> ## ⚠️ HOSTING DIRECTION CHANGE — 2026-05-22
->
-> **New direction:** All Tamrack infrastructure moves to Canadian-region hosting. Fly.io (Toronto `yyz`) for compute, Crunchy Bridge (Montreal `ca-central-1`) for Postgres.
->
-> **This SUPERSEDES the prior "Tamrack stays on Railway" rule.** Full plan and migration sequence at [`../HOSTING-PLAN-2026-05-22.md`](../HOSTING-PLAN-2026-05-22.md). Do not start the migration without reading it. Do not propose Railway-based changes for Tamrack going forward.
->
-> Current Railway deployment remains live until migration executes (target: mid-June 2026, post-rebrand-cutover stabilization).
+Alberta-data platform — HTTP API, MCP server, and Smart UI (chat-first dashboard builder). Public brand: **Tamrack** at [tamrack.ca](https://tamrack.ca).
 
 ## Status
 
-All 4 product phases complete. Deployed live on Railway (auto-deploy from `main`). Focus is now marketing and user acquisition. **Hosting migration to Fly.io + Crunchy Bridge planned mid-June 2026** — see notice above.
+Deployed live. Invite-only access. Focus is on growing early-access usage.
 
 ## Stack
 
 - Next.js 16, React 19, TypeScript
 - Tailwind 4, Recharts
-- better-sqlite3 (local), PostgreSQL (fallback for upstream outages)
-- Deployed on Railway from `main` branch
+- PostgreSQL (Crunchy Bridge, `ca-central-1`) via `pg`; better-sqlite3 for local-dev fallback
+- Deployed on Fly.io — app `tamrack-webui`, region `yyz` (Toronto)
+- Durable data-collection worker on Fly.io — app `tamrack-collector-worker`, region `yyz`
 
-## Products
+## Hosting
 
-| Product | Price | Description |
-|---------|-------|-------------|
-| Pulse Charts | Free | Public dashboard: economy, energy, real estate, environment, governance, municipalities |
-| Pulse EDO | $299/mo | Economic development officer tools: community profiles, peer comparison, council reports, pitch kits |
-| Pulse Realtor | $49/mo | Real estate agent tools: market intel, prospects, neighbourhoods, listings, reports |
-| Pulse Learn | Free | 8-module gamified economics course with quizzes and certificate generation |
+| Service | Platform | App name | Region |
+|---------|----------|----------|--------|
+| webui (this dir) | Fly.io | `tamrack-webui` | `yyz` |
+| collector worker | Fly.io | `tamrack-collector-worker` | `yyz` |
+| Resonate server | Fly.io (separate repo) | — | `yyz` |
+| Database | Crunchy Bridge | — | `ca-central-1` |
+
+**Deploy flow:** `flyctl deploy --local-only` (remote builder OOMs on this app — use `--local-only` with Docker Desktop). Config at `fly.toml` (webui) and `fly.worker.toml` (worker).
+
+**Key env vars (set as Fly secrets):** `DATABASE_URL`, `AUTH_SECRET`, `STRIPE_SECRET_KEY`, `ANTHROPIC_TAMRACK_API_TOKEN`, `RESONATE_URL`, `RESONATE_TOKEN`, `MAILGUN_API_KEY`, `ADMIN_EMAIL`, `NEXT_PUBLIC_*` vars.
+
+**Health check:** `GET /api/health` (120 s timeout, max 3 retries).
+
+## Auth
+
+Email-only magic-link via NextAuth v5 + Mailgun (no SMTP). Google OAuth optional (`GOOGLE_CLIENT_ID` env). Landing page at `/login` is the only public-facing auth surface.
+
+**Access control:** `EARLY_ACCESS=true` (default) blocks self-signup. New users arrive via invite tokens (`tinv_*` prefix, 30-day expiry, one-time-use). Flow: admin issues token at `/admin/invites` → user visits `/invite/<token>` → enters email → magic-link → account + `tk_*` API key created on first sign-in.
+
+Self-serve password reset: not applicable — magic-link only (no passwords).
+
+## Account workspace (`/account`)
+
+Full-screen three-column shell. Auth enforced at the layout level — every sub-page is gated.
+
+- **Left rail** — API key management (reveal, revoke) + MCP token management (mint, list, revoke, copy install snippet) + sign-out.
+- **Center** — chat (`/account/chat`): ask a question, the Smart UI agent picks tools, pulls live data, streams a composed dashboard back. Saved dashboards land at `/d/<slug>`.
+- **Right rail** — recent Q&A history; clicking an entry opens `/d/<slug>`.
+- `/account/keys` and `/account/mcp` are redirect aliases → `/account/chat`.
+- On `< lg` the rails collapse into bottom-bar drawers.
+
+## Smart UI
+
+Two-pass LLM pipeline (both passes use `claude-sonnet-4-6` with prompt caching):
+
+1. **Planner** (`src/lib/smart-ui/planner.ts`) — translates a natural-language question into a `QueryPlan`: intent, card titles, ordered list of MCP tool calls (up to 7 tools in v1.1: `tamrack_macro`, `tamrack_regional`, `tamrack_housing`, `tamrack_energy`, `tamrack_business`, `tamrack_municipality`, `tamrack_catalog`).
+2. **Composer** (`src/lib/smart-ui/composer.ts`) — receives the plan + tool results and produces a `DashboardConfig` (card array: `line`, `scorecard` types).
+
+Saved dashboards persist in `smart_dashboards` table; telemetry in `smart_query_events`.
+
+## MCP Server
+
+Hosted endpoint at `/api/mcp` — Streamable HTTP transport, Bearer auth (`tk_*` keys). Ten live tools: `tamrack_catalog`, `tamrack_municipality`, `tamrack_regional`, `tamrack_real_estate`, `tamrack_macro`, `tamrack_housing`, `tamrack_business`, `tamrack_energy`, `tamrack_search`, `tamrack_entities`. Seven more are catalogued as `"deferred"`.
+
+See [src/app/api/mcp/AGENT.md](src/app/api/mcp/AGENT.md) for registration command, token issuance, scope taxonomy, and tool details.
+
+## Data Collection Worker
+
+`worker.ts` runs 7 collection phases as a Resonate durable workflow (`dailyCollection`) on a `0 6 * * *` (6 AM UTC) schedule. Each phase is a separate `ctx.run` step; regional indicators are further split one step per indicator for fault isolation. Step IDs are date-scoped to prevent Resonate's resolved-step cache from replaying stale results on a new day's fire.
+
+Phases: `regional` (per-indicator), `energy`, `municipalities`, `wells`, `immigration`, `projects`, `macro`.
+
+Resonate client: `ttl: 30 * 60 * 1000` (30 min — energy phase can take 8–23 min).
+
+## Substrate Data Model
+
+`substrate` schema — three orthogonal axes stored in Postgres:
+
+- `substrate.sources` — upstream data provider registry
+- `substrate.geo_dimension` — political/administrative geography (province, municipality, neighbourhood)
+- `substrate.entities` — slow-changing dimensions located within a geo (businesses, parcels, projects, wells); `first_seen`/`last_seen` track presence
+- `substrate.series_metadata` — named time-series with domain, cadence, unit, derivation lineage
+- `substrate.observations` — time-series fact table, partitioned by `period` (monthly), with NULLS NOT DISTINCT unique constraint on `(series_id, period, geo_id, entity_id)`
+- `substrate.latest_observations` — materialized view (latest row per series × geo × entity); refreshed via `substrate.refresh_latest_observations()` which takes an advisory lock to serialize concurrent callers
+- `substrate.major_projects_versioned` — versioned project stage tracking with `substrate.upsert_major_project()` procedure
+- `signals.licence_dietary_taxonomy` — G4 dietary classification cache for Edmonton business licences
+
+Legacy tables (`neighbourhood_metrics`, `macro_metrics`, `regional_indicators`, `energy_throughput`, `energy_production`, `well_licences`, `immigration_records`, `major_projects`, etc.) remain active and are still used by the data-collection worker and API routes.
 
 ## Key Paths
 
 | Path | Contents |
 |------|----------|
-| `src/app/` | Next.js app router pages (~320 across 7 sections + 4 products) |
-| `src/lib/data-sources*.ts` | 16+ data fetcher modules (StatsCan, BoC, Socrata, CKAN, ArcGIS, CER, IRCC, CMHC, ECCC, WCB, CRA, etc.) |
+| `src/app/account/` | Chat workspace shell + left/right rails |
+| `src/app/api/mcp/` | MCP server route, tool files, registry, catalog |
+| `src/app/` | Public dashboard pages (economy, energy, real estate, community, environment, governance, municipalities, learn, tools) |
+| `src/lib/data-sources*.ts` | 16+ data fetcher modules (StatsCan, BoC, CKAN, ArcGIS, CER, IRCC, CMHC, ECCC, WCB, Socrata, etc.) |
+| `src/lib/smart-ui/` | Planner, composer, MCP client, persistence, types |
+| `src/lib/db.ts` | `getDb()` — pool init + boot-time DDL migration (one transaction) |
+| `src/lib/auth.ts` | NextAuth v5 config (magic-link + optional Google) |
+| `src/lib/invites.ts` | Invite token issuance, lookup, atomic redemption |
 | `src/lib/municipality-registry.ts` | Config-driven registry for 30 municipalities across 7 regions |
-| `src/lib/municipality-data.ts` | Generic municipality data fetcher |
-| `src/lib/data-fallback.ts` | PostgreSQL fallback for upstream outages |
-| `src/lib/csv-utils.ts` | Shared CSV parsing utilities |
-| `src/components/nav-config.ts` | Navigation configuration (two-tier: top bar + contextual sidebar) |
-| `docs/MASTER_PLAN.md` | Full 4-phase product strategy (72K) |
+| `src/lib/collector.ts` | Collection phase functions called by `worker.ts` |
+| `worker.ts` | Resonate durable worker (daily collection workflow) |
+| `fly.toml` | Fly.io config for webui (app `tamrack-webui`, `yyz`) |
+| `fly.worker.toml` | Fly.io config for collector worker (app `tamrack-collector-worker`, `yyz`) |
+| `docs/skill-page-creation.md` | Step-by-step guide for adding new dashboard pages |
+| `docs/skill-design-system.md` | Component patterns, category colors, typography scale |
 
 ## Run
 
 ```bash
-cd tamrack/webui && npm run dev
+npm run dev
 ```
 
 Owner prefers to start dev servers themselves — don't auto-start.
 
-## API Routes
-
-19 endpoints under `/api/`: permits, assessments, signals, macro, regional, energy, electricity, immigration, projects, wildfire, crime, fire, health-data, housing, rental, retail, business, politics, fiscal.
-
-Health check: `/api/health?deep=1` — probes all upstream sources with response times and record counts.
-
-### MCP server
-
-Hosted MCP endpoint at `/api/mcp` exposes the substrate to AI agents over Streamable HTTP with Bearer auth. See [src/app/api/mcp/AGENT.md](src/app/api/mcp/AGENT.md) for registration command, token issuance, and tool list.
-
-## Data Sources
-
-50+ live sources across 16 fetcher modules. Key upstream providers:
-- **Government**: StatsCan WDS, Alberta CKAN (AAX), regionaldashboard.alberta.ca (54 indicators, ~340 municipalities), Edmonton/Calgary Socrata
-- **Energy**: CER Open Data (16 CSV endpoints)
-- **Real Estate**: CMHC via StatsCan, UAlberta Open Data Centre, ArcGIS (20 municipalities), Google Maps Platform
-- **Immigration**: IRCC (5 CSV endpoints)
-- **Federal**: Infrastructure Canada, Elections Canada, OpenParliament.ca, open.canada.ca
-
-Full data source reference and scouted-but-unwired endpoint inventory are maintained in private workspace notes (not in this repo).
-
-## Municipality Registry
-
-30 municipalities across 7 regions, all live. Config-driven at `src/lib/municipality-registry.ts`. 8 are regional-data-only (no ArcGIS): Beaumont, Fort Saskatchewan, Morinville, Devon, Okotoks, Chestermere, Red Deer, Wood Buffalo.
-
-## Architecture Notes
-
-- **Resilience**: Error boundaries on all major route groups. Regional data fetcher falls back to PostgreSQL snapshots on upstream failure. Embed routes use ISR (1h) instead of force-dynamic.
-- **Nav**: Two-tier — top bar (7 sections) + contextual sidebar + mobile bottom tabs. Config in `src/components/nav-config.ts`.
-- **Data freshness**: `DataFreshness` component via `CardHeader` `freshness` prop (tiers: realtime/hourly/daily).
-- **Concurrency**: Regional fetch concurrency set to 10.
-- **Git repo**: This directory (`tamrack/webui/`) is the git root. The parent `tamrack/` also contains the Resonate server and worker, but they're separate concerns.
-
-## Deploy
-
-| Service | Platform | Auto-deploy | Domain |
-|---------|----------|-------------|--------|
-| webui (this dir) | Railway | `main` → production | albertapulsecheck.ca |
-| resonate-server | Railway (Docker) | `main` → production | — |
-| worker | Railway (Docker) | `main` → production | — |
-
-**CLI:** `railway` — linked in this directory. Use `railway service <name>` to switch between `web`, `resonate`, `worker`.
-
-**Key env vars (set on Railway, not in code):** `ADMIN_EMAIL`, `AUTH_SECRET`, `DATABASE_URL`, `NEXT_PUBLIC_*` vars.
-
-**Health check:** `/api/health` (120s timeout, max 3 retries on failure).
-
-**Deploy flow:** Push to `main` → Railway auto-builds and deploys. No manual steps needed.
-
 ## Rules
 
-- This is a PUBLIC, deployed application. Every change goes live on merge to `main`.
-- Don't break the build. Run `npm run build` before considering work done.
-- Don't hardcode municipality data. Use the registry.
+- This is a **public, deployed application**. Every change goes live on merge to `main`.
+- Don't break the build. Run `npx tsc --noEmit` to type-check; the full `npm run build` is run by CI.
+- Don't hardcode municipality data. Use the registry (`src/lib/municipality-registry.ts`).
 - Prefer live API calls over static data. If an upstream is down, that's what the fallback layer is for.
-
-## Skills
-
-| File | Skill | Description |
-|------|-------|-------------|
-| [docs/skill-page-creation.md](docs/skill-page-creation.md) | Page Creation | Step-by-step guide for adding new dashboard pages |
-| [docs/skill-design-system.md](docs/skill-design-system.md) | Design System | Component patterns, category colors, typography scale |
-
-## Visibility
-
-**PUBLIC** — deployed live at albertapulsecheck.ca. Never put private financial data, credentials, or PII into this codebase.
+- All writes must use UPSERT (`ON CONFLICT ... DO UPDATE`), not plain INSERT — a UNIQUE violation under Resonate retry loops forever.
+- `substrate.observations` uses `NULLS NOT DISTINCT` on the unique constraint. Bulk inserts with multiple NULL-entity rows for the same `(series_id, period, geo_id)` will conflict; dedupe before inserting or use per-row inserts for the NULL-entity case.
 
 ## Privacy
 
-Visibility declared in `.privacy` at the project root (parent dir). Trip-wires:
+CI workflow at `.github/workflows/privacy.yml` enforces no credentials or internal references on push and PR. Pre-commit hook (gitleaks + workspace-crumbs check) runs locally via `core.hooksPath`.
 
-- Workspace pre-commit hook (gitleaks + workspace-crumbs check) runs on every commit. Wired via `core.hooksPath`.
-- CI workflow at `.github/workflows/privacy.yml` enforces the same on push and PR.
-
-Workspace contributors: full model and pre-publish checklist live in `PRIVACY.md` at the workspace root.
+Never put private financial data, credentials, or PII into this codebase.
