@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Edmonton record-level parcel fetcher (Phase 0 §0.2).
+ * Edmonton record-level parcel fetcher.
  *
  * Each parcel is a row in substrate.entities (kind='parcel'); each daily
  * run writes one observation per parcel into the partitioned
