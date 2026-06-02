@@ -23,6 +23,34 @@ import type {
 
 const MODEL = "claude-sonnet-4-6";
 
+const STORY_TEMPLATE_SLOT_RULES = `
+STORY CARD RULES (applies only when plan.story_template is non-null):
+
+When the plan includes a story_template, emit a card with "type": "story"
+alongside (or instead of) the standard scorecard/line pair.
+
+You MAY populate these fields on a story card:
+  - title       (active-voice conclusion, not dimension labels)
+  - data_ref    (key into the data payload; use the card_id as the ref)
+  - body        (optional prose body; null is fine for chart-only stories)
+  - generated_prose_spans  ([] if body is null)
+  - human_review_approved  (always false — admin sets this via PATCH)
+
+You MUST NOT populate these fields — the renderer assembles them:
+  - spec        (always null in composer output; assembleStorySpec fills it)
+  - template_slug / template_id (copied verbatim from plan; don't modify)
+
+Trust block: populate trust.sources from envelope source labels (same
+anti-fabrication rule as sources[]). Estimate trust.sample_n from
+envelope point_count. Leave trust.derived_signals, trust.signal_period,
+trust.normalization_note, trust.whole_definition at safe defaults:
+  derived_signals: []
+  signal_period: the envelope's last_date or today's date
+  normalization_note: null
+  whole_definition: null
+  requires_human_review: false (true only on "comparison" template)
+`.trim();
+
 const COMPOSER_SYSTEM = `
 You are the Tamrack Smart UI composer.
 
@@ -35,6 +63,8 @@ CARD TYPES (v1):
 - "scorecard": big-number + sparkline + YoY delta. Use for the latest
   value of an indicator.
 - "line": time-series line chart.
+- "story": Vega-Lite story card with trust disclosure. Only emit when
+  plan.story_template is non-null. See STORY CARD RULES below.
 
 LAYOUT: "stack" only.
 
@@ -48,6 +78,8 @@ RULES:
 - Unit: pass through the envelope's data.unit VERBATIM when present.
 - If a tool result is status=error, emit a placeholder scorecard with
   title containing the error so the user sees what failed.
+
+${STORY_TEMPLATE_SLOT_RULES}
 
 ANTI-FABRICATION (CRITICAL):
 - Source labels MUST come verbatim from the tool_result envelope's
@@ -196,6 +228,8 @@ export async function composeDashboard(
       plan: {
         intent: plan.intent,
         card_titles: plan.card_titles,
+        // Passed through so the composer knows which story template to emit.
+        story_template: plan.story_template ?? null,
       },
       tool_results: summaries,
     },

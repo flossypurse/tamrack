@@ -17,7 +17,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 
-import type { QueryPlan } from "./types";
+import type { QueryPlan, StoryTemplateSlug } from "./types";
 
 const MODEL = "claude-sonnet-4-6";
 
@@ -110,14 +110,36 @@ Available MCP tools (v1.1 — line/scorecard-compatible surface):
    Output: discovery payload.
 `.trim();
 
+const STORY_TEMPLATE_DECISION_TREE = `
+STORY TEMPLATE SELECTION — emit "story_template" in every plan:
+
+Match the user's question against these patterns in order. First match wins.
+When uncertain, emit null (narrative-only fallback is always safe).
+
+  "which X" / "top N" / "rank" / "best" / "recommend N"   → "ranking"
+  "where" / "which area" / "hotspot" / "cluster"           → "geo_distribution"
+  "what share" / "breakdown" / "composition" / "%"         → "part_to_whole"
+  anything else / uncertain / time-series dominant          → null
+
+Rules:
+- null is the safe default. Emit null rather than guess.
+- Do NOT emit "geo_distribution" for time-series questions, even if a
+  place is named. Spatial templates only fire on "where" / concentration.
+- Do NOT emit "ranking" for time-series questions like "trend over time".
+- "story_template" is independent of card type. You may emit "ranking" and
+  still plan a "line" card; the composer decides how to render.
+`.trim();
+
 const PLANNER_SYSTEM = `
 You are the Tamrack Smart UI planner.
 
 Tamrack turns natural-language questions about Alberta's economy into custom
 dashboards. Your job is to translate one question into a plan: which MCP
-tools to call and which cards to render.
+tools to call, which cards to render, and which story template (if any) fits.
 
 ${PLANNER_TOOL_CATALOG}
+
+${STORY_TEMPLATE_DECISION_TREE}
 
 Card types you can plan for (v1):
 - "line": time-series line chart. Use for anything with a date axis.
@@ -154,7 +176,8 @@ OUTPUT FORMAT — return a single JSON object, no prose, no markdown fences:
       "tool": "tamrack_macro",
       "args": { "indicator": "unemployment", "time_range": "last_5y" } }
   ],
-  "confidence": 0.85
+  "confidence": 0.85,
+  "story_template": null
 }
 
 EXAMPLES:
@@ -169,7 +192,8 @@ User: "alberta unemployment last 5 years"
       "tool": "tamrack_macro",
       "args": { "indicator": "unemployment", "time_range": "last_5y" } }
   ],
-  "confidence": 0.9
+  "confidence": 0.9,
+  "story_template": null
 }
 
 User: "where is the policy rate right now"
@@ -182,7 +206,34 @@ User: "where is the policy rate right now"
       "tool": "tamrack_macro",
       "args": { "indicator": "policy_rate", "time_range": "last_year" } }
   ],
-  "confidence": 0.88
+  "confidence": 0.88,
+  "story_template": null
+}
+
+User: "top 5 Edmonton neighbourhoods by new business licences"
+{
+  "intent": "Top 5 Edmonton neighbourhoods ranked by new business licence issuance.",
+  "card_titles": ["Top Edmonton neighbourhoods — new licences"],
+  "tools_to_call": [
+    { "card_id": "neighbourhood-licences",
+      "tool": "tamrack_business",
+      "args": { "category": "edmonton_licences_by_neighbourhood" } }
+  ],
+  "confidence": 0.82,
+  "story_template": "ranking"
+}
+
+User: "where are food service businesses concentrated in Edmonton"
+{
+  "intent": "Spatial concentration of food-service businesses across Edmonton.",
+  "card_titles": ["Food service concentration — Edmonton"],
+  "tools_to_call": [
+    { "card_id": "food-concentration",
+      "tool": "tamrack_business",
+      "args": { "category": "food_services" } }
+  ],
+  "confidence": 0.78,
+  "story_template": "geo_distribution"
 }
 `.trim();
 
@@ -275,10 +326,30 @@ export function parsePlan(raw: string): QueryPlan {
   if (!Array.isArray(obj.tools_to_call)) {
     throw new Error("Planner: missing tools_to_call[]");
   }
+  const VALID_SLUGS: StoryTemplateSlug[] = [
+    "ranking",
+    "geo_distribution",
+    "part_to_whole",
+    "outlier_reveal",
+    "trend_reveal",
+    "comparison",
+  ];
+  const storyTemplate =
+    typeof obj.story_template === "string" &&
+    VALID_SLUGS.includes(obj.story_template as StoryTemplateSlug)
+      ? (obj.story_template as StoryTemplateSlug)
+      : null;
+
+  // Gate story cards until the full story render path and corpus data land.
+  // The composer only emits story cards when plan.story_template is non-null,
+  // so gating here is sufficient to keep the live chat clean.
+  const storyTemplatesEnabled = process.env.STORY_TEMPLATES_ENABLED === "true";
+
   return {
     intent: obj.intent,
     card_titles: obj.card_titles as string[],
     tools_to_call: obj.tools_to_call as QueryPlan["tools_to_call"],
     confidence: typeof obj.confidence === "number" ? obj.confidence : 0.5,
+    story_template: storyTemplatesEnabled ? storyTemplate : null,
   };
 }

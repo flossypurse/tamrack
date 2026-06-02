@@ -7,7 +7,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
-import { AccountSubnav } from "@/components/account-subnav";
 import {
   countDashboardsForUser,
   listDashboardsForUser,
@@ -54,9 +53,7 @@ export default async function ChatHistoryPage({
   const hasNext = pageNum < totalPages;
 
   return (
-    <main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <AccountSubnav active="chat" />
-
+    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
       <header className="flex flex-col gap-2">
         <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--mid)]">
           tamrack agent · your history
@@ -153,6 +150,6 @@ export default async function ChatHistoryPage({
           )}
         </>
       )}
-    </main>
+    </div>
   );
 }
