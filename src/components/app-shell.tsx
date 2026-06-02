@@ -13,12 +13,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isPublic =
     publicRoutes.includes(pathname) || pathname.startsWith("/embed/");
 
-  // EDO, Realtor, and Learn products have their own layouts — skip charts nav
+  // EDO, Realtor, and Learn products have their own layouts — skip charts nav.
+  // The /account workspace is a full-screen chat surface with its own layout
+  // (left rail + chat + history) and deliberately carries no global chrome.
   const isEdoRoute = pathname.startsWith("/edo");
   const isRealtorRoute = pathname.startsWith("/realtor");
   const isLearnRoute = pathname.startsWith("/learn");
+  const isAccountRoute = pathname.startsWith("/account");
 
-  if (isPublic || isEdoRoute || isRealtorRoute || isLearnRoute) {
+  if (isPublic || isEdoRoute || isRealtorRoute || isLearnRoute || isAccountRoute) {
     return <>{children}</>;
   }
 
