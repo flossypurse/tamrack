@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Stony Plain business directory snapshot (Phase 0 §0.1).
+ * Stony Plain business directory snapshot.
  *
  * Fetches the Town of Stony Plain ArcGIS Online layer `ToSP_Businesses`
  * (~425 active businesses) and upserts each as a row in substrate.entities
