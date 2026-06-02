@@ -710,6 +710,16 @@ const MIGRATION_SQL = `
     --   'entity+observation'  → both (e.g. parcels: per-entity values over time)
     -- entity_kind is the substrate.entities.kind value the series refers to
     -- (NULL for storage_kind='observation'; CHECK enforces this).
+    -- Idempotent ALTER must run BEFORE the indexes below: on an existing
+    -- series_metadata the CREATE TABLE above is a no-op, so the new columns
+    -- have to be added here or the is_derived / storage_kind indexes would
+    -- reference columns that don't exist yet and abort the whole migration
+    -- ("column ... does not exist"). Covers both fresh and pre-existing deploys.
+    ALTER TABLE substrate.series_metadata
+      ADD COLUMN IF NOT EXISTS is_derived BOOLEAN NOT NULL DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS derivation_lineage JSONB,
+      ADD COLUMN IF NOT EXISTS storage_kind TEXT NOT NULL DEFAULT 'observation',
+      ADD COLUMN IF NOT EXISTS entity_kind TEXT;
     CREATE INDEX IF NOT EXISTS idx_substrate_series_upstream_key
       ON substrate.series_metadata USING GIN (upstream_key);
     CREATE INDEX IF NOT EXISTS idx_substrate_series_tags
@@ -720,14 +730,6 @@ const MIGRATION_SQL = `
       ON substrate.series_metadata(is_derived) WHERE is_derived = TRUE;
     CREATE INDEX IF NOT EXISTS idx_substrate_series_storage_kind
       ON substrate.series_metadata(storage_kind);
-    -- Idempotent ALTER for any deploy where the table already exists
-    -- without the new columns (covers a future where this DDL is
-    -- relocated from boot-block to a versioned migration).
-    ALTER TABLE substrate.series_metadata
-      ADD COLUMN IF NOT EXISTS is_derived BOOLEAN NOT NULL DEFAULT FALSE,
-      ADD COLUMN IF NOT EXISTS derivation_lineage JSONB,
-      ADD COLUMN IF NOT EXISTS storage_kind TEXT NOT NULL DEFAULT 'observation',
-      ADD COLUMN IF NOT EXISTS entity_kind TEXT;
 
     -- Slow-changing dimension: entities are "things that live at a geo"
     -- (businesses, parcels, projects, wells). Distinct from geo_dimension,
