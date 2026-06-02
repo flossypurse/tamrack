@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Spruce Grove licence proxy adapter (Phase 0 §0.1).
+ * Spruce Grove licence proxy adapter.
  *
  * Spruce Grove publishes no business-licence layer through any of its
  * ArcGIS endpoints. Investigation report at handoffs/2026-05-31-... .
