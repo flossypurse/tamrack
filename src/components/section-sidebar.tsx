@@ -2,24 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { sections, buildMunicipalitySubSections } from "./nav-config";
 import type { TopLevelSection, NavSubSection } from "./nav-config";
 
 export function SectionSidebar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
-
-  const isTrialing = session?.user?.subscriptionStatus === "trialing";
-  const trialEnd = session?.user?.trialEnd
-    ? new Date(session.user.trialEnd)
-    : null;
-  const daysLeft = trialEnd
-    ? Math.max(
-        0,
-        Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-      )
-    : 0;
 
   // Find active section based on pathname
   const activeSection = findActiveSection(pathname);
@@ -58,17 +45,6 @@ export function SectionSidebar() {
           </h2>
         </div>
       </div>
-
-      {/* Trial banner */}
-      {isTrialing && daysLeft <= 7 && (
-        <Link
-          href="/billing"
-          className="mx-3 mt-2 block px-3 py-2 bg-accent-amber/10 border border-accent-amber/20 rounded-lg text-xs text-accent-amber hover:bg-accent-amber/15 transition-colors"
-        >
-          {daysLeft} day{daysLeft !== 1 ? "s" : ""} left in trial &mdash;{" "}
-          <span className="font-medium">Subscribe</span>
-        </Link>
-      )}
 
       {/* Sub-sections */}
       <div className="py-2">

@@ -8,7 +8,6 @@ import { useTheme } from "next-themes";
 import {
   ChevronDown,
   User,
-  CreditCard,
   LogOut,
   Shield,
   Home,
@@ -67,16 +66,6 @@ export function Nav() {
 
   const commandItems = buildCommandItems();
   const isAdmin = session?.user?.role === "admin";
-  const isTrialing = session?.user?.subscriptionStatus === "trialing";
-  const trialEnd = session?.user?.trialEnd
-    ? new Date(session.user.trialEnd)
-    : null;
-  const daysLeft = trialEnd
-    ? Math.max(
-        0,
-        Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-      )
-    : 0;
 
   // Close mobile nav on route change
   useEffect(() => {
@@ -228,23 +217,6 @@ export function Nav() {
 
         {/* Inline search */}
         <InlineSearch items={commandItems} onNavigate={handleMobileNavigate} />
-
-        {/* Trial banner */}
-        {isTrialing && daysLeft <= 7 && (
-          <Link
-            href="/billing"
-            onClick={() => setMobileOpen(false)}
-            className="mx-3 mt-2 px-3 py-2 bg-accent-amber/10 border border-accent-amber/20 rounded-lg text-xs text-accent-amber hover:bg-accent-amber/15 transition-colors shrink-0"
-          >
-            <span>{daysLeft} day{daysLeft !== 1 ? "s" : ""} left in trial &mdash;{" "}
-            <span className="font-medium">Subscribe</span></span>
-            {daysLeft <= 3 && (
-              <span className="block text-[10px] text-accent-amber/70 mt-0.5">
-                Deep-dive analysis, municipality data, and briefings require a subscription
-              </span>
-            )}
-          </Link>
-        )}
 
         {/* Accordion sections */}
         <div className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
@@ -407,18 +379,6 @@ export function Nav() {
           >
             <User size={14} />
             Account
-          </Link>
-          <Link
-            href="/billing"
-            onClick={() => setMobileOpen(false)}
-            className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
-              pathname === "/billing"
-                ? "bg-accent/10 text-accent font-medium"
-                : "text-muted hover:text-foreground hover:bg-foreground/[0.05]"
-            }`}
-          >
-            <CreditCard size={14} />
-            Billing
           </Link>
           <form action="/api/auth/sign-out" method="POST">
             <button

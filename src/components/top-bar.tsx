@@ -13,7 +13,6 @@ import { useTheme } from "next-themes";
 import {
   BarChart3,
   User,
-  CreditCard,
   LogIn,
   LogOut,
   Shield,
@@ -180,13 +179,6 @@ export function TopBar() {
                   >
                     <Terminal size={14} />
                     MCP token
-                  </Link>
-                  <Link
-                    href="/billing"
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
-                  >
-                    <CreditCard size={14} />
-                    Billing
                   </Link>
                   {isAdmin && (
                     <>
