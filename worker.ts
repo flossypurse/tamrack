@@ -33,6 +33,16 @@ import {
 import { getDb } from "./src/lib/db";
 import { captureError, initObservability } from "./src/lib/observability";
 
+// WS-SIGNALS pipeline workflows
+import { computeSignals, recomputeSignal } from "./src/workflows/compute-signals";
+import { processSignalQueue } from "./src/workflows/process-signal-queue";
+import { activateSignalFragment } from "./src/workflows/activate-signal-fragment";
+
+// WS-OPS substrate operational workflows
+import { rolloverSubstratePartitions } from "./src/workflows/partition-rollover";
+import { refreshLatestObservations } from "./src/workflows/refresh-matview";
+import { snapshotLogHygiene } from "./src/workflows/snapshot-log-hygiene";
+
 // ---------------------------------------------------------------------------
 // Phase definitions
 // ---------------------------------------------------------------------------
@@ -213,7 +223,18 @@ async function main() {
   // Register the collection workflow
   resonate.register("dailyCollection", dailyCollection);
 
-  console.log("[worker] Registered dailyCollection workflow");
+  // WS-SIGNALS pipeline workflows
+  resonate.register("computeSignals", computeSignals);
+  resonate.register("processSignalQueue", processSignalQueue);
+  resonate.register("activateSignalFragment", activateSignalFragment);
+  resonate.register("recomputeSignal", recomputeSignal);
+
+  // WS-OPS substrate operational workflows
+  resonate.register("rolloverSubstratePartitions", rolloverSubstratePartitions);
+  resonate.register("snapshotLogHygiene", snapshotLogHygiene);
+  resonate.register("refreshLatestObservations", refreshLatestObservations);
+
+  console.log("[worker] Registered dailyCollection + signals + ops workflows");
 
   // The SDK encodes schedule.promiseId as the literal template
   // "{{.id}}.{{.timestamp}}", which starts with "{" — no prefix-scoped
@@ -234,6 +255,84 @@ async function main() {
       throw e;
     }
   }
+
+  // WS-SIGNALS cron schedules
+  try {
+    await resonate.schedule("compute-signals", "0 7 * * *", "computeSignals");
+    console.log("[worker] Scheduled compute-signals cron: 0 7 * * * (7 AM UTC)");
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("HTTP 403")) {
+      console.log("[worker] Skipping compute-signals schedule.create (403 with prefix-scoped token); existing schedule preserved");
+    } else if (msg.includes("HTTP 401")) {
+      console.error("[worker] FATAL: token rejected scheduling compute-signals");
+      throw e;
+    } else {
+      throw e;
+    }
+  }
+
+  try {
+    await resonate.schedule("process-signal-queue", "*/5 * * * *", "processSignalQueue");
+    console.log("[worker] Scheduled process-signal-queue cron: */5 * * * *");
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("HTTP 403")) {
+      console.log("[worker] Skipping process-signal-queue schedule.create (403 with prefix-scoped token); existing schedule preserved");
+    } else if (msg.includes("HTTP 401")) {
+      console.error("[worker] FATAL: token rejected scheduling process-signal-queue");
+      throw e;
+    } else {
+      throw e;
+    }
+  }
+
+  // WS-OPS cron schedules (spaced to avoid collision with daily-collection 06:00)
+  try {
+    await resonate.schedule("monthly-partition-rollover", "0 8 1 * *", "rolloverSubstratePartitions");
+    console.log("[worker] Scheduled monthly-partition-rollover: 0 8 1 * *");
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("HTTP 403")) {
+      console.log("[worker] Skipping monthly-partition-rollover schedule.create (403 with prefix-scoped token); existing schedule preserved");
+    } else if (msg.includes("HTTP 401")) {
+      console.error("[worker] FATAL: token rejected scheduling monthly-partition-rollover");
+      throw e;
+    } else {
+      throw e;
+    }
+  }
+
+  try {
+    await resonate.schedule("monthly-snapshot-log-hygiene", "30 8 1 * *", "snapshotLogHygiene");
+    console.log("[worker] Scheduled monthly-snapshot-log-hygiene: 30 8 1 * *");
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("HTTP 403")) {
+      console.log("[worker] Skipping monthly-snapshot-log-hygiene schedule.create (403 with prefix-scoped token); existing schedule preserved");
+    } else if (msg.includes("HTTP 401")) {
+      console.error("[worker] FATAL: token rejected scheduling monthly-snapshot-log-hygiene");
+      throw e;
+    } else {
+      throw e;
+    }
+  }
+
+  try {
+    await resonate.schedule("nightly-matview-refresh", "30 9 * * *", "refreshLatestObservations");
+    console.log("[worker] Scheduled nightly-matview-refresh: 30 9 * * *");
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("HTTP 403")) {
+      console.log("[worker] Skipping nightly-matview-refresh schedule.create (403 with prefix-scoped token); existing schedule preserved");
+    } else if (msg.includes("HTTP 401")) {
+      console.error("[worker] FATAL: token rejected scheduling nightly-matview-refresh");
+      throw e;
+    } else {
+      throw e;
+    }
+  }
+
   console.log("[worker] Worker running. Press Ctrl+C to stop.");
 
   // Keep the process alive — Resonate SDK handles the event loop

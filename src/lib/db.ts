@@ -1043,6 +1043,541 @@ const MIGRATION_SQL = `
           CHECK (dietary_category IN ('gf_friendly','allergen_friendly','standard','unknown'));
       END IF;
     END $cnstr$;
+
+    -- ============================================================
+    -- WS-AUTH Phase A: username/password auth columns
+    -- ALTER before indexes (idempotent; pre-existing table).
+    -- ============================================================
+
+    -- Make email optional (recovery field only, no longer the login identifier).
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_key;
+    ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
+    DROP INDEX IF EXISTS idx_users_email;
+
+    -- Add username, hashed password, phone, and last-login columns.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS username_lower TEXT GENERATED ALWAYS AS (LOWER(username)) STORED;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
+
+    -- Unique index on the generated column (after the ALTER, per boot-DDL rule).
+    CREATE UNIQUE INDEX IF NOT EXISTS uniq_users_username_lower ON users(username_lower);
+
+    -- Restore a non-unique index on email for lookup queries (optional recovery field).
+    CREATE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL;
+
+    -- ============================================================
+    -- Password-reset tokens (1h TTL, single-use).
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT UNIQUE NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_prt_user ON password_reset_tokens(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_prt_pending ON password_reset_tokens(expires_at) WHERE used_at IS NULL;
+
+    -- ============================================================
+    -- pg_trgm extension (required by operator_aliases GIN index)
+    -- The application role cannot CREATE EXTENSION; this is a no-op
+    -- if already enabled by an admin, and will fail gracefully if not.
+    -- ============================================================
+    CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+    -- ============================================================
+    -- corpus schema — narrative & chart primitives
+    -- ============================================================
+    CREATE SCHEMA IF NOT EXISTS corpus;
+
+    -- Chart template library. One row per visual shape variant.
+    -- series_shape values (spec-locked enum, enforced by application):
+    --   'single_line' | 'multi_line' | 'bar_compare' | 'scorecard'
+    --   'sparkline'   | 'stacked_area' | 'bar_ranked' | 'choropleth'
+    --   'stacked_normalized'
+    --
+    -- spec JSONB holds the Vega-Lite partial.  Composer deep-merges
+    -- runtime data into spec.data; never modifies mark, encoding, or
+    -- transform.  The two new signal-layer columns are added via ALTER
+    -- below so this CREATE TABLE is a no-op on pre-existing databases.
+    CREATE TABLE IF NOT EXISTS corpus.chart_templates (
+      id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug                 TEXT NOT NULL UNIQUE,
+      series_shape         TEXT,
+      unit_type            TEXT,
+      cadence              TEXT,
+      spec                 JSONB NOT NULL DEFAULT '{}'::jsonb,
+      tags                 TEXT[],
+      created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    -- Signal-layer columns: must be ALTERed in (CREATE TABLE is a no-op on
+    -- pre-existing tables, so these would never land if placed only in the
+    -- CREATE TABLE above).
+    ALTER TABLE corpus.chart_templates
+      ADD COLUMN IF NOT EXISTS requires_human_review BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE corpus.chart_templates
+      ADD COLUMN IF NOT EXISTS template_available BOOLEAN NOT NULL DEFAULT TRUE;
+
+    CREATE INDEX IF NOT EXISTS idx_corpus_chart_templates_slug
+      ON corpus.chart_templates (slug);
+    CREATE INDEX IF NOT EXISTS idx_corpus_chart_templates_series_shape
+      ON corpus.chart_templates (series_shape);
+    CREATE INDEX IF NOT EXISTS idx_corpus_chart_templates_available
+      ON corpus.chart_templates (template_available) WHERE template_available = TRUE;
+
+    -- Narrative fragment library. One row per citable interpretation unit.
+    -- body_template variable contract (locked — composer always provides):
+    --   {{value}}           current observation value, formatted per unit
+    --   {{value_raw}}       unformatted numeric
+    --   {{unit}}            e.g. "percent", "CAD"
+    --   {{period}}          observation date, formatted
+    --   {{yoy_delta}}       year-over-year change with sign
+    --   {{yoy_pct}}         year-over-year % change
+    --   {{trend_direction}} "rising" | "falling" | "stable"
+    --   {{geo_name}}        e.g. "Alberta", "Edmonton CMA"
+    --
+    -- freshness values: 'permanent' | 'time_bounded' | 'recomputable'
+    --
+    -- embedding vector(1536): added via guarded DO-block below (requires
+    -- the pgvector extension to be pre-enabled by a DB admin).
+    --
+    -- signal_def_id + observed_window + the UNIQUE constraint are signal-
+    -- layer additions applied via ALTER below so they land idempotently on
+    -- pre-existing corpus tables.
+    CREATE TABLE IF NOT EXISTS corpus.narrative_fragments (
+      id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      topic           TEXT,
+      series_ids      UUID[] NOT NULL DEFAULT '{}',
+      geo_scope       TEXT,
+      body_template   TEXT NOT NULL,
+      tone            TEXT,
+      when_to_use     TEXT,
+      data_threshold  JSONB,
+      freshness       TEXT NOT NULL DEFAULT 'permanent',
+      source_path     TEXT,
+      source_lines    INT4RANGE,
+      entity_kind     TEXT,
+      created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    -- Add embedding column only when pgvector is available (requires admin
+    -- to have run: CREATE EXTENSION IF NOT EXISTS vector;).
+    DO $embed_col$ BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_extension WHERE extname = 'vector'
+      ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'corpus'
+          AND table_name   = 'narrative_fragments'
+          AND column_name  = 'embedding'
+      ) THEN
+        ALTER TABLE corpus.narrative_fragments
+          ADD COLUMN embedding vector(1536);
+      END IF;
+    END $embed_col$;
+
+    CREATE INDEX IF NOT EXISTS idx_corpus_nf_series_ids
+      ON corpus.narrative_fragments USING GIN (series_ids);
+
+    -- ivfflat index requires embedding column + pgvector; created only when
+    -- both the extension and the column are present.
+    DO $embed_idx$ BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_extension WHERE extname = 'vector'
+      ) AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'corpus'
+          AND table_name   = 'narrative_fragments'
+          AND column_name  = 'embedding'
+      ) AND NOT EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE schemaname = 'corpus'
+          AND tablename  = 'narrative_fragments'
+          AND indexname  = 'idx_corpus_nf_embedding'
+      ) THEN
+        CREATE INDEX idx_corpus_nf_embedding
+          ON corpus.narrative_fragments
+          USING ivfflat (embedding vector_cosine_ops) WITH (lists = 30);
+      END IF;
+    END $embed_idx$;
+
+    -- Signal-layer FK additions to narrative_fragments.  ALTERs must come
+    -- before the UNIQUE constraint that references signal_def_id.
+    ALTER TABLE corpus.narrative_fragments
+      ADD COLUMN IF NOT EXISTS signal_def_id UUID;
+    ALTER TABLE corpus.narrative_fragments
+      ADD COLUMN IF NOT EXISTS observed_window DATERANGE;
+    -- Extra columns required by activateSignalFragment workflow (WS-SIGNALS-WORKFLOWS).
+    -- geo_scope and body_template exist in the CREATE TABLE above for new DBs;
+    -- these ALTERs ensure they land on pre-existing corpus tables as well.
+    ALTER TABLE corpus.narrative_fragments
+      ADD COLUMN IF NOT EXISTS geo_scope TEXT;
+    ALTER TABLE corpus.narrative_fragments
+      ADD COLUMN IF NOT EXISTS body_template TEXT;
+    -- freshness has a NOT NULL DEFAULT in the CREATE TABLE; the ALTER must
+    -- match that default so pre-existing rows without freshness get a safe value.
+    ALTER TABLE corpus.narrative_fragments
+      ADD COLUMN IF NOT EXISTS freshness TEXT NOT NULL DEFAULT 'permanent';
+    ALTER TABLE corpus.narrative_fragments
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+    -- ============================================================
+    -- signals schema extensions — catalog + event tables
+    -- (Requires corpus schema above to be created first for FK refs)
+    -- ============================================================
+
+    -- Signal catalog. One row per named signal x version.
+    -- signal_type values: 'panel' | 'derived_series' | 'cross_alloc'
+    --                     | 'composite_score' | 'index' | 'operator_panel'
+    -- cadence values:     'daily' | 'weekly' | 'monthly' | 'annual'
+    --
+    -- narrative_template_id + chart_template_id FKs must come AFTER the
+    -- corpus tables are created above.
+    CREATE TABLE IF NOT EXISTS signals.signal_definitions (
+      id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug                  TEXT NOT NULL,
+      version               INTEGER NOT NULL DEFAULT 1,
+      signal_type           TEXT NOT NULL,
+      series_scope          UUID[] NOT NULL DEFAULT '{}',
+      geo_scope             TEXT NOT NULL,
+      window_days           INTEGER NOT NULL DEFAULT 365,
+      threshold_pct         NUMERIC(6,3),
+      narrative_template_id UUID REFERENCES corpus.narrative_fragments(id) ON DELETE SET NULL,
+      chart_template_id     UUID REFERENCES corpus.chart_templates(id) ON DELETE SET NULL,
+      active                BOOLEAN NOT NULL DEFAULT TRUE,
+      superseded_by         UUID REFERENCES signals.signal_definitions(id),
+      cadence               TEXT NOT NULL DEFAULT 'daily',
+      incremental_enabled   BOOLEAN NOT NULL DEFAULT FALSE,
+      last_wall_ms          INTEGER,
+      priority              INTEGER NOT NULL DEFAULT 100,
+      created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      deprecated_at         TIMESTAMPTZ,
+      UNIQUE (slug, version)
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_def_slug_active
+      ON signals.signal_definitions (slug, active) WHERE active = TRUE;
+
+    -- Add the FK from narrative_fragments back to signal_definitions now that
+    -- signal_definitions exists.  This closes the circular reference safely
+    -- because signal_def_id is nullable.
+    DO $nf_fk$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid = 'corpus.narrative_fragments'::regclass
+          AND conname  = 'narrative_fragments_signal_def_id_fkey'
+      ) THEN
+        ALTER TABLE corpus.narrative_fragments
+          ADD CONSTRAINT narrative_fragments_signal_def_id_fkey
+          FOREIGN KEY (signal_def_id)
+          REFERENCES signals.signal_definitions(id)
+          ON DELETE SET NULL;
+      END IF;
+    END $nf_fk$;
+
+    -- Idempotent UNIQUE constraint: used as the ON CONFLICT target by
+    -- activateSignalFragment (replay-safe UPSERT guarantee).
+    DO $nf_uniq$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid = 'corpus.narrative_fragments'::regclass
+          AND conname  = 'narrative_fragments_signal_unique'
+      ) THEN
+        ALTER TABLE corpus.narrative_fragments
+          ADD CONSTRAINT narrative_fragments_signal_unique
+          UNIQUE (signal_def_id, geo_scope, observed_window);
+      END IF;
+    END $nf_uniq$;
+
+    -- Index on signal_def_id placed AFTER the ALTER that creates the column.
+    CREATE INDEX IF NOT EXISTS idx_corpus_nf_signal_def
+      ON corpus.narrative_fragments (signal_def_id)
+      WHERE signal_def_id IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_corpus_nf_freshness
+      ON corpus.narrative_fragments (freshness);
+
+    -- Tall-narrow event table. One row per (signal_def x series x geo x window).
+    -- UNIQUE constraint is the ON CONFLICT target for Write-Last UPSERT.
+    CREATE TABLE IF NOT EXISTS signals.signal_events (
+      id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      signal_def_id      UUID NOT NULL REFERENCES signals.signal_definitions(id),
+      series_id          UUID REFERENCES substrate.series_metadata(id),
+      geo_id             UUID NOT NULL REFERENCES substrate.geo_dimension(id),
+      observed_window    DATERANGE NOT NULL,
+      fired_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      event_type         TEXT NOT NULL,
+      magnitude          NUMERIC(12,4),
+      direction          TEXT,
+      confidence         NUMERIC(4,3),
+      evidence_refs      UUID[] NOT NULL DEFAULT '{}',
+      corpus_fragment_id UUID REFERENCES corpus.narrative_fragments(id),
+      metadata           JSONB NOT NULL DEFAULT '{}',
+      UNIQUE (signal_def_id, series_id, geo_id, observed_window)
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_events_def_geo_fired
+      ON signals.signal_events (signal_def_id, geo_id, fired_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_signals_events_corpus_fragment
+      ON signals.signal_events (corpus_fragment_id) WHERE corpus_fragment_id IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_signals_events_evidence_refs
+      ON signals.signal_events USING GIN (evidence_refs);
+
+    -- Outbox queue. Written by collector in same TX as observation upsert.
+    -- Drained by processSignalQueue workflow.  FOR UPDATE SKIP LOCKED on
+    -- claim query prevents double-processing across concurrent workers.
+    CREATE TABLE IF NOT EXISTS signals.signal_queue (
+      id           BIGSERIAL PRIMARY KEY,
+      series_id    UUID NOT NULL REFERENCES substrate.series_metadata(id),
+      geo_id       UUID NOT NULL REFERENCES substrate.geo_dimension(id),
+      period       DATE NOT NULL,
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      claimed_at   TIMESTAMPTZ,
+      processed_at TIMESTAMPTZ,
+      UNIQUE (series_id, geo_id, period)
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_queue_pending
+      ON signals.signal_queue (collected_at) WHERE processed_at IS NULL;
+
+    -- Audit trail for scheduled signal-compute runs.
+    -- run_type values: 'scheduled' | 'statistical' | 'agentic' | 'backfill'
+    -- status values:   'running' | 'done' | 'failed' | 'candidate'
+    CREATE TABLE IF NOT EXISTS signals.discovery_runs (
+      id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      signal_def_id     UUID NOT NULL REFERENCES signals.signal_definitions(id),
+      run_type          TEXT NOT NULL,
+      promise_id        TEXT,
+      started_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      completed_at      TIMESTAMPTZ,
+      status            TEXT NOT NULL DEFAULT 'running',
+      events_fired      INTEGER DEFAULT 0,
+      events_suppressed INTEGER DEFAULT 0,
+      wall_ms           INTEGER,
+      cost_cents        INTEGER DEFAULT 0,
+      error_detail      TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_discovery_runs_def_started
+      ON signals.discovery_runs (signal_def_id, started_at DESC);
+
+    -- Per-step progress writer (parallel to answer_progress pattern).
+    -- UNIQUE (workflow_id, stage) used as ON CONFLICT DO NOTHING target
+    -- for replay-safe writes.
+    CREATE TABLE IF NOT EXISTS signals.signal_progress (
+      id          BIGSERIAL PRIMARY KEY,
+      workflow_id TEXT NOT NULL,
+      stage       TEXT NOT NULL,
+      payload     JSONB,
+      emitted_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (workflow_id, stage)
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_progress_workflow
+      ON signals.signal_progress (workflow_id, emitted_at);
+
+    -- Run-level summary for observability dashboards + alert queries.
+    CREATE TABLE IF NOT EXISTS signals.signal_run_log (
+      workflow_id         TEXT PRIMARY KEY,
+      run_date            DATE NOT NULL,
+      total_signals       INTEGER,
+      total_geos          INTEGER,
+      succeeded           INTEGER,
+      failed              INTEGER,
+      skipped_incremental INTEGER,
+      wall_ms             INTEGER,
+      status              TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_run_log_date
+      ON signals.signal_run_log (run_date DESC);
+
+    -- Entity-resolution alias table (S5 operator panel).
+    -- GIN trigram index on alias_string requires pg_trgm (created above).
+    CREATE TABLE IF NOT EXISTS signals.operator_aliases (
+      id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      canonical_id   UUID NOT NULL,
+      canonical_name TEXT NOT NULL,
+      alias_string   TEXT NOT NULL,
+      source         TEXT NOT NULL,
+      source_row_id  TEXT,
+      confidence     NUMERIC(4,3) NOT NULL,
+      match_method   TEXT NOT NULL,
+      resolved_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (alias_string, source)
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_operator_aliases_canonical
+      ON signals.operator_aliases (canonical_id);
+    DO $trgm_idx$ BEGIN
+      IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm')
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE schemaname = 'signals'
+          AND tablename  = 'operator_aliases'
+          AND indexname  = 'idx_signals_operator_aliases_alias_trgm'
+      ) THEN
+        CREATE INDEX idx_signals_operator_aliases_alias_trgm
+          ON signals.operator_aliases
+          USING GIN (alias_string gin_trgm_ops);
+      END IF;
+    END $trgm_idx$;
+
+    -- Nightly MV — wide pivot for planner reads.
+    -- UNIQUE INDEX enables REFRESH MATERIALIZED VIEW CONCURRENTLY.
+    -- The WHERE clause (fired_at > NOW() - 90 days) is intentional:
+    -- planner queries use this view for "current" anomaly state.
+    -- Historical signal_events are always accessible from the base table.
+    CREATE MATERIALIZED VIEW IF NOT EXISTS signals.geo_signal_digest AS
+    SELECT
+      se.geo_id,
+      g.slug                                     AS geo_slug,
+      g.name                                     AS geo_name,
+      g.geo_type,
+      sd.slug                                    AS signal_slug,
+      sd.signal_type,
+      date_trunc('month', se.fired_at)::DATE     AS period_month,
+      MAX(se.fired_at)                           AS latest_event_at,
+      AVG(se.magnitude)                          AS avg_magnitude,
+      MAX(se.magnitude)                          AS max_magnitude,
+      COUNT(*)                                   AS event_count,
+      bool_or(se.event_type = 'anomaly')         AS has_anomaly,
+      MAX(se.confidence)                         AS max_confidence,
+      jsonb_agg(DISTINCT se.metadata)
+        FILTER (WHERE se.metadata != '{}'::jsonb) AS metadata_agg
+    FROM signals.signal_events se
+    JOIN signals.signal_definitions sd
+      ON se.signal_def_id = sd.id AND sd.active = TRUE
+    JOIN substrate.geo_dimension g
+      ON se.geo_id = g.id
+    WHERE se.fired_at > NOW() - INTERVAL '90 days'
+    GROUP BY
+      se.geo_id, g.slug, g.name, g.geo_type,
+      sd.slug, sd.signal_type,
+      date_trunc('month', se.fired_at)::DATE
+    WITH NO DATA;
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_signals_geo_digest_unique
+      ON signals.geo_signal_digest (geo_id, signal_slug, period_month);
+    CREATE INDEX IF NOT EXISTS idx_signals_geo_digest_anomaly
+      ON signals.geo_signal_digest (has_anomaly) WHERE has_anomaly = TRUE;
+
+    -- Seed the MV once if it has never been refreshed (empty but unpopulated
+    -- differs from populated-empty on pg_class.relispopulated).
+    DO $digest_seed$ BEGIN
+      IF NOT (
+        SELECT relispopulated
+        FROM pg_class
+        WHERE relnamespace = 'signals'::regnamespace
+          AND relname = 'geo_signal_digest'
+      ) THEN
+        REFRESH MATERIALIZED VIEW signals.geo_signal_digest;
+      END IF;
+    END $digest_seed$;
+
+    -- ============================================================
+    -- S1 materialized table — Edmonton business panel
+    -- Wide-row enrichment keyed on (licence_id, period).
+    -- Refreshed daily by computeSignals.
+    -- All numeric enrichment columns are nullable: the first daily run
+    -- populates what exists in substrate; gaps are NULL until upstream
+    -- data lands.
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS signals.edmonton_business_panel (
+      -- Natural key
+      licence_id               TEXT NOT NULL,
+      period                   DATE NOT NULL,
+
+      -- Identity
+      trade_name               TEXT,
+      legal_name               TEXT,
+      geo_id                   UUID REFERENCES substrate.geo_dimension(id),
+      neighbourhood            TEXT,
+      address                  TEXT,
+      naics_code               TEXT,
+      category                 TEXT,
+
+      -- Tenure
+      issue_date               DATE,
+      expiry_date              DATE,
+      tenure_months            NUMERIC(8,2),
+      is_active                BOOLEAN NOT NULL DEFAULT TRUE,
+
+      -- Entity context
+      entity_id                UUID REFERENCES substrate.entities(id),
+      is_single_location       BOOLEAN,
+
+      -- Neighbourhood vitality (from S2 once available; NULL until then)
+      neighbourhood_vitality   NUMERIC(6,3),
+      neighbourhood_net_change INTEGER,
+      neighbourhood_rank       INTEGER,
+
+      -- Sector momentum (from S3 once available; NULL until then)
+      sector_closure_rate      NUMERIC(6,4),
+      sector_momentum_score    NUMERIC(6,3),
+
+      -- Parcel intelligence (from S4 once available; NULL until then)
+      parcel_id                TEXT,
+      assessed_value           NUMERIC(14,2),
+      tax_class                TEXT,
+      permit_count_5yr         INTEGER,
+
+      -- Dietary enrichment (from licence_dietary_taxonomy)
+      dietary_category         TEXT,
+      dietary_confidence       NUMERIC(3,2),
+
+      -- S8 acquisition score (populated after S8 is computed)
+      acquisition_score        NUMERIC(6,2),
+
+      -- Bookkeeping
+      computed_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+      PRIMARY KEY (licence_id, period)
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_ebp_geo_period
+      ON signals.edmonton_business_panel (geo_id, period DESC);
+    CREATE INDEX IF NOT EXISTS idx_signals_ebp_naics_period
+      ON signals.edmonton_business_panel (naics_code, period DESC)
+      WHERE naics_code IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_signals_ebp_neighbourhood_period
+      ON signals.edmonton_business_panel (neighbourhood, period DESC)
+      WHERE neighbourhood IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_signals_ebp_single_location
+      ON signals.edmonton_business_panel (period, is_single_location)
+      WHERE is_single_location = TRUE;
+    CREATE INDEX IF NOT EXISTS idx_signals_ebp_active_period
+      ON signals.edmonton_business_panel (period, is_active)
+      WHERE is_active = TRUE;
+    -- Additional indexes from WS-SIGNALS-WORKFLOWS (idempotent IF NOT EXISTS).
+    CREATE INDEX IF NOT EXISTS idx_signals_ebp_neighbourhood
+      ON signals.edmonton_business_panel (neighbourhood, period DESC);
+    CREATE INDEX IF NOT EXISTS idx_signals_ebp_category
+      ON signals.edmonton_business_panel (category, period DESC);
+    CREATE INDEX IF NOT EXISTS idx_signals_ebp_dietary
+      ON signals.edmonton_business_panel (dietary_category, period DESC)
+      WHERE dietary_category != 'unknown';
+
+    -- ============================================================
+    -- WS-OPS: series_metadata CHECK constraints (issue #34).
+    -- ADD CONSTRAINT isn't idempotent, so gate on pg_constraint.
+    -- Must come AFTER the ALTER TABLE substrate.series_metadata block
+    -- above (which adds storage_kind and entity_kind columns).
+    -- ============================================================
+    DO $series_meta_checks$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'series_metadata_storage_kind_check'
+      ) THEN
+        ALTER TABLE substrate.series_metadata
+          ADD CONSTRAINT series_metadata_storage_kind_check
+          CHECK (storage_kind IN ('observation', 'entity', 'entity+observation'));
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'series_metadata_entity_kind_required'
+      ) THEN
+        ALTER TABLE substrate.series_metadata
+          ADD CONSTRAINT series_metadata_entity_kind_required
+          CHECK (storage_kind = 'observation' OR entity_kind IS NOT NULL);
+      END IF;
+    END $series_meta_checks$;
 `;
 
 /**
