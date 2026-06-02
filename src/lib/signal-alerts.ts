@@ -243,8 +243,8 @@ export async function checkCorpusHitRate(): Promise<AlertResult> {
 //      "recomputeSignal", { signalSlug: "<slug>" })
 //   3. If a signal definition was deprecated, set active=FALSE on
 //      signal_definitions and archived_at on the fragment to suppress future alerts.
-//   4. If the fragment is stale because the S1 materialization didn't run,
-//      check signal_run_log for computeSignals errors on that date.
+//   4. If the fragment is stale because the edmonton-business-panel
+//      materialization didn't run, check signal_run_log for computeSignals errors on that date.
 // ---------------------------------------------------------------------------
 
 export async function checkSignalStaleness(): Promise<AlertResult> {

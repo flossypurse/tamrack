@@ -37,6 +37,7 @@ export interface SendInviteEmailInput {
 
 /**
  * Sends a signup invite email containing a tokenized link.
+ * Note: the /signup page/route is not yet built and lands in a later iteration — the URL below is scaffolding.
  */
 export async function sendInviteEmail(
   input: SendInviteEmailInput,
@@ -95,6 +96,7 @@ export interface SendPasswordResetEmailInput {
 
 /**
  * Sends a password-reset email. The reset link expires in 1 hour.
+ * Note: the /reset-password page/route is not yet built and lands in a later iteration — the URL below is scaffolding.
  */
 export async function sendPasswordResetEmail(
   input: SendPasswordResetEmailInput,

@@ -340,11 +340,16 @@ export function parsePlan(raw: string): QueryPlan {
       ? (obj.story_template as StoryTemplateSlug)
       : null;
 
+  // Gate story cards until the full story render path and corpus data land.
+  // The composer only emits story cards when plan.story_template is non-null,
+  // so gating here is sufficient to keep the live chat clean.
+  const storyTemplatesEnabled = process.env.STORY_TEMPLATES_ENABLED === "true";
+
   return {
     intent: obj.intent,
     card_titles: obj.card_titles as string[],
     tools_to_call: obj.tools_to_call as QueryPlan["tools_to_call"],
     confidence: typeof obj.confidence === "number" ? obj.confidence : 0.5,
-    story_template: storyTemplate,
+    story_template: storyTemplatesEnabled ? storyTemplate : null,
   };
 }

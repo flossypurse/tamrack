@@ -45,6 +45,8 @@ export interface CreatedEmailInvite {
  * Creates a new invite row and returns the plaintext token (NOT retrievable
  * later — the hash is what's stored).
  *
+ * Note: the /signup route is not yet built and lands in a later iteration — the signupUrl returned here is scaffolding.
+ *
  * @param input    Who is creating the invite and the recipient email.
  * @param appUrl   Runtime APP_URL (e.g. "https://tamrack.ca"). No trailing slash.
  */

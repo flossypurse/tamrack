@@ -62,19 +62,22 @@ interface DrainResult {
 async function claimBatch(bucket: string): Promise<ClaimedBatch> {
   const pool = await getDb();
 
-  // Claim up to 50 rows atomically.
+  // Claim up to 50 rows atomically. The CTE form holds the SKIP LOCKED row
+  // locks through the outer UPDATE, preventing a race between the inner SELECT
+  // and the outer UPDATE that the subquery form does not prevent.
   const { rows } = await pool.query<QueueRow>(`
-    UPDATE signals.signal_queue
-    SET claimed_at = NOW()
-    WHERE id IN (
+    WITH claimed AS (
       SELECT id FROM signals.signal_queue
-      WHERE claimed_at IS NULL
-        AND processed_at IS NULL
+      WHERE claimed_at IS NULL AND processed_at IS NULL
       ORDER BY collected_at ASC
       LIMIT 50
       FOR UPDATE SKIP LOCKED
     )
-    RETURNING id, series_id, geo_id, period::TEXT, collected_at, claimed_at
+    UPDATE signals.signal_queue q
+    SET claimed_at = NOW()
+    FROM claimed
+    WHERE q.id = claimed.id
+    RETURNING q.id, q.series_id, q.geo_id, q.period::TEXT, q.collected_at, q.claimed_at
   `);
 
   // Dead-letter rows stuck > 1 hour unclaimed.
@@ -217,11 +220,11 @@ export function* processSignalQueue(
 
       try {
         // ctx.beginRpc dispatches activateSignalFragment as a durable RPC.
-        // id is the FIRST positional argument per the Resonate SDK contract.
+        // Function name is first, workflow input is a plain positional arg,
+        // options object is last per the Resonate SDK signature.
         yield* ctx.beginRpc(
-          rpcId,
           "activateSignalFragment",
-          [input],
+          input,
           (ctx as any).options({ id: rpcId })
         );
       } catch (e) {

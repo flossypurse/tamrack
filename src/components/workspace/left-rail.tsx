@@ -78,7 +78,7 @@ export function WorkspaceLeftRail({
               <button
                 type="submit"
                 disabled={atCap}
-                className="w-full border border-[var(--amber)] bg-[var(--amber)] px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--surface)] hover:bg-[var(--amber)]/85 disabled:cursor-not-allowed disabled:opacity-40"
+                className="w-full border border-[var(--ink)] bg-[var(--ink)] px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--surface)] hover:bg-[var(--ink)]/85 disabled:cursor-not-allowed disabled:opacity-40"
                 style={{ transitionDuration: "var(--dur-instant)" }}
               >
                 generate mcp token
@@ -117,7 +117,7 @@ export function WorkspaceLeftRail({
           )}
 
           <details className="group">
-            <summary className="cursor-pointer list-none font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--mid)] hover:text-[var(--amber)]">
+            <summary className="cursor-pointer list-none font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--mid)] hover:text-[var(--ink)]">
               install snippet
             </summary>
             <pre className="mt-2 overflow-x-auto border border-[var(--hairline)] bg-[var(--surface)] p-2 font-mono text-[10px] leading-relaxed text-[var(--ink)]">

@@ -26,7 +26,7 @@ import { captureError } from "../lib/observability";
 export interface ComputeSignalsOptions {
   /** Limit geo fan-out per signal. Useful for smoke tests (maxGeo=1). */
   maxGeo?: number;
-  /** Trailing window in days for S1 recompute. Defaults to 365. */
+  /** Trailing window in days for the edmonton-business-panel recompute. Defaults to 365. */
   windowDays?: number;
   /** If provided, only compute this signal slug. */
   signalSlug?: string;
@@ -60,11 +60,11 @@ interface ComputeOneResult {
 }
 
 // ---------------------------------------------------------------------------
-// S1 materialization SQL (Edmonton business panel)
+// Edmonton business panel materialization SQL
 // ---------------------------------------------------------------------------
 
 /**
- * Builds the S1 materialized table for a given period window.
+ * Builds the edmonton-business-panel materialized table for a given period window.
  *
  * The query joins Edmonton business licences (via substrate.entities +
  * substrate.observations for the licence presence series) with:
@@ -79,31 +79,12 @@ async function materializeEdmontonBusinessPanel(
   windowDays: number,
   today: string
 ): Promise<number> {
-  // Ensure the target table exists (idempotent).
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS signals.edmonton_business_panel (
-      licence_id              TEXT NOT NULL,
-      period                  DATE NOT NULL,
-      trade_name              TEXT,
-      business_category       TEXT,
-      neighbourhood           TEXT,
-      geo_id                  UUID,
-      issue_date              DATE,
-      expiry_date             DATE,
-      tenure_months           NUMERIC(8,2),
-      is_single_location      BOOLEAN,
-      dietary_category        TEXT,
-      dietary_confidence      NUMERIC(3,2),
-      neighbourhood_vitality  NUMERIC(6,3),
-      computed_at             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      PRIMARY KEY (licence_id, period)
-    )
-  `);
-
   // Full recompute for the trailing window. DELETE then re-INSERT is safe
   // because computeSignals runs at 07:00 UTC and collection runs at 06:00 UTC,
   // so the window is always populated by the time we compute.
-  const windowStart = new Date();
+  // Derive windowStart from the passed-in today string to avoid a second
+  // wall-clock read that could straddle midnight.
+  const windowStart = new Date(today);
   windowStart.setDate(windowStart.getDate() - windowDays);
   const windowStartStr = windowStart.toISOString().split("T")[0];
 
@@ -117,18 +98,19 @@ async function materializeEdmontonBusinessPanel(
   // Insert: join entities (business licences) with dietary taxonomy.
   // is_single_location = no other entity sharing the same trade_name in Edmonton.
   // tenure_months = months from issue_date to today (or expiry_date if closed).
-  // neighbourhood_vitality: stub scalar (1.0) until S2 is live; the column
-  // carries the derived value once neighbourhood_formation_monthly is populated.
+  // neighbourhood_vitality: stub scalar (1.0) until the neighbourhood vitality
+  // signal is live; the column carries the derived value once
+  // neighbourhood_formation_monthly is populated.
   const { rowCount } = await pool.query(`
     INSERT INTO signals.edmonton_business_panel
-      (licence_id, period, trade_name, business_category, neighbourhood, geo_id,
+      (licence_id, period, trade_name, category, neighbourhood, geo_id,
        issue_date, expiry_date, tenure_months, is_single_location,
        dietary_category, dietary_confidence, neighbourhood_vitality, computed_at)
     SELECT
       e.slug                              AS licence_id,
       $1::DATE                            AS period,
       e.name                              AS trade_name,
-      COALESCE(e.attrs->>'category', '')  AS business_category,
+      COALESCE(e.attrs->>'category', '')  AS category,
       COALESCE(e.attrs->>'neighbourhood', '') AS neighbourhood,
       e.geo_id,
       CASE WHEN e.attrs->>'issue_date' IS NOT NULL
@@ -171,7 +153,7 @@ async function materializeEdmontonBusinessPanel(
       )
     ON CONFLICT (licence_id, period) DO UPDATE SET
       trade_name             = EXCLUDED.trade_name,
-      business_category      = EXCLUDED.business_category,
+      category               = EXCLUDED.category,
       neighbourhood          = EXCLUDED.neighbourhood,
       geo_id                 = EXCLUDED.geo_id,
       issue_date             = EXCLUDED.issue_date,

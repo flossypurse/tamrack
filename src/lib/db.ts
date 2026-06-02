@@ -1045,7 +1045,7 @@ const MIGRATION_SQL = `
     END $cnstr$;
 
     -- ============================================================
-    -- WS-AUTH Phase A: username/password auth columns
+    -- Auth: username/password columns
     -- ALTER before indexes (idempotent; pre-existing table).
     -- ============================================================
 
@@ -1211,13 +1211,13 @@ const MIGRATION_SQL = `
       ADD COLUMN IF NOT EXISTS signal_def_id UUID;
     ALTER TABLE corpus.narrative_fragments
       ADD COLUMN IF NOT EXISTS observed_window DATERANGE;
-    -- Extra columns required by activateSignalFragment workflow (WS-SIGNALS-WORKFLOWS).
+    -- Extra columns required by activateSignalFragment workflow.
     -- geo_scope and body_template exist in the CREATE TABLE above for new DBs;
     -- these ALTERs ensure they land on pre-existing corpus tables as well.
     ALTER TABLE corpus.narrative_fragments
       ADD COLUMN IF NOT EXISTS geo_scope TEXT;
     ALTER TABLE corpus.narrative_fragments
-      ADD COLUMN IF NOT EXISTS body_template TEXT;
+      ADD COLUMN IF NOT EXISTS body_template TEXT NOT NULL DEFAULT '';
     -- freshness has a NOT NULL DEFAULT in the CREATE TABLE; the ALTER must
     -- match that default so pre-existing rows without freshness get a safe value.
     ALTER TABLE corpus.narrative_fragments
@@ -1315,7 +1315,7 @@ const MIGRATION_SQL = `
       evidence_refs      UUID[] NOT NULL DEFAULT '{}',
       corpus_fragment_id UUID REFERENCES corpus.narrative_fragments(id),
       metadata           JSONB NOT NULL DEFAULT '{}',
-      UNIQUE (signal_def_id, series_id, geo_id, observed_window)
+      UNIQUE NULLS NOT DISTINCT (signal_def_id, series_id, geo_id, observed_window)
     );
     CREATE INDEX IF NOT EXISTS idx_signals_events_def_geo_fired
       ON signals.signal_events (signal_def_id, geo_id, fired_at DESC);
@@ -1389,7 +1389,7 @@ const MIGRATION_SQL = `
     CREATE INDEX IF NOT EXISTS idx_signals_run_log_date
       ON signals.signal_run_log (run_date DESC);
 
-    -- Entity-resolution alias table (S5 operator panel).
+    -- Entity-resolution alias table (operator panel).
     -- GIN trigram index on alias_string requires pg_trgm (created above).
     CREATE TABLE IF NOT EXISTS signals.operator_aliases (
       id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1472,7 +1472,7 @@ const MIGRATION_SQL = `
     END $digest_seed$;
 
     -- ============================================================
-    -- S1 materialized table — Edmonton business panel
+    -- Edmonton business panel — materialized enrichment table
     -- Wide-row enrichment keyed on (licence_id, period).
     -- Refreshed daily by computeSignals.
     -- All numeric enrichment columns are nullable: the first daily run
@@ -1503,16 +1503,16 @@ const MIGRATION_SQL = `
       entity_id                UUID REFERENCES substrate.entities(id),
       is_single_location       BOOLEAN,
 
-      -- Neighbourhood vitality (from S2 once available; NULL until then)
+      -- Neighbourhood vitality (from neighbourhood vitality signal once available; NULL until then)
       neighbourhood_vitality   NUMERIC(6,3),
       neighbourhood_net_change INTEGER,
       neighbourhood_rank       INTEGER,
 
-      -- Sector momentum (from S3 once available; NULL until then)
+      -- Sector momentum (from sector momentum signal once available; NULL until then)
       sector_closure_rate      NUMERIC(6,4),
       sector_momentum_score    NUMERIC(6,3),
 
-      -- Parcel intelligence (from S4 once available; NULL until then)
+      -- Parcel intelligence (from parcel intelligence signal once available; NULL until then)
       parcel_id                TEXT,
       assessed_value           NUMERIC(14,2),
       tax_class                TEXT,
@@ -1522,7 +1522,7 @@ const MIGRATION_SQL = `
       dietary_category         TEXT,
       dietary_confidence       NUMERIC(3,2),
 
-      -- S8 acquisition score (populated after S8 is computed)
+      -- Acquisition score (populated after acquisition score signal is computed)
       acquisition_score        NUMERIC(6,2),
 
       -- Bookkeeping
@@ -1544,7 +1544,7 @@ const MIGRATION_SQL = `
     CREATE INDEX IF NOT EXISTS idx_signals_ebp_active_period
       ON signals.edmonton_business_panel (period, is_active)
       WHERE is_active = TRUE;
-    -- Additional indexes from WS-SIGNALS-WORKFLOWS (idempotent IF NOT EXISTS).
+    -- Additional indexes for signal pipeline queries (idempotent IF NOT EXISTS).
     CREATE INDEX IF NOT EXISTS idx_signals_ebp_neighbourhood
       ON signals.edmonton_business_panel (neighbourhood, period DESC);
     CREATE INDEX IF NOT EXISTS idx_signals_ebp_category
@@ -1554,7 +1554,7 @@ const MIGRATION_SQL = `
       WHERE dietary_category != 'unknown';
 
     -- ============================================================
-    -- WS-OPS: series_metadata CHECK constraints (issue #34).
+    -- series_metadata CHECK constraints.
     -- ADD CONSTRAINT isn't idempotent, so gate on pg_constraint.
     -- Must come AFTER the ALTER TABLE substrate.series_metadata block
     -- above (which adds storage_kind and entity_kind columns).
@@ -1564,6 +1564,7 @@ const MIGRATION_SQL = `
       IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
         WHERE conname = 'series_metadata_storage_kind_check'
+          AND conrelid = 'substrate.series_metadata'::regclass
       ) THEN
         ALTER TABLE substrate.series_metadata
           ADD CONSTRAINT series_metadata_storage_kind_check
@@ -1572,6 +1573,7 @@ const MIGRATION_SQL = `
       IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
         WHERE conname = 'series_metadata_entity_kind_required'
+          AND conrelid = 'substrate.series_metadata'::regclass
       ) THEN
         ALTER TABLE substrate.series_metadata
           ADD CONSTRAINT series_metadata_entity_kind_required

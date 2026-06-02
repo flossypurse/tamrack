@@ -33,12 +33,12 @@ import {
 import { getDb } from "./src/lib/db";
 import { captureError, initObservability } from "./src/lib/observability";
 
-// WS-SIGNALS pipeline workflows
+// Signal pipeline workflows
 import { computeSignals, recomputeSignal } from "./src/workflows/compute-signals";
 import { processSignalQueue } from "./src/workflows/process-signal-queue";
 import { activateSignalFragment } from "./src/workflows/activate-signal-fragment";
 
-// WS-OPS substrate operational workflows
+// Substrate operational workflows
 import { rolloverSubstratePartitions } from "./src/workflows/partition-rollover";
 import { refreshLatestObservations } from "./src/workflows/refresh-matview";
 import { snapshotLogHygiene } from "./src/workflows/snapshot-log-hygiene";
@@ -223,13 +223,13 @@ async function main() {
   // Register the collection workflow
   resonate.register("dailyCollection", dailyCollection);
 
-  // WS-SIGNALS pipeline workflows
+  // Signal pipeline workflows
   resonate.register("computeSignals", computeSignals);
   resonate.register("processSignalQueue", processSignalQueue);
   resonate.register("activateSignalFragment", activateSignalFragment);
   resonate.register("recomputeSignal", recomputeSignal);
 
-  // WS-OPS substrate operational workflows
+  // Substrate operational workflows
   resonate.register("rolloverSubstratePartitions", rolloverSubstratePartitions);
   resonate.register("snapshotLogHygiene", snapshotLogHygiene);
   resonate.register("refreshLatestObservations", refreshLatestObservations);
@@ -256,7 +256,7 @@ async function main() {
     }
   }
 
-  // WS-SIGNALS cron schedules
+  // Signal cron schedules
   try {
     await resonate.schedule("compute-signals", "0 7 * * *", "computeSignals");
     console.log("[worker] Scheduled compute-signals cron: 0 7 * * * (7 AM UTC)");
@@ -287,7 +287,7 @@ async function main() {
     }
   }
 
-  // WS-OPS cron schedules (spaced to avoid collision with daily-collection 06:00)
+  // Substrate operational cron schedules (spaced to avoid collision with daily-collection 06:00)
   try {
     await resonate.schedule("monthly-partition-rollover", "0 8 1 * *", "rolloverSubstratePartitions");
     console.log("[worker] Scheduled monthly-partition-rollover: 0 8 1 * *");

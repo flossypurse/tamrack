@@ -1,15 +1,11 @@
 "use client";
 
 /**
- * HumanReviewGate — Phase-1 placeholder for Tier-3 comparison blocks.
- *
- * Renders when trust.requires_human_review === true AND
- * human_review_approved === false on a story card. Replaces the chart area.
- *
- * The narrative body and disclosure row are still shown — only the chart
- * is gated. Admin approval is via PATCH /answer/:slug/blocks/:block_id
- * (see spec §3.7). This component does NOT render an approval UI;
- * that belongs to the admin route built in a later phase.
+ * HumanReviewGate — renders in place of the chart when a story card requires
+ * editorial review before display (trust.requires_human_review === true AND
+ * human_review_approved === false). The narrative body and disclosure row still
+ * render; only the chart is gated. The approval UI itself is not part of this
+ * component.
  */
 
 interface HumanReviewGateProps {
