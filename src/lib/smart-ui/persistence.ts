@@ -47,6 +47,10 @@ export interface SaveDashboardInput {
   toolResults: ToolCallResult[];
   costCents: number;
   parentId?: string | null;
+  // Visibility carve-out: default FALSE = shared into the query corpus. Set
+  // TRUE to keep a genuinely sensitive question out of the shared feed and out
+  // of promotion nomination (slug-by-link access is unaffected).
+  private?: boolean;
 }
 
 export interface SavedDashboard {
@@ -78,8 +82,8 @@ export async function saveDashboard(
       await pool.query(
         `INSERT INTO smart_dashboards
             (id, slug, user_id, query, query_hash, plan, config, tool_args,
-             cost_cents, parent_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+             cost_cents, parent_id, private)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
         [
           id,
           slug,
@@ -91,6 +95,7 @@ export async function saveDashboard(
           JSON.stringify(toolArgs),
           input.costCents,
           input.parentId ?? null,
+          input.private ?? false,
         ],
       );
       return { id, slug, url: `/d/${slug}` };
@@ -208,6 +213,80 @@ export async function countDashboardsForUser(userId: string): Promise<number> {
     [userId],
   );
   return (rows[0] as { n: number }).n;
+}
+
+export interface SharedQuestion {
+  queryHash: string;
+  query: string;
+  title: string | null;
+  slug: string;
+  askers: number;
+  views: number;
+  lastAsked: string;
+}
+
+/**
+ * "What Alberta is asking" — the de-silo read model. Aggregates non-private
+ * dashboards by query_hash so the same question asked by N people collapses to
+ * one row, ranked by how many distinct people asked it (then total views).
+ *
+ * Two CTEs because Postgres forbids COUNT(DISTINCT ...) as a window function:
+ *   - `stats` does the GROUP BY aggregate (askers / views / last_asked).
+ *   - `rep` picks ONE canonical dashboard per question to link to — most-viewed,
+ *     tie-break most-recent (configs are LLM-composed and differ run-to-run, so
+ *     we must point at a single representative, not all of them).
+ * Read-time aggregation only; we keep one row per ask (no ON CONFLICT dedupe) so
+ * per-user provenance and cost accounting survive.
+ */
+export async function listSharedQuestions(
+  opts: { limit?: number } = {},
+): Promise<SharedQuestion[]> {
+  const pool = await getDb();
+  const limit = Math.min(Math.max(opts.limit ?? 12, 1), 100);
+  const { rows } = await pool.query(
+    `WITH stats AS (
+       SELECT query_hash,
+              COUNT(DISTINCT user_id) AS askers,
+              SUM(view_count)         AS views,
+              MAX(created_at)         AS last_asked
+         FROM smart_dashboards
+        WHERE NOT private
+        GROUP BY query_hash
+     ),
+     rep AS (
+       SELECT DISTINCT ON (query_hash)
+              query_hash, query, title, slug
+         FROM smart_dashboards
+        WHERE NOT private
+        ORDER BY query_hash, view_count DESC, created_at DESC
+     )
+     SELECT rep.query_hash, rep.query, rep.title, rep.slug,
+            stats.askers::int AS askers,
+            stats.views::int  AS views,
+            stats.last_asked  AS last_asked
+       FROM rep
+       JOIN stats USING (query_hash)
+      ORDER BY stats.askers DESC, stats.views DESC, stats.last_asked DESC
+      LIMIT $1`,
+    [limit],
+  );
+  return (rows as Array<{
+    query_hash: string;
+    query: string;
+    title: string | null;
+    slug: string;
+    askers: number;
+    views: number;
+    last_asked: string;
+  }>).map((r) => ({
+    queryHash: r.query_hash,
+    query: r.query,
+    title: r.title,
+    slug: r.slug,
+    askers: r.askers,
+    views: r.views,
+    lastAsked: r.last_asked,
+  }));
 }
 
 export interface LogQueryEventInput {
