@@ -212,7 +212,17 @@ export async function POST(req: NextRequest): Promise<Response> {
             toolResults,
             dashboardId: savedId,
           })
-            .then((verdict) => saveTruthfulnessVerdict(savedId, verdict))
+            .then((verdict) =>
+              // Distinct log key so a DB write failure is triagable apart from
+              // a scoring failure (the row stays unscored and is re-queued by
+              // the backfill either way).
+              saveTruthfulnessVerdict(savedId, verdict).catch((saveErr) => {
+                console.warn(
+                  "smart_query_truthfulness_save_failed",
+                  saveErr instanceof Error ? saveErr.message : saveErr,
+                );
+              }),
+            )
             .catch((scoreErr) => {
               console.warn(
                 "smart_query_truthfulness_failed",

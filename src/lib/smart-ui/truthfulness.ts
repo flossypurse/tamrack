@@ -132,7 +132,10 @@ function checkRecency(summaries: ToolSummary[]): TruthfulnessCheck | null {
     .filter((d): d is string => typeof d === "string" && d.length > 0);
   if (dates.length === 0) return null;
   const newest = dates.reduce((a, b) => (a > b ? a : b));
-  const days = (Date.now() - new Date(newest).getTime()) / 86_400_000;
+  const ms = new Date(newest).getTime();
+  // An unparseable date is n/a, not a failure — don't poison the score with NaN.
+  if (Number.isNaN(ms)) return null;
+  const days = (Date.now() - ms) / 86_400_000;
   const score = Math.max(0, 1 - days / STALE_DAYS);
   return {
     name: "recency",
@@ -142,9 +145,14 @@ function checkRecency(summaries: ToolSummary[]): TruthfulnessCheck | null {
   };
 }
 
-function checkServedFrom(summaries: ToolSummary[]): TruthfulnessCheck {
-  // An errored tool result means no data was fetched — treat as empty.
-  const values = summaries.map((s) =>
+function checkServedFrom(summaries: ToolSummary[]): TruthfulnessCheck | null {
+  // Time-series cards only — same exclusion as sample_size/recency. An errored
+  // municipality/catalog lookup is normal data-absence, not a truthfulness
+  // failure, so it must not drag a good time-series dashboard below the line.
+  const series = summaries.filter((s) => isTimeSeriesCard(s.tool));
+  if (series.length === 0) return null;
+  // An errored time-series result means no data was fetched — treat as empty.
+  const values = series.map((s) =>
     s.status === "error" ? "empty" : s.envelope?.data?.served_from ?? "unknown",
   );
   const anyEmpty = values.includes("empty");
@@ -226,9 +234,9 @@ async function callJudge(
     const response = await client.messages.create({
       model: options.model ?? JUDGE_MODEL,
       max_tokens: 512,
-      system: [
-        { type: "text", text: JUDGE_SYSTEM, cache_control: { type: "ephemeral" } },
-      ],
+      // No cache_control: the system prompt is ~120 tokens, below the 1024-token
+      // minimum cacheable block — the annotation would be a silent no-op.
+      system: JUDGE_SYSTEM,
       tools: [JUDGE_TOOL],
       tool_choice: { type: "tool", name: "truthfulness_judge" },
       messages: [{ role: "user", content: JSON.stringify(payload) }],
@@ -237,7 +245,7 @@ async function callJudge(
     const block = response.content.find(
       (c): c is Anthropic.ToolUseBlock => c.type === "tool_use",
     );
-    if (!block) return null;
+    if (!block || !block.input || typeof block.input !== "object") return null;
     const out = block.input as Partial<TruthfulnessJudge>;
     if (
       typeof out.answers_question !== "boolean" ||
@@ -285,8 +293,10 @@ export async function scoreDashboardTruthfulness(
     weighted.push({ score: recency.score, weight: WEIGHTS.recency });
   }
   const served = checkServedFrom(summaries);
-  checks.push(served);
-  weighted.push({ score: served.score, weight: WEIGHTS.served_from });
+  if (served) {
+    checks.push(served);
+    weighted.push({ score: served.score, weight: WEIGHTS.served_from });
+  }
 
   const judge = await callJudge(input, summaries, options);
   // A judge outage scores neutral (0.5) and passes — never poison every

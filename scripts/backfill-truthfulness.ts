@@ -48,16 +48,19 @@ async function main() {
     `SELECT id, query, plan, config, tool_args
        FROM smart_dashboards
       WHERE truthfulness_checked_at IS NULL
-        AND created_at > NOW() - INTERVAL '${WINDOW_DAYS} days'
+        AND created_at > NOW() - ($1 * INTERVAL '1 day')
       ORDER BY view_count DESC
-      LIMIT ${LIMIT}`,
+      LIMIT $2`,
+    [WINDOW_DAYS, LIMIT],
   );
   const dashboards = rows as Row[];
   console.log(`backfill: ${dashboards.length} unscored dashboard(s) to process`);
 
   let scored = 0;
   let failed = 0;
-  for (const row of dashboards) {
+  for (const [i, row] of dashboards.entries()) {
+    // Rate-limit between rows (MCP + Haiku), but not after the last one.
+    if (i > 0) await sleep(1000);
     try {
       const mcp = await createInProcessMcpClient();
       const toolResults: ToolCallResult[] = [];
@@ -92,7 +95,6 @@ async function main() {
         `  ${row.id}  FAILED: ${err instanceof Error ? err.message : err}`,
       );
     }
-    await sleep(1000);
   }
 
   console.log(`backfill done: ${scored} scored, ${failed} failed`);
