@@ -555,10 +555,20 @@ const MIGRATION_SQL = `
       last_viewed TIMESTAMPTZ
     );
     ALTER TABLE smart_dashboards ADD COLUMN IF NOT EXISTS title TEXT;
+    -- Visibility carve-out for the shared query corpus: default FALSE = shared.
+    -- A private dashboard is excluded from the "what Alberta is asking" feed and
+    -- from promotion nomination; slug-by-link access is unchanged. The ALTER
+    -- must precede the partial index below — the table pre-exists, so the
+    -- CREATE TABLE above is a no-op and the column only arrives via this ALTER.
+    ALTER TABLE smart_dashboards ADD COLUMN IF NOT EXISTS private BOOLEAN NOT NULL DEFAULT FALSE;
     CREATE INDEX IF NOT EXISTS idx_smart_dashboards_user
       ON smart_dashboards(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_smart_dashboards_query_hash
       ON smart_dashboards(query_hash);
+    -- Backs the read-time GROUP BY query_hash aggregate for the shared feed;
+    -- partial so it only spans the rows that feed can surface.
+    CREATE INDEX IF NOT EXISTS idx_smart_dashboards_shared_query_hash
+      ON smart_dashboards(query_hash) WHERE NOT private;
 
     -- Telemetry. One row per Smart UI query, regardless of outcome. The
     -- query goes through planner → tool calls → composer; we record token
