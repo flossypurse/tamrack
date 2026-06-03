@@ -1,8 +1,8 @@
 /**
  * Account workspace shell — the full-screen, three-column surface that every
- * /account page renders inside. The global site chrome (top nav, breadcrumbs,
- * footer) is deliberately bypassed for /account in app-shell.tsx; this layout
- * is the only chrome here.
+ * /account page renders inside. The global site chrome (top nav, footer) is
+ * deliberately bypassed for /account in app-shell.tsx; this layout is the only
+ * chrome here.
  *
  *   LEFT   — API key + MCP token management + the single sign-out
  *   CENTER — the page (chat, or a sub-page like full history)
