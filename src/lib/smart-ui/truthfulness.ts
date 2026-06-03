@@ -332,6 +332,26 @@ export async function scoreDashboardTruthfulness(
   };
 }
 
+/**
+ * Hard gate for the dashboard -> corpus promotion path (Phase B1).
+ *
+ * Stricter than the advisory feed flag (which only reads composite `pass`):
+ * a dashboard becomes durable shared intelligence only if the composite passes
+ * AND the LLM judge affirms it actually answers the question with the right
+ * series. The composite alone weights deterministic data-hygiene checks
+ * (served_from + sample_size + recency) at 0.7, so a clean-but-off-target
+ * dashboard can pass the composite while the judge rejects it — that must not
+ * enter the corpus.
+ *
+ * A judge OUTAGE (verdict.judge === null, scored neutral) is NOT promotable:
+ * featuring is lenient on a Haiku blip, promotion is not.
+ */
+export function passesPromotionGate(v: TruthfulnessVerdict | null): boolean {
+  if (!v || !v.pass) return false;
+  const j = v.judge;
+  return !!j && j.answers_question && j.right_series;
+}
+
 export async function saveTruthfulnessVerdict(
   dashboardId: string,
   verdict: TruthfulnessVerdict,
