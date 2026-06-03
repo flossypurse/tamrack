@@ -10,18 +10,22 @@ const publicRoutes = ["/", "/login", "/terms", "/privacy"];
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  // The home, login, and legal pages own their full layout. The /account
-  // workspace is a full-screen app surface with its own layout (left rail +
-  // chat + history) and deliberately carries no global chrome. Embeds are bare.
+  // The home, login, and legal pages own their full layout. The public chart
+  // catalogue has its own quiet chrome (src/app/charts/layout.tsx) and must NOT
+  // carry the app navigation. The /account workspace is a full-screen app
+  // surface with its own layout. Embeds are bare.
   const isBare =
-    publicRoutes.includes(pathname) || pathname.startsWith("/embed/");
+    publicRoutes.includes(pathname) ||
+    pathname === "/charts" ||
+    pathname.startsWith("/charts/") ||
+    pathname.startsWith("/embed/");
   const isAccountRoute = pathname.startsWith("/account");
 
   if (isBare || isAccountRoute) {
     return <>{children}</>;
   }
 
-  // Remaining surfaces (charts, saved dashboards, admin) get the slim nav.
+  // Remaining surfaces (saved dashboards, admin) get the slim nav.
   return (
     <>
       <Nav />
