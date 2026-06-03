@@ -159,7 +159,7 @@ export interface ComposerResult {
  * points[] so the model isn't paying for 1,800 daily observations of
  * the policy rate; the renderer gets the full payload separately.
  */
-function summariseToolResult(r: ToolCallResult): Record<string, unknown> {
+export function summariseToolResult(r: ToolCallResult): Record<string, unknown> {
   if (r.status === "error") {
     return {
       card_id: r.card_id,
