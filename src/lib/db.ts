@@ -569,6 +569,14 @@ const MIGRATION_SQL = `
     -- partial so it only spans the rows that feed can surface.
     CREATE INDEX IF NOT EXISTS idx_smart_dashboards_shared_query_hash
       ON smart_dashboards(query_hash) WHERE NOT private;
+    -- Phase C — truthfulness gate. score/verdict are written fire-and-forget
+    -- after save; NULL = not-yet-scored (treated as neutral, never flagged).
+    -- ALTERs precede the partial index that references truthfulness_score.
+    ALTER TABLE smart_dashboards ADD COLUMN IF NOT EXISTS truthfulness_score NUMERIC(4,3);
+    ALTER TABLE smart_dashboards ADD COLUMN IF NOT EXISTS truthfulness_verdict JSONB;
+    ALTER TABLE smart_dashboards ADD COLUMN IF NOT EXISTS truthfulness_checked_at TIMESTAMPTZ;
+    CREATE INDEX IF NOT EXISTS idx_smart_dashboards_truthfulness_score
+      ON smart_dashboards(truthfulness_score) WHERE truthfulness_score IS NOT NULL;
 
     -- Telemetry. One row per Smart UI query, regardless of outcome. The
     -- query goes through planner → tool calls → composer; we record token

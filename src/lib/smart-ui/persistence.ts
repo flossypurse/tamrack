@@ -223,6 +223,10 @@ export interface SharedQuestion {
   askers: number;
   views: number;
   lastAsked: string;
+  // Phase C truthfulness verdict for the representative dashboard.
+  // null = not yet scored (treated as neutral — no flag).
+  truthScore: number | null;
+  truthPass: boolean | null;
 }
 
 /**
@@ -261,12 +265,15 @@ export async function listSharedQuestions(
      ),
      rep AS (
        SELECT DISTINCT ON (query_hash)
-              query_hash, query, title, slug
+              query_hash, query, title, slug,
+              truthfulness_score, truthfulness_verdict
          FROM smart_dashboards
         WHERE NOT private
         ORDER BY query_hash, view_count DESC, created_at DESC
      )
      SELECT rep.query_hash, rep.query, rep.title, rep.slug,
+            rep.truthfulness_score AS truth_score,
+            (rep.truthfulness_verdict->>'pass')::boolean AS truth_pass,
             stats.askers     AS askers,
             stats.views      AS views,
             stats.last_asked AS last_asked
@@ -281,6 +288,8 @@ export async function listSharedQuestions(
     query: string;
     title: string | null;
     slug: string;
+    truth_score: string | null;
+    truth_pass: boolean | null;
     askers: string;
     views: string;
     last_asked: string;
@@ -292,6 +301,8 @@ export async function listSharedQuestions(
     askers: Number(r.askers),
     views: Number(r.views),
     lastAsked: r.last_asked,
+    truthScore: r.truth_score === null ? null : Number(r.truth_score),
+    truthPass: r.truth_pass,
   }));
 }
 

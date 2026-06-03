@@ -32,6 +32,10 @@ import {
 } from "@/lib/smart-ui/persistence";
 import { planQuery, type PlannerUsage } from "@/lib/smart-ui/planner";
 import { generateTitle } from "@/lib/smart-ui/title";
+import {
+  scoreDashboardTruthfulness,
+  saveTruthfulnessVerdict,
+} from "@/lib/smart-ui/truthfulness";
 import type { SmartQueryEvent, ToolCallResult } from "@/lib/smart-ui/types";
 
 // Node runtime — needed for `pg`, `better-sqlite3`, and the MCP SDK's
@@ -196,6 +200,23 @@ export async function POST(req: NextRequest): Promise<Response> {
               console.warn(
                 "smart_query_title_failed",
                 titleErr instanceof Error ? titleErr.message : titleErr,
+              );
+            });
+          // Fire-and-forget: score the dashboard's truthfulness (one Haiku
+          // judge + deterministic checks) and store the verdict. Advisory in
+          // the shared feed; never blocks the user's "done" event.
+          void scoreDashboardTruthfulness({
+            query,
+            plan,
+            config: dashboard,
+            toolResults,
+            dashboardId: savedId,
+          })
+            .then((verdict) => saveTruthfulnessVerdict(savedId, verdict))
+            .catch((scoreErr) => {
+              console.warn(
+                "smart_query_truthfulness_failed",
+                scoreErr instanceof Error ? scoreErr.message : scoreErr,
               );
             });
         } catch (persistErr) {

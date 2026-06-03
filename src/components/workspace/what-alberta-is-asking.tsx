@@ -70,6 +70,14 @@ export async function WhatAlbertaIsAsking({
                 <span className="font-mono text-[10px] tracking-[0.12em] uppercase text-[var(--mid)]/70">
                   {askerLabel(item.askers)}
                   {item.views > 0 && ` · ${item.views} views`}
+                  {item.truthScore !== null && item.truthPass === false && (
+                    <span
+                      className="ml-2 text-[var(--amber)]/70"
+                      title="Data quality flag: this dashboard may not fully answer the question"
+                    >
+                      ⚑ flagged
+                    </span>
+                  )}
                 </span>
               </Link>
             </li>
