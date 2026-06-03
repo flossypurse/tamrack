@@ -11,9 +11,12 @@ import { Symbol } from "@/components/brand/wordmark";
 import { KeyOnceCard } from "@/components/key-once-card";
 import { TKey } from "@/components/icons/t3";
 import { MCP_KEY_CAP, formatRelative, type McpKey } from "@/lib/mcp-tokens";
+import { HTTP_KEY_CAP, type HttpKey } from "@/lib/http-keys";
 import {
   issueMcpToken,
   revokeMcpToken,
+  issueHttpKey,
+  revokeHttpKey,
   clearMcpOnce,
   clearApiKeyOnce,
 } from "@/app/account/actions";
@@ -23,6 +26,7 @@ interface Props {
   apiKeyOnce: string | null;
   mcpOnce: string | null;
   activeMcpKeys: McpKey[];
+  activeHttpKeys: HttpKey[];
   mcpEndpoint: string;
 }
 
@@ -34,9 +38,11 @@ export function WorkspaceLeftRail({
   apiKeyOnce,
   mcpOnce,
   activeMcpKeys,
+  activeHttpKeys,
   mcpEndpoint,
 }: Props) {
   const atCap = activeMcpKeys.length >= MCP_KEY_CAP;
+  const atHttpCap = activeHttpKeys.length >= HTTP_KEY_CAP;
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-[var(--surface-elevated)] p-4">
@@ -49,16 +55,58 @@ export function WorkspaceLeftRail({
       </div>
 
       <div className="flex flex-1 flex-col gap-6 border-t border-[var(--hairline)] pt-4">
-        {/* ── API key ── */}
-        <section className="flex flex-col gap-2">
-          <p className={SECTION_LABEL}>api key · http</p>
+        {/* ── API key · http ── */}
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <p className={SECTION_LABEL}>api key · http</p>
+            <span className="font-mono text-[10px] text-[var(--mid)]">
+              {activeHttpKeys.length}/{HTTP_KEY_CAP}
+            </span>
+          </div>
+
           {apiKeyOnce ? (
             <KeyOnceCard plaintext={apiKeyOnce} clearAction={clearApiKeyOnce} />
           ) : (
-            <p className="text-xs leading-relaxed text-[var(--mid)]">
-              Your founder key is shown once at issue. If you missed it, ask
-              Cully for a replacement — the plaintext is never stored.
-            </p>
+            <form action={issueHttpKey}>
+              <button
+                type="submit"
+                disabled={atHttpCap}
+                className="w-full border border-[var(--ink)] bg-[var(--ink)] px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--surface)] hover:bg-[var(--ink)]/85 disabled:cursor-not-allowed disabled:opacity-40"
+                style={{ transitionDuration: "var(--dur-instant)" }}
+              >
+                generate api key
+              </button>
+            </form>
+          )}
+
+          {activeHttpKeys.length > 0 && (
+            <ul className="flex flex-col divide-y divide-[var(--hairline)] border-t border-[var(--hairline)]">
+              {activeHttpKeys.map((k) => (
+                <li
+                  key={k.id}
+                  className="flex items-center justify-between gap-2 py-2"
+                >
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate font-mono text-[11px] text-[var(--ink)]">
+                      {k.name}
+                    </span>
+                    <span className="font-mono text-[9px] tracking-wider text-[var(--mid)]">
+                      {k.key_prefix}… · {formatRelative(k.last_used_at)}
+                    </span>
+                  </div>
+                  <form action={revokeHttpKey}>
+                    <input type="hidden" name="keyId" value={k.id} />
+                    <button
+                      type="submit"
+                      className="font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--mid)] hover:text-[var(--accent-red)]"
+                      style={{ transitionDuration: "var(--dur-instant)" }}
+                    >
+                      revoke
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
           )}
         </section>
 

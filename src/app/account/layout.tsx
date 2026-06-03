@@ -17,6 +17,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { ONCE_KEY_COOKIE, MCP_ONCE_KEY_COOKIE } from "@/lib/key-cookies";
 import { listActiveMcpKeys } from "@/lib/mcp-tokens";
+import { listActiveHttpKeys } from "@/lib/http-keys";
 import { WorkspaceLeftRail } from "@/components/workspace/left-rail";
 import { WorkspaceRightRail } from "@/components/workspace/right-rail";
 import { MobileWorkspaceBar } from "@/components/workspace/mobile-bar";
@@ -39,6 +40,7 @@ export default async function AccountLayout({
   const apiKeyOnce = jar.get(ONCE_KEY_COOKIE)?.value ?? null;
   const mcpOnce = jar.get(MCP_ONCE_KEY_COOKIE)?.value ?? null;
   const activeMcpKeys = await listActiveMcpKeys(userId);
+  const activeHttpKeys = await listActiveHttpKeys(userId);
 
   const identity = user.name || user.email || "founder access";
   const mcpEndpoint =
@@ -50,6 +52,7 @@ export default async function AccountLayout({
       apiKeyOnce={apiKeyOnce}
       mcpOnce={mcpOnce}
       activeMcpKeys={activeMcpKeys}
+      activeHttpKeys={activeHttpKeys}
       mcpEndpoint={mcpEndpoint}
     />
   );
