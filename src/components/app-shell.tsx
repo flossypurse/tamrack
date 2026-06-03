@@ -2,31 +2,26 @@
 
 import { usePathname } from "next/navigation";
 import { Nav } from "./nav";
-import { Breadcrumbs } from "./breadcrumbs";
 import { Footer } from "./footer";
-import { shouldShowSectionSidebar } from "./section-sidebar";
 
-const publicRoutes = ["/", "/login", "/terms", "/privacy", "/access-request"];
+// Pages that render with no global chrome at all.
+const publicRoutes = ["/", "/login", "/terms", "/privacy"];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isPublic =
-    publicRoutes.includes(pathname) || pathname.startsWith("/embed/");
 
-  // EDO, Realtor, and Learn products have their own layouts — skip charts nav.
-  // The /account workspace is a full-screen chat surface with its own layout
-  // (left rail + chat + history) and deliberately carries no global chrome.
-  const isEdoRoute = pathname.startsWith("/edo");
-  const isRealtorRoute = pathname.startsWith("/realtor");
-  const isLearnRoute = pathname.startsWith("/learn");
+  // The home, login, and legal pages own their full layout. The /account
+  // workspace is a full-screen app surface with its own layout (left rail +
+  // chat + history) and deliberately carries no global chrome. Embeds are bare.
+  const isBare =
+    publicRoutes.includes(pathname) || pathname.startsWith("/embed/");
   const isAccountRoute = pathname.startsWith("/account");
 
-  if (isPublic || isEdoRoute || isRealtorRoute || isLearnRoute || isAccountRoute) {
+  if (isBare || isAccountRoute) {
     return <>{children}</>;
   }
 
-  const hasSidebar = shouldShowSectionSidebar(pathname);
-
+  // Remaining surfaces (charts, saved dashboards, admin) get the slim nav.
   return (
     <>
       <Nav />
@@ -35,13 +30,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Mobile: top bar spacer */}
       <div className="lg:hidden h-[52px]" />
 
-      {/* Content area */}
-      <div className={`${hasSidebar ? "lg:pl-56" : ""} transition-[padding-left] duration-200`}>
-        <div className="px-4 pt-3 sm:px-6 sm:pt-4">
-          <Breadcrumbs />
-        </div>
-        {children}
-      </div>
+      {children}
 
       <Footer />
 

@@ -5,11 +5,8 @@ import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
-// Lucide icons retained here are functional/menu-only (avatar dropdown,
-// section icons rendered from nav-config). Brand-bearing icons (search,
-// theme toggle) have been swapped to T3. A full Lucide sweep across the
-// 50+ remaining pages is tracked as deferred Phase 4 P3 work — see
-// brand-phase-4 handoff notes and iconography/rejections.md.
+// Lucide icons retained here are functional/menu-only (the avatar dropdown).
+// Brand-bearing icons (search, theme toggle) use the T3 custom set.
 import {
   BarChart3,
   User,
@@ -18,8 +15,6 @@ import {
   Shield,
   ChevronDown,
   Sparkles,
-  Key,
-  Terminal,
 } from "lucide-react";
 import { Wordmark } from "./brand/wordmark";
 import { TSearch, TSun, TMoon } from "./icons/t3";
@@ -165,20 +160,6 @@ export function TopBar() {
                   >
                     <Sparkles size={14} />
                     Ask
-                  </Link>
-                  <Link
-                    href="/account/keys"
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
-                  >
-                    <Key size={14} />
-                    API key
-                  </Link>
-                  <Link
-                    href="/account/mcp"
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
-                  >
-                    <Terminal size={14} />
-                    MCP token
                   </Link>
                   {isAdmin && (
                     <>
