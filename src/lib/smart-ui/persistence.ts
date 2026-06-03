@@ -231,12 +231,17 @@ export interface SharedQuestion {
  * one row, ranked by how many distinct people asked it (then total views).
  *
  * Two CTEs because Postgres forbids COUNT(DISTINCT ...) as a window function:
- *   - `stats` does the GROUP BY aggregate (askers / views / last_asked).
+ *   - `stats` does the GROUP BY aggregate (askers / views / last_asked). The
+ *     HAVING drops questions whose askers are all NULL (user_id is ON DELETE SET
+ *     NULL, so a deleted account leaves orphan rows) — "0 people asked" is not a
+ *     meaningful feed entry.
  *   - `rep` picks ONE canonical dashboard per question to link to — most-viewed,
  *     tie-break most-recent (configs are LLM-composed and differ run-to-run, so
  *     we must point at a single representative, not all of them).
- * Read-time aggregation only; we keep one row per ask (no ON CONFLICT dedupe) so
- * per-user provenance and cost accounting survive.
+ * COUNT/SUM return bigint (returned as strings by node-postgres); we select them
+ * raw and coerce with Number() in the map rather than ::int-casting in SQL, which
+ * would throw "integer out of range" past 2^31. Read-time aggregation only; we
+ * keep one row per ask (no ON CONFLICT dedupe) so per-user provenance survives.
  */
 export async function listSharedQuestions(
   opts: { limit?: number } = {},
@@ -252,6 +257,7 @@ export async function listSharedQuestions(
          FROM smart_dashboards
         WHERE NOT private
         GROUP BY query_hash
+        HAVING COUNT(DISTINCT user_id) >= 1
      ),
      rep AS (
        SELECT DISTINCT ON (query_hash)
@@ -261,9 +267,9 @@ export async function listSharedQuestions(
         ORDER BY query_hash, view_count DESC, created_at DESC
      )
      SELECT rep.query_hash, rep.query, rep.title, rep.slug,
-            stats.askers::int AS askers,
-            stats.views::int  AS views,
-            stats.last_asked  AS last_asked
+            stats.askers     AS askers,
+            stats.views      AS views,
+            stats.last_asked AS last_asked
        FROM rep
        JOIN stats USING (query_hash)
       ORDER BY stats.askers DESC, stats.views DESC, stats.last_asked DESC
@@ -275,16 +281,16 @@ export async function listSharedQuestions(
     query: string;
     title: string | null;
     slug: string;
-    askers: number;
-    views: number;
+    askers: string;
+    views: string;
     last_asked: string;
   }>).map((r) => ({
     queryHash: r.query_hash,
     query: r.query,
     title: r.title,
     slug: r.slug,
-    askers: r.askers,
-    views: r.views,
+    askers: Number(r.askers),
+    views: Number(r.views),
     lastAsked: r.last_asked,
   }));
 }

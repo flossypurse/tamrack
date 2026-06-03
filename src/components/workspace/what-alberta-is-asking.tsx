@@ -33,15 +33,18 @@ export async function WhatAlbertaIsAsking({
   let items: SharedQuestion[] = [];
   try {
     items = await listSharedQuestions({ limit: FEED_LIMIT });
-  } catch {
+  } catch (err) {
     // Never break the rail if the aggregate fails — it's a secondary surface.
+    // Log so a persistent failure (e.g. the deploy window before the `private`
+    // column lands) shows up in server logs rather than vanishing silently.
+    console.error("WhatAlbertaIsAsking: listSharedQuestions failed", err);
     items = [];
   }
 
   if (items.length === 0) return null;
 
   return (
-    <aside className="flex flex-col gap-3">
+    <aside aria-label="What Alberta is asking" className="flex flex-col gap-3">
       <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--mid)]">
         what alberta is asking
       </p>

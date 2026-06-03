@@ -52,7 +52,7 @@ export async function ChatHistorySidebar({
   }
 
   return (
-    <aside className="flex flex-col gap-3">
+    <aside aria-label="Your recent questions" className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--mid)]">
           recent
