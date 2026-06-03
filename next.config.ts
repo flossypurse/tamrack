@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import { createMDX } from "fumadocs-mdx/next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 // Build uses --webpack flag (see package.json) because Turbopack production
@@ -7,7 +6,6 @@ import { withSentryConfig } from "@sentry/nextjs";
 // ChunkLoadError / ENOENT on SSR chunks during static page generation.
 // Dev still uses Turbopack (Next.js 16 default). The prebuild script cleans
 // .next to prevent Turbopack dev cache from conflicting with Webpack builds.
-const withMDX = createMDX();
 
 // Content Security Policy — strict-ish but compatible with our actual surface:
 // - 'unsafe-inline' on script-src is needed for Next.js inline runtime bootstrap
@@ -121,8 +119,6 @@ const nextConfig: NextConfig = {
       { source: "/coverage", destination: "/municipalities/coverage", permanent: true },
 
       // Tools
-      // NOTE: `/docs` is now served by Fumadocs (Tamrack developer docs).
-      // The legacy `/tools/docs` page remains for the in-app docs surface.
       { source: "/sources", destination: "/tools/sources", permanent: true },
 
       // Legacy routes removed in Phase 1
@@ -139,7 +135,7 @@ const nextConfig: NextConfig = {
 // (2) hide source maps from the public build output.
 // All three options are no-ops without the env vars, so the build still ships
 // cleanly before the Sentry project is provisioned.
-export default withSentryConfig(withMDX(nextConfig), {
+export default withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   silent: !process.env.CI,
