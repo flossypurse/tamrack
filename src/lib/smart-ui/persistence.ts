@@ -306,6 +306,143 @@ export async function listSharedQuestions(
   }));
 }
 
+// Minimum distinct askers for a question to be nominated for promotion. Kept
+// low for invite-only scale, where most questions have a single asker; raise as
+// usage grows so the queue surfaces genuinely repeated demand.
+const NOMINATION_MIN_ASKERS = 1;
+
+export interface PromotionNomination {
+  queryHash: string;
+  query: string;
+  title: string | null;
+  repSlug: string;
+  repDashboardId: string;
+  score: number | null;
+  judgeReasons: string[];
+  askers: number;
+  views: number;
+  lastAsked: string;
+}
+
+/**
+ * Nomination read model for the curation queue (Phase B1). Same shared-corpus
+ * aggregate as listSharedQuestions, narrowed to promotion candidates:
+ *   - only questions that pass the HARD promotion gate (composite pass AND the
+ *     judge affirms answers_question + right_series — mirrors passesPromotionGate
+ *     in SQL so the queue only shows what the approve action will accept);
+ *   - excluding questions already approved or dismissed (anti-join on the
+ *     corpus.dashboard_promotions ledger);
+ *   - with at least NOMINATION_MIN_ASKERS distinct askers.
+ * The representative dashboard (most-viewed, tie-break most-recent) is what gets
+ * captured on approval, so we return its id alongside its slug.
+ */
+export async function listPromotionNominations(
+  opts: { limit?: number } = {},
+): Promise<PromotionNomination[]> {
+  const pool = await getDb();
+  const limit = Math.min(Math.max(opts.limit ?? 25, 1), 100);
+  const { rows } = await pool.query(
+    `WITH stats AS (
+       SELECT query_hash,
+              COUNT(DISTINCT user_id) AS askers,
+              SUM(view_count)         AS views,
+              MAX(created_at)         AS last_asked
+         FROM smart_dashboards
+        WHERE NOT private
+        GROUP BY query_hash
+        HAVING COUNT(DISTINCT user_id) >= $2
+     ),
+     rep AS (
+       SELECT DISTINCT ON (query_hash)
+              query_hash, id, query, title, slug,
+              truthfulness_score, truthfulness_verdict
+         FROM smart_dashboards
+        WHERE NOT private
+        ORDER BY query_hash, view_count DESC, created_at DESC
+     )
+     SELECT rep.query_hash, rep.id AS rep_id, rep.query, rep.title, rep.slug,
+            rep.truthfulness_score AS truth_score,
+            rep.truthfulness_verdict->'judge'->'reasons' AS judge_reasons,
+            stats.askers     AS askers,
+            stats.views      AS views,
+            stats.last_asked AS last_asked
+       FROM rep
+       JOIN stats USING (query_hash)
+       LEFT JOIN corpus.dashboard_promotions p USING (query_hash)
+      WHERE p.query_hash IS NULL
+        AND (rep.truthfulness_verdict->>'pass')::boolean
+        AND (rep.truthfulness_verdict->'judge'->>'answers_question')::boolean
+        AND (rep.truthfulness_verdict->'judge'->>'right_series')::boolean
+      ORDER BY stats.askers DESC, stats.views DESC, stats.last_asked DESC
+      LIMIT $1`,
+    [limit, NOMINATION_MIN_ASKERS],
+  );
+  return (rows as Array<{
+    query_hash: string;
+    rep_id: string;
+    query: string;
+    title: string | null;
+    slug: string;
+    truth_score: string | null;
+    judge_reasons: string[] | null;
+    askers: string;
+    views: string;
+    last_asked: string;
+  }>).map((r) => ({
+    queryHash: r.query_hash,
+    query: r.query,
+    title: r.title,
+    repSlug: r.slug,
+    repDashboardId: r.rep_id,
+    score: r.truth_score === null ? null : Number(r.truth_score),
+    judgeReasons: Array.isArray(r.judge_reasons) ? r.judge_reasons : [],
+    askers: Number(r.askers),
+    views: Number(r.views),
+    lastAsked: r.last_asked,
+  }));
+}
+
+export interface PromotionDecisionInput {
+  status: "approved" | "dismissed";
+  chartTemplateId?: string | null;
+  sourceDashboardId?: string | null;
+  decidedBy?: string | null;
+  note?: string | null;
+}
+
+/**
+ * Record (or update) a curation decision for a question cluster. Idempotent on
+ * query_hash — re-deciding overwrites. Used by the dismiss path; the approve
+ * path writes its ledger row inside the same transaction as the chart_templates
+ * insert (see promoteDashboardToTemplate).
+ */
+export async function recordPromotionDecision(
+  queryHash: string,
+  input: PromotionDecisionInput,
+): Promise<void> {
+  const pool = await getDb();
+  await pool.query(
+    `INSERT INTO corpus.dashboard_promotions
+       (query_hash, status, chart_template_id, source_dashboard_id, decided_by, note, decided_at)
+     VALUES ($1, $2, $3, $4, $5, $6, NOW())
+     ON CONFLICT (query_hash) DO UPDATE SET
+       status              = EXCLUDED.status,
+       chart_template_id   = EXCLUDED.chart_template_id,
+       source_dashboard_id = EXCLUDED.source_dashboard_id,
+       decided_by          = EXCLUDED.decided_by,
+       note                = EXCLUDED.note,
+       decided_at          = NOW()`,
+    [
+      queryHash,
+      input.status,
+      input.chartTemplateId ?? null,
+      input.sourceDashboardId ?? null,
+      input.decidedBy ?? null,
+      input.note ?? null,
+    ],
+  );
+}
+
 export interface LogQueryEventInput {
   dashboardId: string | null;
   userId: string | null;

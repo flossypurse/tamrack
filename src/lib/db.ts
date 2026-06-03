@@ -1147,6 +1147,22 @@ const MIGRATION_SQL = `
     CREATE INDEX IF NOT EXISTS idx_corpus_chart_templates_available
       ON corpus.chart_templates (template_available) WHERE template_available = TRUE;
 
+    -- Curation ledger for the dashboard -> corpus promotion path. One decision
+    -- per question cluster (query_hash), so an approved/dismissed question drops
+    -- out of the nomination queue and never reappears. query_hash is the PK,
+    -- which also indexes the anti-join the nomination read model uses to exclude
+    -- already-decided questions. status: 'approved' | 'dismissed'.
+    CREATE TABLE IF NOT EXISTS corpus.dashboard_promotions (
+      query_hash          TEXT PRIMARY KEY,
+      status              TEXT NOT NULL CONSTRAINT chk_promotion_status
+                            CHECK (status IN ('approved', 'dismissed')),
+      chart_template_id   UUID REFERENCES corpus.chart_templates(id) ON DELETE SET NULL,
+      source_dashboard_id TEXT,
+      decided_by          TEXT,
+      decided_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      note                TEXT
+    );
+
     -- Narrative fragment library. One row per citable interpretation unit.
     -- body_template variable contract (locked — composer always provides):
     --   {{value}}           current observation value, formatted per unit
