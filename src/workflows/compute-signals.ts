@@ -197,7 +197,7 @@ export async function computeOneSignal(
            magnitude, direction, confidence, metadata)
         VALUES
           ($1, $2,
-           daterange($3::DATE - $4 * INTERVAL '1 day', $3::DATE, '[)'),
+           daterange($3::DATE - $4::INTEGER, $3::DATE, '[)'),
            NOW(), 'recompute',
            $5, 'neutral', 1.0, $6)
         ON CONFLICT (signal_def_id, series_id, geo_id, observed_window)
@@ -420,7 +420,12 @@ export function* recomputeSignal(
   const windowDays = opts.windowDays ?? 365;
   const maxGeo = opts.maxGeo ?? Infinity;
 
-  const stepId = (suffix: string) => `${today}.recomputeSignal.${opts.signalSlug}.${suffix}`;
+  // Scope step IDs to this invocation's promise id, not `today`. recomputeSignal
+  // is a manual/on-demand backfill, so two runs on the same day must each execute
+  // fresh — date-scoped step IDs would make the second run replay the first run's
+  // cached (possibly stale) results from Resonate's resolved-promise store. ctx.id
+  // is stable across a single invocation's replays, so mid-run idempotency holds.
+  const stepId = (suffix: string) => `${ctx.id}.recompute.${opts.signalSlug}.${suffix}`;
 
   const def: SignalDef | null = yield* ctx.run(
     async (): Promise<SignalDef | null> => {
