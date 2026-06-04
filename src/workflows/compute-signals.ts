@@ -18,6 +18,7 @@
 import type { Context } from "@resonatehq/sdk";
 import { getDb } from "../lib/db";
 import { captureError } from "../lib/observability";
+import type { ActivateSignalFragmentInput } from "./activate-signal-fragment";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -105,7 +106,7 @@ async function materializeEdmontonBusinessPanel(
     INSERT INTO signals.edmonton_business_panel
       (licence_id, period, trade_name, category, neighbourhood, geo_id,
        issue_date, expiry_date, tenure_months, is_single_location,
-       dietary_category, dietary_confidence, neighbourhood_vitality, computed_at)
+       dietary_category, dietary_confidence, neighbourhood_vitality)
     SELECT
       e.slug                              AS licence_id,
       $1::DATE                            AS period,
@@ -322,10 +323,15 @@ export function* computeSignals(
     const geos: GeoRow[] = yield* ctx.run(
       async (): Promise<GeoRow[]> => {
         const pool = await getDb();
+        // geo_scope is matched as either a geo_type (fan out across all geos of
+        // that type) OR a single geo slug (a panel scoped to one place, e.g.
+        // edmonton-business-panel → 'edmonton'). The ORDER BY makes an exact
+        // slug match win so maxGeo=1 is deterministic instead of an arbitrary row.
         const { rows } = await pool.query<GeoRow>(`
           SELECT id, slug, name, geo_type
           FROM substrate.geo_dimension
-          WHERE geo_type = $1
+          WHERE geo_type = $1 OR slug = $1
+          ORDER BY (slug = $1) DESC, slug ASC
           LIMIT $2
         `, [def.geo_scope, maxGeo]);
         return rows;
@@ -442,10 +448,13 @@ export function* recomputeSignal(
   const geos: GeoRow[] = yield* ctx.run(
     async (): Promise<GeoRow[]> => {
       const pool = await getDb();
+      // geo_scope is matched as a geo_type OR a single geo slug (see computeSignals),
+      // ordered so an exact slug match wins — keeps maxGeo=1 deterministic.
       const { rows } = await pool.query<GeoRow>(`
         SELECT id, slug, name, geo_type
         FROM substrate.geo_dimension
-        WHERE geo_type = $1
+        WHERE geo_type = $1 OR slug = $1
+        ORDER BY (slug = $1) DESC, slug ASC
         LIMIT $2
       `, [def.geo_scope, maxGeo]);
       return rows;
@@ -471,6 +480,29 @@ export function* recomputeSignal(
     },
     (ctx as any).options({ id: stepId(`compute.${geo.slug}`) })
   );
+
+  // Activate the corpus narrative_fragment for this (signal, geo, period).
+  // computeOneSignal only materializes the panel + writes a signal_event; the
+  // fragment + embedding come from activateSignalFragment. The scheduled queue
+  // path reaches it via processSignalQueue's RPC, but a manual/smoke recompute
+  // has no queue rows — so call it locally (LFC) here. Running it inline means
+  // the fragment is committed before recompute returns, which the pre-deploy
+  // smoke test depends on. Skipped if the compute step itself errored.
+  if (result.status === "ok") {
+    const activationInput: ActivateSignalFragmentInput = {
+      signalDefId: def.id,
+      signalSlug: def.slug,
+      seriesId: "", // unused by activateSignalFragment; evidence comes from the event's evidence_refs
+      geoId: geo.id,
+      period: today,
+      queueRowId: `recompute.${today}`,
+    };
+    yield* ctx.run(
+      "activateSignalFragment",
+      activationInput,
+      (ctx as any).options({ id: stepId(`activate.${geo.slug}`) })
+    );
+  }
 
   return result;
 }

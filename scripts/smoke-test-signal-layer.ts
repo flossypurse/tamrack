@@ -72,10 +72,17 @@ async function main(): Promise<void> {
 
   // Import workflow functions dynamically to avoid triggering side effects
   // at module load time (the worker import path is relative to the project root).
+  // activateSignalFragment must be registered too: recomputeSignal invokes it as
+  // a local function call to write the corpus fragment.
   const { recomputeSignal } = await import("../src/workflows/compute-signals");
+  const { activateSignalFragment } = await import("../src/workflows/activate-signal-fragment");
   resonate.register("recomputeSignal", recomputeSignal as any);
+  resonate.register("activateSignalFragment", activateSignalFragment as any);
 
-  const runId = `smoke-signal-layer-${Date.now()}`;
+  // The runId must start with the worker token's prefix ("access-request") or
+  // the server rejects task.create with HTTP 403. Schedule-fired roots are
+  // created server-side and exempt; a client-initiated run like this is not.
+  const runId = `access-request.smoke-signal-layer-${Date.now()}`;
   console.log(`[smoke] Triggering recomputeSignal run: ${runId}`);
 
   const runResult = await Promise.race([
