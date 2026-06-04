@@ -321,7 +321,7 @@ export function* activateSignalFragment(
            body_template, embedding, freshness, created_at, updated_at)
         VALUES
           ($1, $2,
-           daterange($3::DATE, $3::DATE + INTERVAL '1 day', '[)'),
+           daterange($3::DATE, $3::DATE + 1, '[)'),
            $4,
            $5::vector,
            COALESCE($6, 'time_bounded'),
