@@ -790,16 +790,32 @@ function safeJsonParse(text: string): Record<string, number> {
  * Useful for trend charts (total licences issued per filing day).
  */
 export async function fetchWellLicenceDaily(
-  days: number = 90
+  days: number = 90,
+  range?: { from?: string; to?: string }
 ): Promise<WellLicenceDailyPoint[]> {
   try {
     const db = await getDb();
+    // When an explicit {from,to} window is given, filter by filing_date so the
+    // result is the requested window (not just the most-recent N days).
+    const conds: string[] = [];
+    const params: (string | number)[] = [];
+    if (range?.from) {
+      params.push(range.from);
+      conds.push(`filing_date >= $${params.length}`);
+    }
+    if (range?.to) {
+      params.push(range.to);
+      conds.push(`filing_date <= $${params.length}`);
+    }
+    const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
+    params.push(days);
     const result = await db.query(
       `SELECT filing_date, total_count, by_substance, by_classification, by_licensee
        FROM well_licence_daily
+       ${where}
        ORDER BY filing_date DESC
-       LIMIT $1`,
-      [days]
+       LIMIT $${params.length}`,
+      params
     );
     // Reverse so the caller receives ascending (oldest → newest) order.
     return result.rows.reverse().map((r) => ({

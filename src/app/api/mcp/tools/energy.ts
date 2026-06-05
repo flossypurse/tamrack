@@ -768,9 +768,23 @@ export function registerEnergyTool(server: McpServer): void {
             break;
           }
           case "well_licences_daily": {
-            // Translate time_range to a days window.
-            const days = poolSeriesDaysForRange(timeRange);
-            const rows: WellLicenceDailyPoint[] = await fetchWellLicenceDaily(days);
+            // Named ranges → a sliding days window; an explicit {from,to} →
+            // a real filing_date filter, so the requested window is honoured
+            // (not just the most-recent N rows).
+            let dailyRange: { from?: string; to?: string } | undefined;
+            let days = 90;
+            if (timeRange != null) {
+              if (typeof timeRange === "string") {
+                days = namedRangeToDays(timeRange);
+              } else {
+                dailyRange = { from: timeRange.from, to: timeRange.to };
+                days = 3650; // cap; the WHERE bounds do the real filtering
+              }
+            }
+            const rows: WellLicenceDailyPoint[] = await fetchWellLicenceDaily(
+              days,
+              dailyRange,
+            );
             const capped = limit != null ? rows.slice(-limit) : rows;
             servedFrom = capped.length > 0 ? "upstream" : "empty";
             payload = { dataset: "well_licences_daily", rows: capped };
