@@ -144,10 +144,13 @@ export async function fetchAssessmentsByGroup(
     let data: Record<string, unknown>[];
 
     if (isSocrataEndpoint(endpoint.url)) {
-      // Socrata API
+      // Socrata API — use a custom assessmentWhere if supplied (e.g. when the
+      // assessment value column is stored as TEXT so "field > 0" is a type error).
+      const socrataWhere = config.filters?.assessmentWhere
+        || `${valueField} > 0 AND ${groupField} IS NOT NULL`;
       data = await fetchSocrata(endpoint.url, {
         $select: `${groupField}, ${valueField}`,
-        $where: `${valueField} > 0 AND ${groupField} IS NOT NULL`,
+        $where: socrataWhere,
         $limit: "5000",
       });
     } else {
@@ -377,7 +380,12 @@ export async function fetchPermitsByGroup(
   config: MunicipalityConfig,
   limit: number = 2000
 ): Promise<PermitSummary[]> {
-  const endpoint = config.endpoints.devPermits || config.endpoints.permits;
+  // Prefer the dedicated building-permits endpoint for group snapshots.
+  // devPermits (development applications) uses different field names than the
+  // building-permits endpoint, so mixing them yields no-such-column errors for
+  // cities like Edmonton/Calgary that have both.  Fall back to devPermits for
+  // municipalities that only publish development permits (e.g. Strathcona, St. Albert).
+  const endpoint = config.endpoints.permits || config.endpoints.devPermits;
   if (!endpoint) return [];
 
   const groupField = config.fields.subdivision || config.fields.permitType || "";
