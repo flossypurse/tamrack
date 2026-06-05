@@ -578,7 +578,13 @@ export async function fetchZoningDistribution(
       }))
       .filter((r) => r.zoningCategory && r.zoningCategory !== "null" && r.parcelCount > 0)
       .sort((a, b) => b.parcelCount - a.parcelCount);
-  } catch {
+  } catch (err) {
+    // Surface the failure so a broken endpoint isn't indistinguishable from a
+    // municipality that genuinely has zero zoning categories.
+    console.warn(
+      `[zoning-distribution] ${config.slug} fetch failed:`,
+      err instanceof Error ? err.message : err,
+    );
     return [];
   }
 }

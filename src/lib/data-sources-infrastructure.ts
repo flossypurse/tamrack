@@ -314,6 +314,10 @@ export async function fetchAERWellLicences(
     }
   }
 
+  // If the legend dividers aren't found, the header layout changed upstream.
+  // Bail rather than scan the whole file and risk parsing headers as records.
+  if (dividerCount < 2) return [];
+
   // Data ends at the "AMENDMENTS OF WELL LICENCES" sub-section header or at
   // the "-------- END OF WELL LICENCES DAILY LIST --------" footer.
   let dataEnd = rawLines.length;
@@ -379,7 +383,7 @@ export async function fetchAERWellLicences(
 
     // uniqueId: the UWI portion sits in [4,25); [25,28) bleeds into the
     // surface-coordinate direction indicator (e.g. "  S" / "  N").
-    const rawUniqueId = A.length >= 1 ? B.substring(4, 25).trim() : "";
+    const rawUniqueId = B.length > 4 ? B.substring(4, 25).trim() : "";
 
     return {
       wellName: A.substring(4, 40).trim(),
