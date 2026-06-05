@@ -1,7 +1,8 @@
 /**
  * `tamrack_energy` tool registration.
  *
- * Wraps AESO + CER energy substrate behind one typed surface.
+ * Wraps AESO + CER energy substrate and AER well-licence data behind one
+ * typed surface.
  *
  *   - `src/lib/data-sources-aeso.ts` — AESO public API (requires
  *     AESO_API_KEY env var, free key from api.aeso.ca). Pool price, the
@@ -15,22 +16,34 @@
  *     pipeline incidents, apportionment, monthly crude oil production
  *     by province (Alberta default).
  *
- * Datasets (9):
- *   - pool_price_current  → AESO pool price for the current/recent window
- *                           (hourly rows, last 30d default)
- *   - pool_price_series   → AESO daily-average pool price time series
- *                           (uses time_range to size the window)
- *   - supply_demand       → AESO current supply/demand snapshot (single
- *                           object, no time series)
+ *   - `src/lib/data-sources-infrastructure.ts` — AER well licences
+ *     accumulated in Postgres from the AER daily fixed-width list. Three
+ *     datasets: individual licence records, daily filing totals with
+ *     substance/classification/licensee breakdowns, and the operator
+ *     roster derived from the substrate entity directory.
+ *
+ * Datasets (12):
+ *   - pool_price_current    → AESO pool price for the current/recent window
+ *                             (hourly rows, last 30d default)
+ *   - pool_price_series     → AESO daily-average pool price time series
+ *                             (uses time_range to size the window)
+ *   - supply_demand         → AESO current supply/demand snapshot (single
+ *                             object, no time series)
  *   - system_marginal_price → AESO system marginal price (hourly rows)
- *   - forecast            → AESO actual-vs-forecast load (hourly rows)
- *   - pipeline_throughput → CER throughput CSV; requires a pipeline (one
- *                           of NGTL/Trans-Mountain/Keystone/Enbridge
- *                           Mainline/Alliance/Foothills). Default: NGTL.
- *   - pipeline_incidents  → CER pipeline incident report (Alberta + ROC)
- *   - apportionment       → CER pipeline apportionment (congestion) data
- *   - oil_production      → CER monthly crude oil production by province,
- *                           filtered to Alberta by default
+ *   - forecast              → AESO actual-vs-forecast load (hourly rows)
+ *   - pipeline_throughput   → CER throughput CSV; requires a pipeline (one
+ *                             of NGTL/Trans-Mountain/Keystone/Enbridge
+ *                             Mainline/Alliance/Foothills). Default: NGTL.
+ *   - pipeline_incidents    → CER pipeline incident report (Alberta + ROC)
+ *   - apportionment         → CER pipeline apportionment (congestion) data
+ *   - oil_production        → CER monthly crude oil production by province,
+ *                             filtered to Alberta by default
+ *   - well_licences         → AER well licences from Postgres (individual
+ *                             records; filterable by filing date range)
+ *   - well_licences_daily   → Daily filing totals with substance,
+ *                             classification, and licensee breakdowns
+ *   - well_operators        → Current well-operator roster with per-operator
+ *                             licence counts (substrate entity directory)
  *
  * Time range:
  *   AESO pool_price_current accepts `startDate`/`endDate` in YYYY-MM-DD,
@@ -38,7 +51,8 @@
  *   are translated to a sliding window (last_30d → 30 days, etc.). The
  *   AESO supply/demand snapshot has no time dimension; if a time_range is
  *   passed it's surfaced as a note. CER fetchers return full historical
- *   series and we filter the date column post-fetch.
+ *   series and we filter the date column post-fetch. Well-licence datasets
+ *   translate time_range to a filing_date window or days limit.
  *
  * Fallback policy:
  *   No `data-fallback.ts` entries for energy. Substrate fetchers swallow
@@ -74,6 +88,14 @@ import {
   type PipelineThroughputPoint,
   type ProductionPoint,
 } from "@/lib/data-sources-cer";
+import {
+  fetchWellLicenceRecords,
+  fetchWellLicenceDaily,
+  fetchWellOperators,
+  type WellLicenceRecord,
+  type WellLicenceDailyPoint,
+  type WellOperator,
+} from "@/lib/data-sources-infrastructure";
 
 import {
   LimitSchema,
@@ -100,6 +122,9 @@ const ENERGY_DATASETS = [
   "pipeline_incidents",
   "apportionment",
   "oil_production",
+  "well_licences",
+  "well_licences_daily",
+  "well_operators",
 ] as const;
 
 type EnergyDataset = (typeof ENERGY_DATASETS)[number];
@@ -107,7 +132,7 @@ type EnergyDataset = (typeof ENERGY_DATASETS)[number];
 const EnergyDatasetSchema = z
   .enum(ENERGY_DATASETS)
   .describe(
-    "Energy dataset. AESO: pool_price_current (hourly), pool_price_series (daily avg), supply_demand (snapshot), system_marginal_price, forecast. CER: pipeline_throughput (per pipeline), pipeline_incidents, apportionment, oil_production.",
+    "Energy dataset. AESO: pool_price_current (hourly), pool_price_series (daily avg), supply_demand (snapshot), system_marginal_price, forecast. CER: pipeline_throughput (per pipeline), pipeline_incidents, apportionment, oil_production. AER (Postgres): well_licences (individual records), well_licences_daily (daily filing totals with breakdowns), well_operators (operator roster with licence counts).",
   );
 
 const PIPELINE_NAMES = [
@@ -365,6 +390,47 @@ const OilProductionPayloadSchema = z.object({
   rows: z.array(ProductionPointSchema),
 });
 
+const WellLicenceRecordSchema = z.object({
+  licenceNumber: z.string(),
+  wellName: z.string(),
+  licensee: z.string(),
+  substance: z.string(),
+  classification: z.string(),
+  surfaceLocation: z.string(),
+  filingDate: z.string(),
+});
+
+const WellLicenceDailyPointSchema = z.object({
+  date: z.string(),
+  totalCount: z.number(),
+  bySubstance: z.record(z.string(), z.number()),
+  byClassification: z.record(z.string(), z.number()),
+  byLicensee: z.record(z.string(), z.number()),
+});
+
+const WellOperatorSchema = z.object({
+  name: z.string(),
+  slug: z.string(),
+  firstSeen: z.string().nullable(),
+  lastSeen: z.string().nullable(),
+  licenceCount: z.number(),
+});
+
+const WellLicencesPayloadSchema = z.object({
+  dataset: z.literal("well_licences"),
+  rows: z.array(WellLicenceRecordSchema),
+});
+
+const WellLicencesDailyPayloadSchema = z.object({
+  dataset: z.literal("well_licences_daily"),
+  rows: z.array(WellLicenceDailyPointSchema),
+});
+
+const WellOperatorsPayloadSchema = z.object({
+  dataset: z.literal("well_operators"),
+  rows: z.array(WellOperatorSchema),
+});
+
 const EnergyPayloadSchema = z.union([
   PoolPriceCurrentPayloadSchema,
   PoolPriceSeriesPayloadSchema,
@@ -375,6 +441,9 @@ const EnergyPayloadSchema = z.union([
   PipelineIncidentsPayloadSchema,
   ApportionmentPayloadSchema,
   OilProductionPayloadSchema,
+  WellLicencesPayloadSchema,
+  WellLicencesDailyPayloadSchema,
+  WellOperatorsPayloadSchema,
 ]);
 
 const EnergyDataSchema = z.object({
@@ -460,6 +529,24 @@ const DATASET_META: Record<EnergyDataset, DatasetMeta> = {
     unit: "thousand barrels per day",
     respectsTimeRange: true,
   },
+  well_licences: {
+    source: "AER Well Licences (static.aer.ca daily list, accumulated)",
+    envelopeSource: "AER",
+    unit: "licences",
+    respectsTimeRange: true,
+  },
+  well_licences_daily: {
+    source: "AER Well Licences — daily filing totals (accumulated)",
+    envelopeSource: "AER",
+    unit: "new licences per day",
+    respectsTimeRange: true,
+  },
+  well_operators: {
+    source: "AER Well Licences — operator roster (substrate entity directory)",
+    envelopeSource: "AER",
+    unit: "operators",
+    respectsTimeRange: false,
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -476,16 +563,20 @@ const TOOL_DESCRIPTION =
   "throughput + capacity + utilization for NGTL, Trans-Mountain, Keystone, " +
   "Enbridge Mainline, Alliance, Foothills; pipeline incidents; pipeline " +
   "apportionment; monthly crude oil production by province (Alberta default). " +
+  "AER (Alberta Energy Regulator) well licences from Postgres: individual " +
+  "licence records (well_licences), daily filing totals with substance/ " +
+  "classification/licensee breakdowns (well_licences_daily), and the current " +
+  "well-operator roster with per-operator licence counts (well_operators). " +
   "Each dataset returns its native row shape; agents branch on the echoed " +
   "`dataset` field. Time ranges are honoured on every series dataset and " +
-  "noted-as-ignored on `supply_demand` (snapshot only).";
+  "noted-as-ignored on `supply_demand` and `well_operators` (non-series).";
 
 updateToolEntry(TOOL_NAME, {
   status: "live",
   parameters_summary:
-    "dataset (enum: pool_price_current, pool_price_series, supply_demand, system_marginal_price, forecast, pipeline_throughput, pipeline_incidents, apportionment, oil_production); optional pipeline (NGTL|Trans-Mountain|Keystone|Enbridge Mainline|Alliance|Foothills, used by pipeline_throughput, defaults NGTL); optional province (oil_production, default Alberta); optional time_range; optional limit.",
+    "dataset (enum: pool_price_current, pool_price_series, supply_demand, system_marginal_price, forecast, pipeline_throughput, pipeline_incidents, apportionment, oil_production, well_licences, well_licences_daily, well_operators); optional pipeline (NGTL|Trans-Mountain|Keystone|Enbridge Mainline|Alliance|Foothills, used by pipeline_throughput, defaults NGTL); optional province (oil_production, default Alberta); optional time_range; optional limit.",
   response_summary:
-    "Envelope with schema_version, tool, source (AESO or CER Open Data); data.{dataset, source, unit, served_from, payload}. Payload is a discriminated union keyed by `dataset`; each variant carries the native substrate row shape (rows[] or `snapshot` for supply_demand).",
+    "Envelope with schema_version, tool, source (AESO, CER Open Data, or AER); data.{dataset, source, unit, served_from, payload}. Payload is a discriminated union keyed by `dataset`; each variant carries the native substrate row shape (rows[] or `snapshot` for supply_demand).",
   indicators: [...ENERGY_DATASETS],
   example_invocations: [
     {
@@ -501,6 +592,14 @@ updateToolEntry(TOOL_NAME, {
     {
       description: "Alberta crude oil production (CER monthly).",
       arguments: { dataset: "oil_production" },
+    },
+    {
+      description: "AER well licence daily filing totals over the last year.",
+      arguments: { dataset: "well_licences_daily", time_range: "last_year" },
+    },
+    {
+      description: "Top 20 well operators by total licences issued.",
+      arguments: { dataset: "well_operators", limit: 20 },
     },
   ],
 });
@@ -646,6 +745,43 @@ export function registerEnergyTool(server: McpServer): void {
             };
             break;
           }
+          case "well_licences": {
+            // Translate time_range to a filing_date window when provided.
+            let range: { from?: string; to?: string } | undefined;
+            if (timeRange != null) {
+              if (typeof timeRange === "string") {
+                const days = namedRangeToDays(timeRange);
+                const from = new Date(Date.now() - days * 86_400_000)
+                  .toISOString()
+                  .slice(0, 10);
+                range = { from };
+              } else {
+                range = { from: timeRange.from, to: timeRange.to };
+              }
+            }
+            const rows: WellLicenceRecord[] = await fetchWellLicenceRecords(
+              limit ?? 100,
+              range,
+            );
+            servedFrom = rows.length > 0 ? "upstream" : "empty";
+            payload = { dataset: "well_licences", rows };
+            break;
+          }
+          case "well_licences_daily": {
+            // Translate time_range to a days window.
+            const days = poolSeriesDaysForRange(timeRange);
+            const rows: WellLicenceDailyPoint[] = await fetchWellLicenceDaily(days);
+            const capped = limit != null ? rows.slice(-limit) : rows;
+            servedFrom = capped.length > 0 ? "upstream" : "empty";
+            payload = { dataset: "well_licences_daily", rows: capped };
+            break;
+          }
+          case "well_operators": {
+            const rows: WellOperator[] = await fetchWellOperators(limit ?? 100);
+            servedFrom = rows.length > 0 ? "upstream" : "empty";
+            payload = { dataset: "well_operators", rows };
+            break;
+          }
         }
       } catch (err) {
         console.warn(
@@ -716,5 +852,11 @@ function emptyPayloadFor(
       return { dataset: "apportionment", rows: [] };
     case "oil_production":
       return { dataset: "oil_production", province: "Alberta", rows: [] };
+    case "well_licences":
+      return { dataset: "well_licences", rows: [] };
+    case "well_licences_daily":
+      return { dataset: "well_licences_daily", rows: [] };
+    case "well_operators":
+      return { dataset: "well_operators", rows: [] };
   }
 }

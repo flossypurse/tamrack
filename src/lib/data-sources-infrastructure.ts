@@ -2,6 +2,7 @@
 // Mixed formats: JSON, CSV, fixed-width text, CKAN APIs
 
 import { FIRE_ENDPOINTS } from "./data-sources-fire";
+import { getDb } from "./db";
 
 // ============================================================
 // Endpoints
@@ -685,6 +686,160 @@ export async function fetchCRATaxStats(
     return await fetchCSV(url);
   } catch (err) {
     console.error(`CRA tax stats fetch error for table ${table}:`, err);
+    return [];
+  }
+}
+
+// ============================================================
+// Accumulated well-licence reads (Postgres)
+// ============================================================
+
+export interface WellLicenceRecord {
+  licenceNumber: string;
+  wellName: string;
+  licensee: string;
+  substance: string;
+  classification: string;
+  surfaceLocation: string;
+  filingDate: string;
+}
+
+export interface WellLicenceDailyPoint {
+  date: string;
+  totalCount: number;
+  bySubstance: Record<string, number>;
+  byClassification: Record<string, number>;
+  byLicensee: Record<string, number>;
+}
+
+export interface WellOperator {
+  name: string;
+  slug: string;
+  firstSeen: string | null;
+  lastSeen: string | null;
+  licenceCount: number;
+}
+
+/**
+ * Well licences accumulated in Postgres from AER daily files.
+ * Optionally filtered by filing_date range; ordered newest first.
+ */
+export async function fetchWellLicenceRecords(
+  limit: number = 100,
+  range?: { from?: string; to?: string }
+): Promise<WellLicenceRecord[]> {
+  try {
+    const db = await getDb();
+    const params: (string | number)[] = [];
+    const conditions: string[] = [];
+
+    if (range?.from) {
+      params.push(range.from);
+      conditions.push(`filing_date >= $${params.length}`);
+    }
+    if (range?.to) {
+      params.push(range.to);
+      conditions.push(`filing_date <= $${params.length}`);
+    }
+
+    params.push(limit);
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const sql = `
+      SELECT licence_number, well_name, licensee, substance, classification,
+             surface_location, filing_date
+      FROM well_licences
+      ${where}
+      ORDER BY filing_date DESC, id DESC
+      LIMIT $${params.length}
+    `;
+
+    const result = await db.query(sql, params);
+    return result.rows.map((r) => ({
+      licenceNumber: r.licence_number as string,
+      wellName: r.well_name as string,
+      licensee: r.licensee as string,
+      substance: r.substance as string,
+      classification: r.classification as string,
+      surfaceLocation: r.surface_location as string,
+      filingDate: r.filing_date as string,
+    }));
+  } catch (err) {
+    console.error("fetchWellLicenceRecords error:", err);
+    return [];
+  }
+}
+
+function safeJsonParse(text: string): Record<string, number> {
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, number>;
+    }
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Daily well-licence summary rows from Postgres, returned in ascending date order.
+ * Useful for trend charts (total licences issued per filing day).
+ */
+export async function fetchWellLicenceDaily(
+  days: number = 90
+): Promise<WellLicenceDailyPoint[]> {
+  try {
+    const db = await getDb();
+    const result = await db.query(
+      `SELECT filing_date, total_count, by_substance, by_classification, by_licensee
+       FROM well_licence_daily
+       ORDER BY filing_date DESC
+       LIMIT $1`,
+      [days]
+    );
+    // Reverse so the caller receives ascending (oldest → newest) order.
+    return result.rows.reverse().map((r) => ({
+      date: r.filing_date as string,
+      totalCount: r.total_count as number,
+      bySubstance: safeJsonParse(r.by_substance as string),
+      byClassification: safeJsonParse(r.by_classification as string),
+      byLicensee: safeJsonParse(r.by_licensee as string),
+    }));
+  } catch (err) {
+    console.error("fetchWellLicenceDaily error:", err);
+    return [];
+  }
+}
+
+/**
+ * Well operators from the substrate entity directory, joined to their
+ * accumulated licence count. Ordered by total licences issued, descending.
+ */
+export async function fetchWellOperators(
+  limit: number = 100
+): Promise<WellOperator[]> {
+  try {
+    const db = await getDb();
+    const result = await db.query(
+      `SELECT e.name, e.slug, e.first_seen, e.last_seen,
+              COUNT(w.id)::int AS licence_count
+       FROM substrate.entities e
+       LEFT JOIN well_licences w ON w.licensee = e.name
+       WHERE e.kind = 'well-operator'
+       GROUP BY e.name, e.slug, e.first_seen, e.last_seen
+       ORDER BY licence_count DESC, e.last_seen DESC NULLS LAST
+       LIMIT $1`,
+      [limit]
+    );
+    return result.rows.map((r) => ({
+      name: r.name as string,
+      slug: r.slug as string,
+      firstSeen: r.first_seen != null ? String(r.first_seen) : null,
+      lastSeen: r.last_seen != null ? String(r.last_seen) : null,
+      licenceCount: r.licence_count as number,
+    }));
+  } catch (err) {
+    console.error("fetchWellOperators error:", err);
     return [];
   }
 }
