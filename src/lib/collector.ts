@@ -37,6 +37,7 @@ import {
   fetchInfrastructureProjects,
   fetchAERWellLicences,
   AERAccessBlockedError,
+  type WellLicence,
 } from "./data-sources-infrastructure";
 
 import { MUNICIPALITY_REGISTRY } from "./municipality-registry";
@@ -165,17 +166,20 @@ const SQL = {
     VALUES ($1, $2, $3, $4)
     ON CONFLICT(municipality, zoning_category, snapshot_date)
     DO UPDATE SET parcel_count = EXCLUDED.parcel_count, collected_at = NOW()`,
+  // Conflict target changed from (licence_number) to (licence_number, filing_date)
+  // so re-appearing licences accumulate history rows instead of overwriting them.
+  // Matches the UNIQUE constraint added in the 2026-06-04 boot migration.
   upsertWellLicence: `
     INSERT INTO well_licences (filing_date, licence_number, well_name, unique_id, surface_location, projected_depth, classification, substance, licensee)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-    ON CONFLICT(licence_number)
+    ON CONFLICT(licence_number, filing_date)
     DO UPDATE SET well_name = EXCLUDED.well_name, collected_at = NOW()`,
   upsertWellDaily: `
-    INSERT INTO well_licence_daily (filing_date, total_count, by_substance, by_classification)
-    VALUES ($1, $2, $3, $4)
+    INSERT INTO well_licence_daily (filing_date, total_count, by_substance, by_classification, by_licensee)
+    VALUES ($1, $2, $3, $4, $5)
     ON CONFLICT(filing_date)
     DO UPDATE SET total_count = EXCLUDED.total_count, by_substance = EXCLUDED.by_substance,
-                  by_classification = EXCLUDED.by_classification`,
+                  by_classification = EXCLUDED.by_classification, by_licensee = EXCLUDED.by_licensee`,
   upsertImmigration: `
     INSERT INTO immigration_records (year, month, province, category, cma, count)
     VALUES ($1, $2, $3, $4, $5, $6)
@@ -529,6 +533,201 @@ export async function collectMunicipalityData(today: string): Promise<number> {
 }
 
 // ---------------------------------------------------------------------------
+// Well-licence intelligence derivation
+// ---------------------------------------------------------------------------
+
+/**
+ * Slug-safe: lowercase, trim, replace any non-alphanumeric run with a dash.
+ * e.g. "Pembina Pipeline Corp." → "pembina-pipeline-corp"
+ */
+function licenseeSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Derive well-licence intelligence into the substrate model.
+ *
+ * Runs AFTER the raw well_licences rows are persisted for `today`. Produces:
+ *
+ *   1. substrate.entities rows (kind = 'well-operator') for each distinct
+ *      licensee seen today. First-seen is set on insert; last_seen is bumped
+ *      on every run that sees the operator.
+ *
+ *   2. substrate.observations rows for three series:
+ *        well-licences-new-by-substance       — one obs row per substance value today
+ *        well-licences-new-by-classification  — one obs row per classification today
+ *        well-licences-new-by-operator        — one obs row per licensee today
+ *
+ *      All three use the 'alberta' geo_dimension slug (province-level).
+ *      The entity_id column is set for the operator series (links to the
+ *      substrate.entities row for that operator); substance and classification
+ *      series leave entity_id NULL (geo-level aggregates, qualifier carries
+ *      the bucket label).
+ *
+ * All writes are idempotent (ON CONFLICT DO UPDATE / DO NOTHING).
+ * This function is non-fatal from the caller's perspective — failures are
+ * logged to snapshot_log but do not abort the collection run.
+ */
+export async function deriveWellLicenceIntelligence(
+  today: string,
+  licences: WellLicence[],
+  bySubstance: Record<string, number>,
+  byClassification: Record<string, number>,
+  byLicensee: Record<string, number>,
+): Promise<void> {
+  if (licences.length === 0) return;
+
+  const pool = await getDb();
+
+  // ------------------------------------------------------------------
+  // Resolve IDs we need from substrate
+  // ------------------------------------------------------------------
+
+  // Geo: Alberta province-level
+  const geoRes = await pool.query<{ id: string }>(
+    `SELECT id FROM substrate.geo_dimension
+     WHERE slug = 'alberta' OR (LOWER(name) = 'alberta' AND geo_type = 'province')
+     LIMIT 1`
+  );
+  const geoId = geoRes.rows[0]?.id;
+  if (!geoId) {
+    // Alberta geo row not yet seeded — log and bail; derivation will retry next run.
+    console.warn(JSON.stringify({
+      event: "deriveWellLicenceIntelligence.noAlbertaGeo",
+      today,
+    }));
+    return;
+  }
+
+  // Source: AER Well Licences
+  const srcRes = await pool.query<{ id: string }>(
+    `SELECT id FROM substrate.sources WHERE name = 'AER Well Licences' LIMIT 1`
+  );
+  const sourceId = srcRes.rows[0]?.id ?? null;
+
+  // Series metadata IDs
+  const seriesRes = await pool.query<{ id: string; slug: string }>(
+    `SELECT id, slug FROM substrate.series_metadata
+     WHERE slug IN (
+       'well-licences-new-by-substance',
+       'well-licences-new-by-classification',
+       'well-licences-new-by-operator'
+     )`
+  );
+  const seriesMap = new Map(seriesRes.rows.map((r) => [r.slug, r.id]));
+
+  const subSeriesId = seriesMap.get("well-licences-new-by-substance");
+  const clsSeriesId = seriesMap.get("well-licences-new-by-classification");
+  const opSeriesId  = seriesMap.get("well-licences-new-by-operator");
+
+  // ------------------------------------------------------------------
+  // 1. Upsert operator entities
+  // ------------------------------------------------------------------
+
+  // Map licensee name → substrate.entities.id so we can link observations.
+  const operatorIdMap = new Map<string, string>();
+
+  for (const [licensee, _count] of Object.entries(byLicensee)) {
+    if (!licensee || licensee === "Unknown") continue;
+    const slug = `well-operator-${licenseeSlug(licensee)}`;
+
+    const opRes = await pool.query<{ id: string }>(
+      `INSERT INTO substrate.entities
+         (slug, kind, name, geo_id, source_id, attrs, first_seen, last_seen)
+       VALUES ($1, 'well-operator', $2, $3, $4, '{}'::jsonb, $5::date, $5::date)
+       ON CONFLICT (slug) DO UPDATE SET
+         last_seen = GREATEST(substrate.entities.last_seen, EXCLUDED.last_seen),
+         name      = EXCLUDED.name
+       RETURNING id`,
+      [slug, licensee, geoId, sourceId, today]
+    );
+    const opId = opRes.rows[0]?.id;
+    if (opId) operatorIdMap.set(licensee, opId);
+  }
+
+  // ------------------------------------------------------------------
+  // 2. Substance observations (geo-level, one row per day)
+  //
+  // substrate.observations UNIQUE is (series_id, period, geo_id, entity_id)
+  // with NULLS NOT DISTINCT — only one NULL-entity row is allowed per
+  // (series, period, geo). We write the total count as `value` and the
+  // per-bucket JSON as `raw_value`. A UI that needs per-substance breakdown
+  // can JOIN against well_licence_daily.by_substance for the same date.
+  // ------------------------------------------------------------------
+
+  if (subSeriesId) {
+    const total = Object.values(bySubstance).reduce((s, n) => s + n, 0);
+    await pool.query(
+      `INSERT INTO substrate.observations
+         (series_id, period, geo_id, entity_id, value, raw_value, collected_at)
+       VALUES ($1, $2::date, $3, NULL, $4, $5, NOW())
+       ON CONFLICT (series_id, period, geo_id, entity_id) DO UPDATE SET
+         value        = EXCLUDED.value,
+         raw_value    = EXCLUDED.raw_value,
+         collected_at = NOW()`,
+      [subSeriesId, today, geoId, total, JSON.stringify(bySubstance)]
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // 3. Classification observations (geo-level, one row per day)
+  //
+  // Same single-row-per-day convention as substance series above.
+  // raw_value holds the JSON breakdown; value is total count.
+  // ------------------------------------------------------------------
+
+  if (clsSeriesId) {
+    const total = Object.values(byClassification).reduce((s, n) => s + n, 0);
+    await pool.query(
+      `INSERT INTO substrate.observations
+         (series_id, period, geo_id, entity_id, value, raw_value, collected_at)
+       VALUES ($1, $2::date, $3, NULL, $4, $5, NOW())
+       ON CONFLICT (series_id, period, geo_id, entity_id) DO UPDATE SET
+         value        = EXCLUDED.value,
+         raw_value    = EXCLUDED.raw_value,
+         collected_at = NOW()`,
+      [clsSeriesId, today, geoId, total, JSON.stringify(byClassification)]
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // 4. Operator observations (entity-keyed)
+  //
+  // One row per (series, period, geo, entity_id). entity_id is the
+  // substrate.entities UUID for this operator; unknown/blank licensees
+  // are skipped (no entity was created for them above).
+  // ------------------------------------------------------------------
+
+  if (opSeriesId) {
+    for (const [licensee, count] of Object.entries(byLicensee)) {
+      const entityId = operatorIdMap.get(licensee);
+      if (!entityId) continue; // skip "Unknown" and any blank-name entries
+      await pool.query(
+        `INSERT INTO substrate.observations
+           (series_id, period, geo_id, entity_id, value, qualifier, collected_at)
+         VALUES ($1, $2::date, $3, $4, $5, $6, NOW())
+         ON CONFLICT (series_id, period, geo_id, entity_id) DO UPDATE SET
+           value        = EXCLUDED.value,
+           qualifier    = EXCLUDED.qualifier,
+           collected_at = NOW()`,
+        [opSeriesId, today, geoId, entityId, count, licensee]
+      );
+    }
+  }
+
+  await pool.query(SQL.logEntry, [
+    "well_licences_derive",
+    licences.length,
+    "ok",
+    null,
+  ]);
+}
+
+// ---------------------------------------------------------------------------
 // Phase 4: Well Licences
 // ---------------------------------------------------------------------------
 
@@ -562,22 +761,36 @@ export async function collectWellLicences(today: string): Promise<number> {
     }
   });
 
-  // Daily aggregates
+  // Daily aggregates — three breakdown dimensions
   const bySubstance: Record<string, number> = {};
   const byClassification: Record<string, number> = {};
+  const byLicensee: Record<string, number> = {};
   for (const lic of licences) {
     const sub = lic.substance || "Unknown";
     const cls = lic.classification || "Unknown";
+    const lnk = lic.licensee || "Unknown";
     bySubstance[sub] = (bySubstance[sub] || 0) + 1;
     byClassification[cls] = (byClassification[cls] || 0) + 1;
+    byLicensee[lnk] = (byLicensee[lnk] || 0) + 1;
   }
 
   await pool.query(SQL.upsertWellDaily, [
     today, licences.length,
     JSON.stringify(bySubstance), JSON.stringify(byClassification),
+    JSON.stringify(byLicensee),
   ]);
 
   await pool.query(SQL.logEntry, ["well_licences", licences.length, "ok", null]);
+
+  // Derive intelligence from today's licences into the substrate model.
+  // Non-fatal: collection success is not conditional on derivation success.
+  try {
+    await deriveWellLicenceIntelligence(today, licences, bySubstance, byClassification, byLicensee);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    await pool.query(SQL.logEntry, ["well_licences_derive", 0, "error", msg]).catch(() => {});
+  }
+
   return licences.length;
 }
 

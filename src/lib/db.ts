@@ -366,6 +366,39 @@ const MIGRATION_SQL = `
       UNIQUE(licence_number)
     );
 
+    -- 2026-06-04: Re-key well_licences to accumulate history.
+    --
+    -- BEFORE: UNIQUE(licence_number) — each licence_number had exactly one row,
+    --   so re-collecting a licence (e.g. it appears again in a later day's AER
+    --   file) overwrote its filing_date, destroying the time series.
+    --
+    -- AFTER:  UNIQUE(licence_number, filing_date) — one row per (licence, day).
+    --   A licence appearing on multiple filing dates accumulates a row per date.
+    --   The natural key for a well licence is (licence_number, filing_date):
+    --   licence_number is the AER identifier (immutable per licence); filing_date
+    --   is the date AER published it.
+    --
+    -- Migration is safe on the existing ~140-row table because all three
+    -- filing_dates present (2026-03-14, 2026-06-03, 2026-06-04) are already
+    -- distinct across licence_numbers — there are no (licence_number, filing_date)
+    -- duplicates. If somehow there were, the DROP+ADD sequence leaves the table
+    -- with no unique constraint momentarily; any conflict on ADD would need manual
+    -- dedup first. The constraint names use IF EXISTS / IF NOT EXISTS guards so
+    -- this block is idempotent across multiple boot runs.
+    ALTER TABLE well_licences
+      DROP CONSTRAINT IF EXISTS well_licences_licence_number_key;
+    DO $wl_uniq$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid = 'well_licences'::regclass
+          AND conname   = 'well_licences_licence_number_filing_date_key'
+      ) THEN
+        ALTER TABLE well_licences
+          ADD CONSTRAINT well_licences_licence_number_filing_date_key
+          UNIQUE (licence_number, filing_date);
+      END IF;
+    END $wl_uniq$;
+
     CREATE TABLE IF NOT EXISTS well_licence_daily (
       id SERIAL PRIMARY KEY,
       filing_date TEXT NOT NULL,
@@ -374,6 +407,12 @@ const MIGRATION_SQL = `
       by_classification TEXT DEFAULT '{}',
       UNIQUE(filing_date)
     );
+
+    -- 2026-06-04: Add by_licensee breakdown to well_licence_daily.
+    --   Tracks how many new licences each licensee/operator received per day.
+    --   Used by the well-licences-new-by-operator substrate series.
+    ALTER TABLE well_licence_daily
+      ADD COLUMN IF NOT EXISTS by_licensee TEXT DEFAULT '{}';
 
     CREATE TABLE IF NOT EXISTS immigration_records (
       id SERIAL PRIMARY KEY,
@@ -1651,6 +1690,100 @@ const MIGRATION_SQL = `
           CHECK (storage_kind = 'observation' OR entity_kind IS NOT NULL);
       END IF;
     END $series_meta_checks$;
+
+    -- ============================================================
+    -- Well-licence intelligence layer (2026-06-04)
+    --
+    -- Promotes the raw well_licences mirror into the substrate/signals
+    -- data model so licence activity becomes a queryable time series.
+    --
+    -- Three additions:
+    --   1. substrate.sources row for AER well licences.
+    --   2. substrate.series_metadata rows for three derived observation
+    --      series (daily new-licence counts by substance, classification,
+    --      operator/licensee).
+    --   3. substrate.entities rows for distinct licensees/operators
+    --      (kind = 'well-operator').
+    --
+    -- These are seeded via the collector (collectWellLicences) and the
+    -- new deriveWellLicenceIntelligence() function in collector.ts.
+    -- All writes are idempotent (ON CONFLICT DO UPDATE / DO NOTHING).
+    -- ============================================================
+
+    -- Source record
+    INSERT INTO substrate.sources (name, base_url, auth_type)
+    VALUES (
+      'AER Well Licences',
+      'https://static.aer.ca/prd/data/well-lic',
+      'none'
+    )
+    ON CONFLICT (name) DO NOTHING;
+
+    -- Series: daily new-licence counts by substance (oil/gas/bitumen/etc.)
+    INSERT INTO substrate.series_metadata
+      (slug, domain, name, unit, unit_type, cadence, description, tags,
+       is_derived, derivation_lineage, storage_kind)
+    VALUES (
+      'well-licences-new-by-substance',
+      'energy',
+      'New Well Licences — Daily Count by Substance',
+      'licences',
+      'count',
+      'daily',
+      'Count of new AER well licences issued per day, broken down by substance type (oil, gas, bitumen, etc.). Derived from well_licences and well_licence_daily.',
+      ARRAY['wells','drilling','aer','substance','alberta'],
+      TRUE,
+      '{"v":1,"kind":"rollup","upstream":[{"table":"well_licences","filter":{}},{"table":"well_licence_daily","filter":{}}]}'::jsonb,
+      'observation'
+    )
+    ON CONFLICT (slug) DO UPDATE SET
+      name               = EXCLUDED.name,
+      description        = EXCLUDED.description,
+      tags               = EXCLUDED.tags;
+
+    -- Series: daily new-licence counts by classification (new, reactivation, etc.)
+    INSERT INTO substrate.series_metadata
+      (slug, domain, name, unit, unit_type, cadence, description, tags,
+       is_derived, derivation_lineage, storage_kind)
+    VALUES (
+      'well-licences-new-by-classification',
+      'energy',
+      'New Well Licences — Daily Count by Classification',
+      'licences',
+      'count',
+      'daily',
+      'Count of new AER well licences issued per day, broken down by licence classification (New, Reactivation, Recompletion, etc.). Derived from well_licences.',
+      ARRAY['wells','drilling','aer','classification','alberta'],
+      TRUE,
+      '{"v":1,"kind":"rollup","upstream":[{"table":"well_licences","filter":{}}]}'::jsonb,
+      'observation'
+    )
+    ON CONFLICT (slug) DO UPDATE SET
+      name               = EXCLUDED.name,
+      description        = EXCLUDED.description,
+      tags               = EXCLUDED.tags;
+
+    -- Series: daily new-licence counts by operator/licensee
+    INSERT INTO substrate.series_metadata
+      (slug, domain, name, unit, unit_type, cadence, description, tags,
+       is_derived, derivation_lineage, storage_kind)
+    VALUES (
+      'well-licences-new-by-operator',
+      'energy',
+      'New Well Licences — Daily Count by Operator',
+      'licences',
+      'count',
+      'daily',
+      'Count of new AER well licences issued per day, broken down by licensee/operator. Paired with substrate.entities (kind=well-operator). Derived from well_licences.',
+      ARRAY['wells','drilling','aer','operator','licensee','alberta'],
+      TRUE,
+      '{"v":1,"kind":"rollup","upstream":[{"table":"well_licences","filter":{}}]}'::jsonb,
+      'observation'
+    )
+    ON CONFLICT (slug) DO UPDATE SET
+      name               = EXCLUDED.name,
+      description        = EXCLUDED.description,
+      tags               = EXCLUDED.tags;
 `;
 
 /**
@@ -2090,10 +2223,12 @@ export async function upsertWellLicence(
   licensee: string
 ) {
   const pool = await getDb();
+  // Conflict target: (licence_number, filing_date) — preserves one row per
+  // (licence, day) so history accumulates. See 2026-06-04 boot migration.
   await pool.query(
     `INSERT INTO well_licences (filing_date, licence_number, well_name, unique_id, surface_location, projected_depth, classification, substance, licensee)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-     ON CONFLICT(licence_number)
+     ON CONFLICT(licence_number, filing_date)
      DO UPDATE SET well_name = EXCLUDED.well_name, collected_at = NOW()`,
     [filingDate, licenceNumber, wellName, uniqueId, surfaceLocation, projectedDepth, classification, substance, licensee]
   );
@@ -2103,16 +2238,17 @@ export async function upsertWellLicenceDaily(
   filingDate: string,
   totalCount: number,
   bySubstance: string,
-  byClassification: string
+  byClassification: string,
+  byLicensee: string = "{}"
 ) {
   const pool = await getDb();
   await pool.query(
-    `INSERT INTO well_licence_daily (filing_date, total_count, by_substance, by_classification)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO well_licence_daily (filing_date, total_count, by_substance, by_classification, by_licensee)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT(filing_date)
      DO UPDATE SET total_count = EXCLUDED.total_count, by_substance = EXCLUDED.by_substance,
-                   by_classification = EXCLUDED.by_classification`,
-    [filingDate, totalCount, bySubstance, byClassification]
+                   by_classification = EXCLUDED.by_classification, by_licensee = EXCLUDED.by_licensee`,
+    [filingDate, totalCount, bySubstance, byClassification, byLicensee]
   );
 }
 
