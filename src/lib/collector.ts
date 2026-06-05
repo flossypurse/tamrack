@@ -48,6 +48,16 @@ import {
 
 import { STATSCAN_SERIES } from "./data-sources";
 
+import {
+  fetchHousingStarts,
+  fetchHousingCompletions,
+  fetchUnderConstruction,
+  fetchVacancyRates,
+  fetchRentComparison,
+  fetchAbsorptions,
+  fetchMortgageRate,
+} from "./data-sources-cmhc";
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -76,6 +86,7 @@ export type SourceName =
   | "immigration"
   | "projects"
   | "macro"
+  | "housing"
   | "all";
 
 // ---------------------------------------------------------------------------
@@ -175,6 +186,11 @@ const SQL = {
     VALUES ($1, $2, $3)
     ON CONFLICT(snapshot_date, indicator)
     DO UPDATE SET value = EXCLUDED.value`,
+  upsertCMHC: `
+    INSERT INTO cmhc_housing_snapshots (period, cma, metric, value, unit)
+    VALUES ($1, $2, $3, $4, $5)
+    ON CONFLICT(period, cma, metric)
+    DO UPDATE SET value = EXCLUDED.value, unit = EXCLUDED.unit, collected_at = NOW()`,
   logEntry: `
     INSERT INTO snapshot_log (taken_at, source, records_inserted, status, error)
     VALUES (NOW(), $1, $2, $3, $4)`,
@@ -754,6 +770,83 @@ export async function collectMacroIndicators(today: string): Promise<number> {
 }
 
 // ---------------------------------------------------------------------------
+// Phase: CMHC Housing (StatsCan table 34-10-0154 + siblings, no API key)
+// ---------------------------------------------------------------------------
+export async function collectCMHCHousing(): Promise<number> {
+  const pool = await getDb();
+  let count = 0;
+
+  async function upsertCMASeries(
+    series: { date: string; edmonton: number; calgary: number }[],
+    metric: string,
+    unit: string
+  ): Promise<number> {
+    if (!series.length) return 0;
+    return withTransaction(async (client: pg.PoolClient) => {
+      let n = 0;
+      for (const pt of series) {
+        if (!pt.date) continue;
+        if (pt.edmonton > 0) {
+          await client.query(SQL.upsertCMHC, [pt.date, "Edmonton", metric, pt.edmonton, unit]);
+          n++;
+        }
+        if (pt.calgary > 0) {
+          await client.query(SQL.upsertCMHC, [pt.date, "Calgary", metric, pt.calgary, unit]);
+          n++;
+        }
+      }
+      return n;
+    });
+  }
+
+  try { count += await upsertCMASeries(await fetchHousingStarts(60), "starts", "units"); } catch { /* non-fatal */ }
+  try { count += await upsertCMASeries(await fetchHousingCompletions(60), "completions", "units"); } catch { /* non-fatal */ }
+  try { count += await upsertCMASeries(await fetchUnderConstruction(60), "under_construction", "units"); } catch { /* non-fatal */ }
+  try { count += await upsertCMASeries(await fetchVacancyRates(20), "vacancy_rate", "%"); } catch { /* non-fatal */ }
+
+  try {
+    const rents = await fetchRentComparison(20);
+    if (rents.length > 0) {
+      await withTransaction(async (client: pg.PoolClient) => {
+        for (const pt of rents) {
+          if (!pt.date) continue;
+          const rentMetrics: [string, number, number][] = [
+            ["rent_bachelor", pt.edmontonBachelor, pt.calgaryBachelor],
+            ["rent_1bed",     pt.edmontonOneBed,   pt.calgaryOneBed],
+            ["rent_2bed",     pt.edmontonTwoBed,   pt.calgaryTwoBed],
+            ["rent_3bed",     pt.edmontonThreeBed, pt.calgaryThreeBed],
+          ];
+          for (const [metric, edm, cal] of rentMetrics) {
+            if (edm > 0) { await client.query(SQL.upsertCMHC, [pt.date, "Edmonton", metric, edm, "$/month"]); count++; }
+            if (cal > 0) { await client.query(SQL.upsertCMHC, [pt.date, "Calgary", metric, cal, "$/month"]); count++; }
+          }
+        }
+      });
+    }
+  } catch { /* non-fatal */ }
+
+  try {
+    const { absorbed, unabsorbed } = await fetchAbsorptions(40);
+    await withTransaction(async (client: pg.PoolClient) => {
+      for (const pt of absorbed) { if (pt.date && pt.value) { await client.query(SQL.upsertCMHC, [pt.date, "Alberta", "absorbed", pt.value, "units"]); count++; } }
+      for (const pt of unabsorbed) { if (pt.date && pt.value) { await client.query(SQL.upsertCMHC, [pt.date, "Alberta", "unabsorbed", pt.value, "units"]); count++; } }
+    });
+  } catch { /* non-fatal */ }
+
+  try {
+    const mortgage = await fetchMortgageRate(60);
+    if (mortgage.length > 0) {
+      await withTransaction(async (client: pg.PoolClient) => {
+        for (const pt of mortgage) { if (pt.date && pt.value) { await client.query(SQL.upsertCMHC, [pt.date, "Canada", "mortgage_rate_5y", pt.value, "%"]); count++; } }
+      });
+    }
+  } catch { /* non-fatal */ }
+
+  await pool.query(SQL.logEntry, ["cmhc_housing", count, "ok", null]);
+  return count;
+}
+
+// ---------------------------------------------------------------------------
 // Main orchestrator
 // ---------------------------------------------------------------------------
 
@@ -804,6 +897,12 @@ const PHASES: {
     key: "macro_indicators",
     sources: ["macro", "all"],
     fn: (today) => collectMacroIndicators(today),
+  },
+  {
+    name: "CMHC Housing",
+    key: "cmhc_housing",
+    sources: ["housing", "all"],
+    fn: () => collectCMHCHousing(),
   },
 ];
 

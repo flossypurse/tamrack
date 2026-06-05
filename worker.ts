@@ -28,6 +28,7 @@ import {
   collectImmigration,
   collectMajorProjects,
   collectMacroIndicators,
+  collectCMHCHousing,
 } from "./src/lib/collector";
 
 import { getDb } from "./src/lib/db";
@@ -62,6 +63,7 @@ const NON_REGIONAL_PHASES = [
   { name: "immigration",   fn: (_today: string) => collectImmigration() },
   { name: "projects",      fn: (today: string) => collectMajorProjects(today) },
   { name: "macro",         fn: (today: string) => collectMacroIndicators(today) },
+  { name: "housing",       fn: (_today: string) => collectCMHCHousing() },
 ] as const;
 
 // Slug-safe key for Resonate step IDs (must be deterministic across replays).

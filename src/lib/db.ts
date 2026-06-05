@@ -384,6 +384,25 @@ const MIGRATION_SQL = `
     );
 
     -- ============================================================
+    -- CMHC Housing Snapshots (2026-06-04)
+    -- Monthly housing starts/completions/under-construction for
+    -- Edmonton and Calgary CMAs, plus vacancy rates and average rents.
+    -- Source: Statistics Canada via CMHC (no API key needed).
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS cmhc_housing_snapshots (
+      id            SERIAL PRIMARY KEY,
+      period        TEXT NOT NULL,
+      cma           TEXT NOT NULL,
+      metric        TEXT NOT NULL,
+      value         DOUBLE PRECISION NOT NULL,
+      unit          TEXT NOT NULL DEFAULT '',
+      collected_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (period, cma, metric)
+    );
+    CREATE INDEX IF NOT EXISTS idx_cmhc_cma_metric ON cmhc_housing_snapshots(cma, metric, period);
+    CREATE INDEX IF NOT EXISTS idx_cmhc_period ON cmhc_housing_snapshots(period DESC);
+
+    -- ============================================================
     -- CRM tables
     -- ============================================================
 
