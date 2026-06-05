@@ -295,26 +295,103 @@ export async function fetchAERWellLicences(
   }
 
   const text = await res.text();
-  const lines = text.split("\n");
-  const dataLines = lines.filter(
-    (l) =>
-      l.trim().length > 0 &&
-      !l.startsWith("-") &&
-      !l.startsWith("=") &&
-      !l.toLowerCase().includes("well name") &&
-      !l.toLowerCase().includes("licence")
-  );
 
-  return dataLines.map((line) => ({
-    licenceNumber: line.substring(0, 10).trim(),
-    wellName: line.substring(10, 50).trim(),
-    uniqueId: line.substring(50, 66).trim(),
-    surfaceLocation: line.substring(66, 100).trim(),
-    projectedDepth: parseInt(line.substring(100, 110).trim(), 10) || 0,
-    classification: line.substring(110, 125).trim(),
-    substance: line.substring(125, 145).trim(),
-    licensee: line.substring(145).trim(),
-  }));
+  // The file uses CRLF — strip \r from every line.
+  const rawLines = text.split("\n").map((l) => l.replace(/\r$/, ""));
+
+  // ── Locate the data section ──────────────────────────────────────────────
+  // The header block opens with a legend delimited by two "----" divider
+  // lines.  Data records start immediately after the second divider.
+  let dataStart = 0;
+  let dividerCount = 0;
+  for (let i = 0; i < rawLines.length; i++) {
+    if (rawLines[i].trim().startsWith("----")) {
+      dividerCount++;
+      if (dividerCount === 2) {
+        dataStart = i + 1;
+        break;
+      }
+    }
+  }
+
+  // Data ends at the "AMENDMENTS OF WELL LICENCES" sub-section header or at
+  // the "-------- END OF WELL LICENCES DAILY LIST --------" footer.
+  let dataEnd = rawLines.length;
+  for (let i = dataStart; i < rawLines.length; i++) {
+    const t = rawLines[i].trim();
+    if (
+      t.includes("AMENDMENTS OF WELL LICENCES") ||
+      t.startsWith("-------- END OF WELL")
+    ) {
+      dataEnd = i;
+      break;
+    }
+  }
+
+  // ── Group lines into per-record blocks ──────────────────────────────────
+  // A record-start line has a 6–7 digit licence number in columns [40,51)
+  // and a non-empty well name in columns [4,40).  Everything from one
+  // record-start up to (but not including) the next is one block.
+  const isRecordStart = (line: string): boolean => {
+    if (line.length < 51) return false;
+    const licField = line.substring(40, 51).trim();
+    const wellField = line.substring(4, 40).trim();
+    return /^\d{6,7}$/.test(licField) && wellField.length > 0;
+  };
+
+  const blocks: string[][] = [];
+  let current: string[] | null = null;
+  for (let i = dataStart; i < dataEnd; i++) {
+    const line = rawLines[i];
+    if (isRecordStart(line)) {
+      if (current) blocks.push(current);
+      current = [line];
+    } else if (current !== null) {
+      current.push(line);
+    }
+  }
+  if (current) blocks.push(current);
+
+  // ── Parse each block ────────────────────────────────────────────────────
+  // Each standard well-licence record consists of exactly 5 content lines
+  // (non-blank), using fixed column ranges confirmed against the live file:
+  //
+  //   Line A (record-start): wellName=[4,40)  licenceNumber=[40,51)
+  //   Line B:                uniqueId=[4,25)  projectedDepth=[72,end)
+  //   Line C:                classification=[4,28)
+  //   Line D:                substance=[72,end)
+  //   Line E:                licensee=[4,72)  surfaceLocation=[72,end)
+  //
+  // Some records are followed by WELL NAME:/BOTTOMHOLE continuation lines;
+  // those are ignored by taking only the first 5 non-blank lines.
+  const parseDepth = (raw: string): number => {
+    const m = raw.trim().match(/^([0-9]+(?:\.[0-9]+)?)/);
+    return m ? parseFloat(m[1]) : 0;
+  };
+
+  return blocks.map((block) => {
+    const content = block.filter((l) => l.trim().length > 0);
+    const A = content[0] ?? "";
+    const B = content[1] ?? "";
+    const C = content[2] ?? "";
+    const D = content[3] ?? "";
+    const E = content[4] ?? "";
+
+    // uniqueId: the UWI portion sits in [4,25); [25,28) bleeds into the
+    // surface-coordinate direction indicator (e.g. "  S" / "  N").
+    const rawUniqueId = A.length >= 1 ? B.substring(4, 25).trim() : "";
+
+    return {
+      wellName: A.substring(4, 40).trim(),
+      licenceNumber: A.substring(40, 51).trim(),
+      uniqueId: rawUniqueId,
+      projectedDepth: parseDepth(B.substring(72)),
+      classification: C.substring(4, 28).trim(),
+      substance: D.substring(72).trim(),
+      licensee: E.substring(4, 72).trim(),
+      surfaceLocation: E.substring(72).trim(),
+    };
+  });
 }
 
 // ============================================================
