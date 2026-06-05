@@ -333,6 +333,24 @@ const MIGRATION_SQL = `
       UNIQUE(snapshot_date, municipality, group_name)
     );
 
+    -- ============================================================
+    -- Zoning distribution (count-only) for munis without assessment $
+    -- Captures parcel/polygon counts by zoning category per day.
+    -- Covers: Cochrane, Airdrie, Spruce Grove, Sturgeon County,
+    --         Leduc County, Lloydminster (and any future no-$ munis).
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS municipality_zoning_distribution (
+      id SERIAL PRIMARY KEY,
+      municipality TEXT NOT NULL,
+      zoning_category TEXT NOT NULL,
+      parcel_count INTEGER NOT NULL DEFAULT 0,
+      snapshot_date TEXT NOT NULL,
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(municipality, zoning_category, snapshot_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_muni_zoning_dist_muni_date
+      ON municipality_zoning_distribution(municipality, snapshot_date);
+
     CREATE TABLE IF NOT EXISTS well_licences (
       id SERIAL PRIMARY KEY,
       filing_date TEXT NOT NULL,

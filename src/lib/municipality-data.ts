@@ -506,6 +506,83 @@ export async function fetchRecentPermits(
   }
 }
 
+// ============================================================
+// Zoning distribution — count-only, for munis with no assessment $
+// ============================================================
+
+export interface ZoningDistributionRow {
+  zoningCategory: string;
+  parcelCount: number;
+}
+
+/**
+ * Fetch a per-zoning-category parcel count for municipalities that expose
+ * polygon/parcel geometry but no dollar assessment values.
+ *
+ * Resolution order for the grouping field:
+ *   1. config.fields.zoningDistributionField  (explicit override)
+ *   2. config.fields.zoning
+ *   3. config.fields.subdivision              (last resort — geo grouping)
+ *
+ * Uses the ArcGIS groupByFieldsForStatistics + outStatistics COUNT pattern,
+ * which avoids fetching full geometry or paginating all records.
+ * Skips Socrata endpoints (they use a different API and always have $ values).
+ */
+export async function fetchZoningDistribution(
+  config: MunicipalityConfig
+): Promise<ZoningDistributionRow[]> {
+  // Only applies to zoning-only munis (no assessmentValue field)
+  if (config.fields.assessmentValue) return [];
+
+  // Pick endpoint: prefer dedicated zoning layer, fall back to parcels
+  const endpoint = config.endpoints.zoning || config.endpoints.parcels;
+  if (!endpoint) return [];
+
+  // Skip Socrata endpoints — they always carry dollar values and use a
+  // different API shape; this fetcher is ArcGIS-only.
+  if (isSocrataEndpoint(endpoint.url)) return [];
+
+  // Resolve grouping field
+  const groupField =
+    config.fields.zoningDistributionField ||
+    config.fields.zoning ||
+    config.fields.subdivision;
+  if (!groupField) return [];
+
+  try {
+    const params = new URLSearchParams({
+      f: "json",
+      where: "1=1",
+      outFields: groupField,
+      returnGeometry: "false",
+      groupByFieldsForStatistics: groupField,
+      outStatistics: JSON.stringify([
+        {
+          statisticType: "count",
+          onStatisticField: groupField,
+          outStatisticFieldName: "cnt",
+        },
+      ]),
+    });
+
+    const res = await fetch(`${endpoint.url}/query?${params.toString()}`, {
+      next: { revalidate: 3600 },
+    });
+    const data = await res.json();
+    if (!data?.features) return [];
+
+    return (data.features as { attributes: Record<string, unknown> }[])
+      .map((f) => ({
+        zoningCategory: String(f.attributes[groupField] ?? "").trim(),
+        parcelCount: Number(f.attributes["cnt"] ?? 0),
+      }))
+      .filter((r) => r.zoningCategory && r.zoningCategory !== "null" && r.parcelCount > 0)
+      .sort((a, b) => b.parcelCount - a.parcelCount);
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchMunicipalityMetrics(
   config: MunicipalityConfig
 ): Promise<MunicipalityMetrics> {

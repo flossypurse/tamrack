@@ -43,6 +43,12 @@ export interface FieldMapping {
   salePrice?: string;             // e.g., "TXSLAM"
   acreage?: string;               // e.g., "Area_Acre", "AreaAcre", "Hectares"
 
+  // Count-only zoning-distribution grouping field (for munis with no assessment values).
+  // Overrides `zoning` for the zoningDistribution collector path when set.
+  // Use when the best available grouping field is not a zoning code
+  // (e.g. Lloydminster uses Subdivision; Sturgeon County uses PropertyCode).
+  zoningDistributionField?: string;
+
   // Permit fields
   permitType?: string;
   permitStatus?: string;
@@ -429,6 +435,9 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     fields: {
       address: "FullAddress",
       neighbourhood: "Neighbourhood",
+      // PropertyCode is the closest proxy to zoning available on this layer
+      // (e.g. "R1", "AG", "PU", "EP", "I5"). No dollar-value field present.
+      zoning: "PropertyCode",
     },
     capabilities: ["zoning"],
     dataSource: "Sturgeon County ArcGIS",
@@ -509,8 +518,10 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     },
     fields: {
       address: "ADDRESS",
-      zoning: "LAND_USE_DISTRICT",
-      zoningDescription: "DESCRIPTION",
+      // Real group field is DISTRICTCL (district classification, e.g. "Residential District").
+      // DISTRICTDE is the long description; DISTRICT is short code (e.g. "R-LD").
+      zoning: "DISTRICTCL",
+      zoningDescription: "DISTRICTDE",
     },
     capabilities: ["zoning"],
     dataSource: "City of Airdrie ArcGIS Hub",
@@ -530,7 +541,10 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     },
     fields: {
       address: "ADDRESS",
-      zoning: "LAND_USE",
+      // Real field name on the zoning polygon layer is ZONING_CODE (not LAND_USE).
+      // The layer also exposes ZONING_DESC for human-readable descriptions.
+      zoning: "ZONING_CODE",
+      zoningDescription: "ZONING_DESC",
       neighbourhood: "NEIGHBOURHOOD",
     },
     capabilities: ["zoning"],
@@ -699,12 +713,14 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
       address: "Address",
       subdivision: "Subdivision",
       yearBuilt: "YearBuilt",
+      // No zoning field on this layer — use Subdivision as the distribution grouping.
+      zoningDistributionField: "Subdivision",
     },
     capabilities: ["zoning"],
     dataSource: "City of Lloydminster ArcGIS",
     description: "13,000 parcels on the Alberta/Saskatchewan border. Year built, subdivisions, and lot data.",
     color: "#ca8a04",
-    notes: ["No dollar-value assessments available via public API"],
+    notes: ["No dollar-value assessments available via public API", "Grouped by Subdivision (no zoning field available)"],
   },
 
   {

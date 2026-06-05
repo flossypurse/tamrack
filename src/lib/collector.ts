@@ -44,6 +44,7 @@ import { MUNICIPALITY_REGISTRY } from "./municipality-registry";
 import {
   fetchAssessmentsByGroup,
   fetchPermitsByGroup,
+  fetchZoningDistribution,
 } from "./municipality-data";
 
 import { STATSCAN_SERIES } from "./data-sources";
@@ -159,6 +160,11 @@ const SQL = {
     VALUES ($1, $2, $3, $4, $5)
     ON CONFLICT(snapshot_date, municipality, group_name)
     DO UPDATE SET count = EXCLUDED.count, total_value = EXCLUDED.total_value`,
+  upsertZoningDistribution: `
+    INSERT INTO municipality_zoning_distribution (municipality, zoning_category, parcel_count, snapshot_date)
+    VALUES ($1, $2, $3, $4)
+    ON CONFLICT(municipality, zoning_category, snapshot_date)
+    DO UPDATE SET parcel_count = EXCLUDED.parcel_count, collected_at = NOW()`,
   upsertWellLicence: `
     INSERT INTO well_licences (filing_date, licence_number, well_name, unique_id, surface_location, projected_depth, classification, substance, licensee)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -469,6 +475,52 @@ export async function collectMunicipalityData(today: string): Promise<number> {
 
   const permitResults = await runWithConcurrency(permitTasks, 4);
   for (const r of permitResults) {
+    if (r.status === "fulfilled") totalRows += r.value;
+  }
+
+  // Zoning distribution — count-only collection for munis with no assessment $
+  // Targets munis that have a zoning/parcels endpoint but no assessmentValue field.
+  // These are precisely the 6 munis that previously produced 0 rows: Cochrane,
+  // Airdrie, Spruce Grove, Sturgeon County, Leduc County, Lloydminster.
+  const zoningDistMunis = liveMunis.filter(
+    (m) =>
+      !m.fields.assessmentValue &&
+      (m.endpoints.zoning || m.endpoints.parcels)
+  );
+
+  const zoningDistTasks = zoningDistMunis.map((m) => async () => {
+    try {
+      const rows = await fetchZoningDistribution(m);
+      if (rows.length > 0) {
+        await withTransaction(async (client: pg.PoolClient) => {
+          for (const row of rows) {
+            await client.query(SQL.upsertZoningDistribution, [
+              m.slug, row.zoningCategory, row.parcelCount, today,
+            ]);
+          }
+        });
+      }
+      await pool.query(SQL.logEntry, [
+        `municipality_data:${m.slug}:zoning_distribution`,
+        rows.length,
+        "ok",
+        null,
+      ]);
+      return rows.length;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      await pool.query(SQL.logEntry, [
+        `municipality_data:${m.slug}:zoning_distribution`,
+        0,
+        "error",
+        msg,
+      ]).catch(() => {});
+      return 0;
+    }
+  });
+
+  const zoningDistResults = await runWithConcurrency(zoningDistTasks, 4);
+  for (const r of zoningDistResults) {
     if (r.status === "fulfilled") totalRows += r.value;
   }
 
