@@ -363,7 +363,9 @@ const MIGRATION_SQL = `
       substance TEXT DEFAULT '',
       licensee TEXT DEFAULT '',
       collected_at TIMESTAMPTZ DEFAULT NOW(),
-      UNIQUE(licence_number)
+      -- History-accumulating key: one row per (licence, filing day). The ALTER
+      -- block below migrates pre-existing tables off the old single-column key.
+      UNIQUE(licence_number, filing_date)
     );
 
     -- 2026-06-04: Re-key well_licences to accumulate history.
@@ -2229,7 +2231,10 @@ export async function upsertWellLicence(
     `INSERT INTO well_licences (filing_date, licence_number, well_name, unique_id, surface_location, projected_depth, classification, substance, licensee)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      ON CONFLICT(licence_number, filing_date)
-     DO UPDATE SET well_name = EXCLUDED.well_name, collected_at = NOW()`,
+     DO UPDATE SET well_name = EXCLUDED.well_name, unique_id = EXCLUDED.unique_id,
+       surface_location = EXCLUDED.surface_location, projected_depth = EXCLUDED.projected_depth,
+       classification = EXCLUDED.classification, substance = EXCLUDED.substance,
+       licensee = EXCLUDED.licensee, collected_at = NOW()`,
     [filingDate, licenceNumber, wellName, uniqueId, surfaceLocation, projectedDepth, classification, substance, licensee]
   );
 }
