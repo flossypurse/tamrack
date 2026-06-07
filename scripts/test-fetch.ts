@@ -13,7 +13,7 @@ import {
   fetchImmigrationByCMA,
 } from "../src/lib/data-sources-ircc";
 import { fetchCrudeOilProduction } from "../src/lib/data-sources-cer";
-import { fetchJobBankPostings, resolveLatestJobBankMonth } from "../src/lib/data-sources-jobbank";
+import { fetchJobBankPostings } from "../src/lib/data-sources-jobbank";
 
 async function main() {
   const which = process.argv[2] ?? "major-projects";
@@ -47,8 +47,7 @@ async function main() {
       break;
     }
     case "jobbank": {
-      const month = await resolveLatestJobBankMonth();
-      const all = await fetchJobBankPostings({ province: "Alberta", tierBOnly: false });
+      const { postings: all, month } = await fetchJobBankPostings({ province: "Alberta", tierBOnly: false });
       const tierB = all.filter((p) => !!p.matchedNocCode);
       console.log("data month:", month);
       console.log("total Alberta postings:", all.length);

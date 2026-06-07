@@ -60,10 +60,7 @@ import {
   fetchMortgageRate,
 } from "./data-sources-cmhc";
 
-import {
-  fetchJobBankPostings,
-  resolveLatestJobBankMonth,
-} from "./data-sources-jobbank";
+import { fetchJobBankPostings } from "./data-sources-jobbank";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -1168,17 +1165,20 @@ export async function collectJobBankData(_today: string): Promise<number> {
   const pool = await getDb();
 
   // One fetch of all Alberta postings; the fetcher never throws (returns []).
-  const all = await fetchJobBankPostings({ province: "Alberta", tierBOnly: false });
+  // The result bundles the authoritative data month from the same CKAN lookup,
+  // so rows are always stored under the month they actually came from.
+  const { postings: all, month } = await fetchJobBankPostings({
+    province: "Alberta",
+    tierBOnly: false,
+  });
   if (all.length === 0) {
     await pool.query(SQL.logEntry, ["jobbank", 0, "error", "no postings (fetch failed or empty feed)"]);
     return 0;
   }
 
   const tierB = all.filter((p) => !!p.matchedNocCode && !!p.wicId);
-  // Authoritative snapshot month from CKAN (cached warm by the fetch above);
-  // fall back to the current month if CKAN can't be reached.
-  const dataMonth =
-    (await resolveLatestJobBankMonth()) || new Date().toISOString().slice(0, 7);
+  // Fall back to the current month only if CKAN didn't return one.
+  const dataMonth = month || new Date().toISOString().slice(0, 7);
 
   await withTransaction(async (client: pg.PoolClient) => {
     for (const p of tierB) {

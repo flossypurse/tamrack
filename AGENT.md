@@ -66,7 +66,7 @@ See [src/app/api/mcp/AGENT.md](src/app/api/mcp/AGENT.md) for registration comman
 
 ## Data Collection Worker
 
-`worker.ts` runs 7 collection phases as a Resonate durable workflow (`dailyCollection`) on a `0 6 * * *` (6 AM UTC) schedule. Each phase is a separate `ctx.run` step; regional indicators are further split one step per indicator for fault isolation. Step IDs are date-scoped to prevent Resonate's resolved-step cache from replaying stale results on a new day's fire.
+`worker.ts` runs 9 collection phases as a Resonate durable workflow (`dailyCollection`) on a `0 6 * * *` (6 AM UTC) schedule. Each phase is a separate `ctx.run` step; regional indicators are further split one step per indicator for fault isolation. Step IDs are date-scoped to prevent Resonate's resolved-step cache from replaying stale results on a new day's fire.
 
 Phases: `regional` (per-indicator), `energy`, `municipalities`, `wells`, `immigration`, `projects`, `macro`, `housing`, `jobbank`.
 

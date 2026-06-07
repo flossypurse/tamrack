@@ -235,42 +235,39 @@ export async function resolveLatestJobBankMonth(): Promise<string> {
 // Fetcher
 // ============================================================
 
+// Result of a Job Bank fetch: the postings plus the authoritative data month
+// ("YYYY-MM") resolved from CKAN. Bundling the month here means callers never
+// need a second CKAN round-trip to learn which month they got — and can never
+// store rows under a month key that diverges from the data they fetched.
+export interface JobBankFetchResult {
+  postings: JobBankPosting[];
+  month: string;
+}
+
 /**
- * Fetches and parses the latest (or specified) Job Bank monthly CSV,
- * filters to Alberta, and optionally narrows to Tier-B NOC21 codes.
+ * Fetches and parses the latest Job Bank monthly CSV, filters to Alberta, and
+ * optionally narrows to Tier-B NOC21 codes.
  *
- * Returns an empty array on any error — never throws.
+ * NOTE: `opts.month` does NOT pin the data month — CKAN only exposes the latest
+ * monthly resource, so this always returns the newest published month. The
+ * returned `month` is the authoritative value; use it, don't assume `opts.month`.
+ *
+ * Never throws — returns `{ postings: [], month: "" }` on any error.
  */
 export async function fetchJobBankPostings(
   opts: FetchJobBankOptions = {}
-): Promise<JobBankPosting[]> {
+): Promise<JobBankFetchResult> {
   const province = opts.province ?? "Alberta";
   const tierBOnly = opts.tierBOnly ?? true;
   const limitN = opts.limit ?? 0;
 
-  let csvUrl: string;
-  let dataMonth = opts.month ?? "";
-
-  if (opts.month) {
-    // Caller pinned a specific month — still need to find the URL via CKAN.
-    // We resolve the URL from CKAN and verify it matches; if not, fall back to
-    // the latest. In practice this path is used for tests.
-    const resolved = await resolveLatestEnglishUrl();
-    if (!resolved) {
-      console.error("[jobbank] Could not resolve CSV URL for month", opts.month);
-      return [];
-    }
-    csvUrl = resolved.url;
-    dataMonth = resolved.month;
-  } else {
-    const resolved = await resolveLatestEnglishUrl();
-    if (!resolved) {
-      console.error("[jobbank] Could not resolve latest CSV URL");
-      return [];
-    }
-    csvUrl = resolved.url;
-    dataMonth = resolved.month;
+  const resolved = await resolveLatestEnglishUrl();
+  if (!resolved) {
+    console.error("[jobbank] Could not resolve latest CSV URL");
+    return { postings: [], month: "" };
   }
+  const csvUrl = resolved.url;
+  const dataMonth = resolved.month;
 
   try {
     const res = await fetch(csvUrl, {
@@ -284,7 +281,7 @@ export async function fetchJobBankPostings(
     });
     if (!res.ok) {
       console.error(`[jobbank] CSV fetch ${res.status} from ${csvUrl}`);
-      return [];
+      return { postings: [], month: dataMonth };
     }
 
     // The file is UTF-16LE with BOM. Fetch returns a byte stream; we need
@@ -293,7 +290,7 @@ export async function fetchJobBankPostings(
     const text = new TextDecoder("utf-16le").decode(buffer);
 
     const rawRows = parseTsv(text);
-    if (rawRows.length === 0) return [];
+    if (rawRows.length === 0) return { postings: [], month: dataMonth };
 
     const out: JobBankPosting[] = [];
 
@@ -337,16 +334,10 @@ export async function fetchJobBankPostings(
     // Most-recently posted first
     out.sort((a, b) => b.firstPostingDate.localeCompare(a.firstPostingDate));
 
-    if (dataMonth) {
-      // Attach dataMonth to first row for caller inspection (non-destructive).
-      // The proper way to expose this is fetchJobBankSummary — but for the raw
-      // array we annotate via the module-level lastFetchedMonth export below.
-    }
-
-    return out;
+    return { postings: out, month: dataMonth };
   } catch (err) {
     console.error("[jobbank] Fetch/parse error:", err);
-    return [];
+    return { postings: [], month: dataMonth };
   }
 }
 
@@ -363,12 +354,13 @@ export async function fetchJobBankSummary(
   const province = opts.province ?? "Alberta";
 
   // Fetch all Alberta postings (not just Tier-B) so we can compute totals.
-  const all = await fetchJobBankPostings({ ...opts, province, tierBOnly: false });
+  // The result bundles the authoritative data month — no second CKAN call.
+  const { postings: all, month } = await fetchJobBankPostings({
+    ...opts,
+    province,
+    tierBOnly: false,
+  });
   if (all.length === 0) return null;
-
-  // Resolve data month from CKAN (same call the fetcher made — cached).
-  const resolved = await resolveLatestEnglishUrl();
-  const month = resolved?.month ?? opts.month ?? "";
 
   const tierB = all.filter((r) => !!r.matchedNocCode);
 
