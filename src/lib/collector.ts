@@ -1262,6 +1262,12 @@ const PHASES: {
     sources: ["housing", "all"],
     fn: () => collectCMHCHousing(),
   },
+  {
+    name: "Procurement",
+    key: "procurement",
+    sources: ["procurement", "all"],
+    fn: (today) => collectProcurementData(today),
+  },
 ];
 
 /**

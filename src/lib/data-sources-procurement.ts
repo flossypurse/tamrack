@@ -211,8 +211,11 @@ function isRelevant(haystack: string, unspsc: string): string[] {
   for (const { term, re } of IT_TERMS) {
     if (re.test(haystack)) matched.push(term);
   }
-  if (IT_UNSPSC_PREFIXES.some((p) => unspsc.startsWith(p))) {
-    matched.push(`unspsc:${unspsc.slice(0, 2)}`);
+  const unspscPrefix = IT_UNSPSC_PREFIXES.find((p) => unspsc.startsWith(p));
+  if (unspscPrefix) {
+    // Label with the matched prefix (e.g. unspsc:811, unspsc:80101700) rather
+    // than the 2-char segment — the prefix is what actually qualified the row.
+    matched.push(`unspsc:${unspscPrefix}`);
   }
   // Weak terms ("cloud", "api") don't count unless something stronger matched
   // too — otherwise they balloon the result set with false positives.
