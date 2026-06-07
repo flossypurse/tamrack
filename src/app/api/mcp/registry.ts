@@ -38,6 +38,7 @@ export type ToolDomain =
   | "energy"
   | "search"
   | "municipality"
+  | "hiring"
   // v2-deferred domains follow
   | "entities"
   | "safety"
@@ -146,6 +147,11 @@ export const TOOL_DOMAINS: DomainDescriptor[] = [
     name: "municipality",
     description:
       "Municipality registry entries — population, region, capabilities, available datasets — for any Alberta municipality in the registry.",
+  },
+  {
+    name: "hiring",
+    description:
+      "Latent-demand hiring signals — Alberta postings for manual-process/automatable back-office roles (Canada Job Bank), with NOC/sector/city breakdowns and month-over-month momentum. Aggregate strain signal, not per-company leads.",
   },
   // Deferred to v2 — the domains exist conceptually so the catalog can
   // advertise them and so Parcel 6's docs read coherently.
@@ -429,6 +435,25 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     ],
   },
 
+  tamrack_hiring: {
+    name: "tamrack_hiring",
+    status: "planned",
+    domain: "hiring",
+    description:
+      "Latent-demand hiring signals — Alberta postings for manual-process/automatable back-office roles (Canada Job Bank, ESDC open data), with NOC/sector/city breakdowns + month-over-month momentum. Flipped to live by tools/hiring.ts.",
+    parameters_summary:
+      "dataset (enum: signals); optional month (YYYY-MM, defaults to latest stored).",
+    response_summary:
+      "Envelope with data.payload.summary — { month, totalAlbertaPostings, tierBPostings, byNoc[], bySector[], byCity[], momentum, sampleRows[] } (null until first collection).",
+    indicators: ["signals"],
+    example_invocations: [
+      {
+        description: "Latest Alberta hiring-strain summary (automatable roles).",
+        arguments: { dataset: "signals" },
+      },
+    ],
+  },
+
   // ── v2-deferred tools ──────────────────────────────────────────────────
 
   tamrack_entities: {
@@ -534,6 +559,7 @@ const TOOL_ORDER: readonly string[] = [
   "tamrack_energy",
   "tamrack_search",
   "tamrack_entities",
+  "tamrack_hiring",
   "tamrack_safety",
   "tamrack_immigration",
   "tamrack_politics",

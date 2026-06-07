@@ -58,7 +58,9 @@ Saved dashboards persist in `smart_dashboards` table; telemetry in `smart_query_
 
 ## MCP Server
 
-Hosted endpoint at `/api/mcp` — Streamable HTTP transport, Bearer auth (`tk_*` keys). Ten live tools: `tamrack_catalog`, `tamrack_municipality`, `tamrack_regional`, `tamrack_real_estate`, `tamrack_macro`, `tamrack_housing`, `tamrack_business`, `tamrack_energy`, `tamrack_search`, `tamrack_entities`. Seven more are catalogued as `"deferred"`.
+Hosted endpoint at `/api/mcp` — Streamable HTTP transport, Bearer auth (`tk_*` keys). Eleven live tools: `tamrack_catalog`, `tamrack_municipality`, `tamrack_regional`, `tamrack_real_estate`, `tamrack_macro`, `tamrack_housing`, `tamrack_business`, `tamrack_energy`, `tamrack_search`, `tamrack_entities`, `tamrack_hiring`. Seven more are catalogued as `"deferred"`.
+
+`tamrack_hiring` (scope `tamrack:economy:read`) is the latent-demand feed: Canada Job Bank Alberta postings for automatable back-office roles, read from `jobbank_postings`/`jobbank_monthly` with NOC/sector/city breakdowns + month-over-month momentum. Also `GET /api/hiring?type=signals[&month=YYYY-MM]`. Aggregate strain signal (no employer name in source), not per-company leads.
 
 See [src/app/api/mcp/AGENT.md](src/app/api/mcp/AGENT.md) for registration command, token issuance, scope taxonomy, and tool details.
 
@@ -66,7 +68,9 @@ See [src/app/api/mcp/AGENT.md](src/app/api/mcp/AGENT.md) for registration comman
 
 `worker.ts` runs 7 collection phases as a Resonate durable workflow (`dailyCollection`) on a `0 6 * * *` (6 AM UTC) schedule. Each phase is a separate `ctx.run` step; regional indicators are further split one step per indicator for fault isolation. Step IDs are date-scoped to prevent Resonate's resolved-step cache from replaying stale results on a new day's fire.
 
-Phases: `regional` (per-indicator), `energy`, `municipalities`, `wells`, `immigration`, `projects`, `macro`.
+Phases: `regional` (per-indicator), `energy`, `municipalities`, `wells`, `immigration`, `projects`, `macro`, `housing`, `jobbank`.
+
+The `jobbank` phase (`collectJobBankData`) fetches the latest Canada Job Bank monthly snapshot, stores Alberta Tier-B postings (automatable back-office roles) in `jobbank_postings` plus a monthly aggregate in `jobbank_monthly` (`src/lib/data-sources-jobbank.ts`). Each month accumulates as a distinct snapshot to build month-over-month hiring momentum.
 
 Resonate client: `ttl: 30 * 60 * 1000` (30 min — energy phase can take 8–23 min).
 

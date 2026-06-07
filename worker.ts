@@ -2,7 +2,7 @@
 /**
  * Tamrack — Resonate Durable Worker
  *
- * Runs the 7 collection phases as fault-tolerant durable steps.
+ * Runs the daily collection phases as fault-tolerant durable steps.
  * Connects to Resonate server at RESONATE_URL and data Postgres at DATABASE_URL.
  *
  * If a phase crashes mid-run, Resonate resumes from the last completed step
@@ -29,6 +29,7 @@ import {
   collectMajorProjects,
   collectMacroIndicators,
   collectCMHCHousing,
+  collectJobBankData,
 } from "./src/lib/collector";
 
 import { getDb } from "./src/lib/db";
@@ -64,6 +65,7 @@ const NON_REGIONAL_PHASES = [
   { name: "projects",      fn: (today: string) => collectMajorProjects(today) },
   { name: "macro",         fn: (today: string) => collectMacroIndicators(today) },
   { name: "housing",       fn: (_today: string) => collectCMHCHousing() },
+  { name: "jobbank",       fn: (today: string) => collectJobBankData(today) },
 ] as const;
 
 // Slug-safe key for Resonate step IDs (must be deterministic across replays).
