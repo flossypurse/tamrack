@@ -58,7 +58,9 @@ Saved dashboards persist in `smart_dashboards` table; telemetry in `smart_query_
 
 ## MCP Server
 
-Hosted endpoint at `/api/mcp` — Streamable HTTP transport, Bearer auth (`tk_*` keys). Ten live tools: `tamrack_catalog`, `tamrack_municipality`, `tamrack_regional`, `tamrack_real_estate`, `tamrack_macro`, `tamrack_housing`, `tamrack_business`, `tamrack_energy`, `tamrack_search`, `tamrack_entities`. Seven more are catalogued as `"deferred"`.
+Hosted endpoint at `/api/mcp` — Streamable HTTP transport, Bearer auth (`tk_*` keys). Eleven live tools: `tamrack_catalog`, `tamrack_municipality`, `tamrack_regional`, `tamrack_real_estate`, `tamrack_macro`, `tamrack_housing`, `tamrack_business`, `tamrack_energy`, `tamrack_search`, `tamrack_entities`, `tamrack_opportunities`. Seven more are catalogued as `"deferred"`.
+
+`tamrack_opportunities` (scope `tamrack:economy:read`) is the demand-side feed: CanadaBuys federal open tenders (IT/software/AI/data) read from the `opportunities` table. Also reachable via `GET /api/opportunities?type=tenders[&open=1&closing_before=YYYY-MM-DD&limit=N]`.
 
 See [src/app/api/mcp/AGENT.md](src/app/api/mcp/AGENT.md) for registration command, token issuance, scope taxonomy, and tool details.
 
@@ -66,7 +68,9 @@ See [src/app/api/mcp/AGENT.md](src/app/api/mcp/AGENT.md) for registration comman
 
 `worker.ts` runs 7 collection phases as a Resonate durable workflow (`dailyCollection`) on a `0 6 * * *` (6 AM UTC) schedule. Each phase is a separate `ctx.run` step; regional indicators are further split one step per indicator for fault isolation. Step IDs are date-scoped to prevent Resonate's resolved-step cache from replaying stale results on a new day's fire.
 
-Phases: `regional` (per-indicator), `energy`, `municipalities`, `wells`, `immigration`, `projects`, `macro`.
+Phases: `regional` (per-indicator), `energy`, `municipalities`, `wells`, `immigration`, `projects`, `macro`, `housing`, `procurement`.
+
+The `procurement` phase (`collectProcurementData`) fetches the CanadaBuys open-tender CSV and UPSERTs IT/software/AI/data-relevant, nationally-deliverable notices into the `opportunities` table (`src/lib/data-sources-procurement.ts`). Stores all statuses (open + closed) keyed on `(reference_number, publication_date)`; the read layer derives open-vs-closed at query time.
 
 Resonate client: `ttl: 30 * 60 * 1000` (30 min — energy phase can take 8–23 min).
 

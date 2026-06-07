@@ -462,6 +462,43 @@ const MIGRATION_SQL = `
     CREATE INDEX IF NOT EXISTS idx_cmhc_period ON cmhc_housing_snapshots(period DESC);
 
     -- ============================================================
+    -- Opportunities (demand-side feed, 2026-06-07)
+    -- Federal procurement tenders (CanadaBuys open data). Unlike the macro
+    -- series, each row is a concrete opportunity with a buyer and a deadline.
+    -- High-cardinality, frequently-amended entities — NOT time-series
+    -- observations, so they get their own table rather than substrate.observations.
+    -- Natural key: (reference_number, publication_date) — a notice keeps its
+    -- reference_number across amendments; amendments re-publish, so the pair
+    -- lets re-runs UPDATE the mutable fields (closing_date, status) in place.
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS opportunities (
+      id                     SERIAL PRIMARY KEY,
+      reference_number       TEXT NOT NULL,
+      solicitation_number    TEXT DEFAULT '',
+      title                  TEXT NOT NULL,
+      buyer                  TEXT DEFAULT '',
+      category               TEXT DEFAULT '',
+      procurement_method     TEXT DEFAULT '',
+      gsin                   TEXT DEFAULT '',
+      gsin_description       TEXT DEFAULT '',
+      unspsc                 TEXT DEFAULT '',
+      unspsc_description     TEXT DEFAULT '',
+      regions_of_opportunity TEXT DEFAULT '',
+      regions_of_delivery    TEXT DEFAULT '',
+      publication_date       TEXT NOT NULL,
+      closing_date           TEXT DEFAULT '',
+      expected_start_date    TEXT DEFAULT '',
+      expected_end_date      TEXT DEFAULT '',
+      status                 TEXT DEFAULT '',
+      notice_url             TEXT DEFAULT '',
+      matched_terms          TEXT DEFAULT '[]',
+      source                 TEXT NOT NULL DEFAULT 'canadabuys',
+      collected_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (reference_number, publication_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_opportunities_closing ON opportunities(closing_date, collected_at DESC);
+
+    -- ============================================================
     -- CRM tables
     -- ============================================================
 
