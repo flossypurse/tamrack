@@ -763,7 +763,7 @@ const MIGRATION_SQL = `
       ON smart_query_events(dashboard_id);
 
     -- ============================================================
-    -- Access requests (charter: tamrack/handoffs/2026-05-19-access-request-resonate-charter.md §5)
+    -- Access requests
     -- ============================================================
     -- One row per (lower-cased) email that ever requested access. The
     -- Resonate workflow attaches via id-hash idempotency; UNIQUE(email_lower)

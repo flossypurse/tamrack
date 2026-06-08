@@ -1,9 +1,7 @@
 "use client";
 
 /**
- * SectionDividerTerminal — Direction C (Terminal Buffer) between-section beat.
- *
- * Spec source: tamrack/handoffs/2026-05-19-between-section-animation-moodboard.md
+ * SectionDividerTerminal — Terminal Buffer between-section beat.
  *
  * What it does:
  *   - Renders a 12px-tall mono caption band: `> ` + char-by-char type-out of `label`.
@@ -12,14 +10,14 @@
  *   - IntersectionObserver trigger: rootMargin "-20% 0px", threshold 0, once: true.
  *   - Reduced-motion: render the full label immediately, no cursor, no type-out.
  *
- * Performance budget (per moodboard §"Performance budget"):
+ * Performance budget:
  *   - <8kb gzipped JS — this file is ~2kb.
  *   - No canvas, no rAF loops; setTimeout per char + a single 400ms blink keyframe.
  *   - Char rate decision: 30ms/char default. Label cap = 20 chars (20 * 30ms = 600ms
- *     dominant gesture, +400ms blink = 1000ms total mount-to-dismount). The moodboard
- *     hard-caps the *dominant gesture* at 600ms, not the full mount-to-dismount, and
- *     the blink runs after the gesture lands — so this fits. If a future label needs
- *     more headroom, drop the char rate to 25ms rather than relaxing the cap.
+ *     dominant gesture, +400ms blink = 1000ms total mount-to-dismount). The dominant
+ *     gesture is capped at 600ms, not the full mount-to-dismount, and the blink runs
+ *     after the gesture lands — so this fits. If a future label needs more headroom,
+ *     drop the char rate to 25ms rather than relaxing the cap.
  */
 
 import { useEffect, useRef, useState } from "react";

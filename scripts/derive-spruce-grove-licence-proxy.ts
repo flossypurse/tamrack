@@ -3,7 +3,7 @@
  * Spruce Grove licence proxy adapter.
  *
  * Spruce Grove publishes no business-licence layer through any of its
- * ArcGIS endpoints. Investigation report at handoffs/2026-05-31-... .
+ * ArcGIS endpoints, so this script derives proxy signals instead.
  * The strongest available signals are:
  *
  *   1. Development-permit-stage data from `municipality_permits` (count
