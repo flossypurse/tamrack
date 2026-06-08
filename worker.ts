@@ -31,6 +31,8 @@ import {
   collectCMHCHousing,
   collectProcurementData,
   collectJobBankData,
+  collectSpruceGroveProxy,
+  collectStonyPlainEntities,
 } from "./src/lib/collector";
 
 import { getDb } from "./src/lib/db";
@@ -59,15 +61,17 @@ interface PhaseResult {
 
 // Non-regional phases run as a single ctx.run step each (payloads are small).
 const NON_REGIONAL_PHASES = [
-  { name: "energy",        fn: (_today: string) => collectEnergyData() },
-  { name: "municipalities", fn: (today: string) => collectMunicipalityData(today) },
-  { name: "wells",         fn: (today: string) => collectWellLicences(today) },
-  { name: "immigration",   fn: (_today: string) => collectImmigration() },
-  { name: "projects",      fn: (today: string) => collectMajorProjects(today) },
-  { name: "macro",         fn: (today: string) => collectMacroIndicators(today) },
-  { name: "housing",       fn: (_today: string) => collectCMHCHousing() },
-  { name: "procurement",   fn: (today: string) => collectProcurementData(today) },
-  { name: "jobbank",       fn: (today: string) => collectJobBankData(today) },
+  { name: "energy",               fn: (_today: string) => collectEnergyData() },
+  { name: "municipalities",       fn: (today: string) => collectMunicipalityData(today) },
+  { name: "wells",                fn: (today: string) => collectWellLicences(today) },
+  { name: "immigration",          fn: (_today: string) => collectImmigration() },
+  { name: "projects",             fn: (today: string) => collectMajorProjects(today) },
+  { name: "macro",                fn: (today: string) => collectMacroIndicators(today) },
+  { name: "housing",              fn: (_today: string) => collectCMHCHousing() },
+  { name: "procurement",         fn: (today: string) => collectProcurementData(today) },
+  { name: "jobbank",              fn: (today: string) => collectJobBankData(today) },
+  { name: "spruce-grove-proxy",   fn: (today: string) => collectSpruceGroveProxy(today) },
+  { name: "stony-plain-entities", fn: (today: string) => collectStonyPlainEntities(today) },
 ] as const;
 
 // Slug-safe key for Resonate step IDs (must be deterministic across replays).

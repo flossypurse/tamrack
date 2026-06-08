@@ -65,6 +65,7 @@ import {
   ProcurementAccessBlockedError,
 } from "./data-sources-procurement";
 import { fetchJobBankPostings } from "./data-sources-jobbank";
+import { fetchWithRetry } from "./fetch-utils";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -97,6 +98,8 @@ export type SourceName =
   | "housing"
   | "procurement"
   | "jobbank"
+  | "spruce-grove-proxy"
+  | "stony-plain-entities"
   | "all";
 
 // ---------------------------------------------------------------------------
@@ -1289,6 +1292,418 @@ export async function collectJobBankData(_today: string): Promise<number> {
 }
 
 // ---------------------------------------------------------------------------
+// Phase: Spruce Grove licence proxy (derived observations)
+// ---------------------------------------------------------------------------
+
+/**
+ * Derive Spruce Grove licence-proxy observation series from existing upstream
+ * tables (municipality_permits + regional_indicators.Incorporations).
+ *
+ * Writes to substrate.observations — two series:
+ *   spruce-grove-licence-proxy-dev-permits   (daily, forward-leaning proxy)
+ *   spruce-grove-licence-proxy-incorporations (period, concurrent proxy)
+ *
+ * Idempotent: all writes are ON CONFLICT DO UPDATE. Passes `since=yesterday`
+ * so frozen historical periods are not re-derived on every run.
+ *
+ * snapshot_log source strings:
+ *   substrate.observations.spruce-grove-licence-proxy-dev-permits
+ *   substrate.observations.spruce-grove-licence-proxy-incorporations
+ */
+export async function collectSpruceGroveProxy(today: string): Promise<number> {
+  const pool = await getDb();
+
+  // Compute yesterday as the --since cutoff: avoids re-deriving frozen history
+  // while still picking up any permit/indicator rows written today or yesterday.
+  // Integer day subtraction: CURRENT_DATE - 1 (integer literal) is safe on
+  // Crunchy Bridge (avoids the INTERVAL footgun with daterange operators).
+  const sinceRes = await pool.query<{ d: string }>(
+    `SELECT (CURRENT_DATE - 1)::text AS d`
+  );
+  const since: string = sinceRes.rows[0].d;
+
+  const SPRUCE_GROVE_SLUG = "spruce-grove";
+  const SPRUCE_GROVE_MUNICIPALITY = "Spruce Grove";
+  const PERMITS_SERIES_SLUG = "spruce-grove-licence-proxy-dev-permits";
+  const INCORP_SERIES_SLUG = "spruce-grove-licence-proxy-incorporations";
+  const SOURCE_NAME_PROXY = "Tri-Region licence proxy";
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const parent = await client.query<{ id: string; csduid: string | null }>(
+      `SELECT id, csduid FROM substrate.geo_dimension WHERE slug = $1`,
+      [SPRUCE_GROVE_SLUG]
+    );
+    if (parent.rowCount === 0) {
+      const msg = `geo_dimension row for ${SPRUCE_GROVE_SLUG} not found`;
+      await pool.query(SQL.logEntry, [`substrate.observations.${PERMITS_SERIES_SLUG}`, 0, "error", msg]);
+      await pool.query(SQL.logEntry, [`substrate.observations.${INCORP_SERIES_SLUG}`, 0, "error", msg]);
+      await client.query("ROLLBACK");
+      return 0;
+    }
+    const spruceId: string = parent.rows[0].id;
+    const spruceCsduid: string | null = parent.rows[0].csduid;
+    if (!spruceCsduid) {
+      const msg = `geo_dimension row for ${SPRUCE_GROVE_SLUG} has no csduid`;
+      await pool.query(SQL.logEntry, [`substrate.observations.${PERMITS_SERIES_SLUG}`, 0, "error", msg]);
+      await pool.query(SQL.logEntry, [`substrate.observations.${INCORP_SERIES_SLUG}`, 0, "error", msg]);
+      await client.query("ROLLBACK");
+      return 0;
+    }
+
+    // Upsert source.
+    const src = await client.query<{ id: string }>(
+      `INSERT INTO substrate.sources (name, base_url, auth_type)
+       VALUES ($1, NULL, 'derived')
+       ON CONFLICT (name) DO UPDATE SET auth_type = EXCLUDED.auth_type
+       RETURNING id`,
+      [SOURCE_NAME_PROXY]
+    );
+    const sourceId: string = src.rows[0].id;
+
+    // Upsert permits series_metadata.
+    const permitsSer = await client.query<{ id: string }>(
+      `INSERT INTO substrate.series_metadata
+         (slug, domain, name, source_id, unit, unit_type, cadence, geo_id,
+          description, tags, upstream_key, is_derived, derivation_lineage)
+       VALUES
+         ($1, 'business_licence_proxy', 'Spruce Grove dev-permit count (licence proxy)',
+          $2, 'permits', 'count', 'daily', $3,
+          'PROXY: derived from municipality_permits aggregated to total count per snapshot_date for Spruce Grove.',
+          ARRAY['tri-region','licence-proxy','spruce-grove','derived']::text[],
+          $4::jsonb, TRUE, $5::jsonb)
+       ON CONFLICT (slug) DO UPDATE SET
+         name = EXCLUDED.name,
+         source_id = EXCLUDED.source_id,
+         description = EXCLUDED.description,
+         tags = EXCLUDED.tags,
+         upstream_key = EXCLUDED.upstream_key,
+         is_derived = EXCLUDED.is_derived,
+         derivation_lineage = EXCLUDED.derivation_lineage
+       RETURNING id`,
+      [
+        PERMITS_SERIES_SLUG, sourceId, spruceId,
+        JSON.stringify({ kind: "derived", upstream_table: "municipality_permits", municipality: SPRUCE_GROVE_MUNICIPALITY }),
+        JSON.stringify({ v: 1, kind: "rollup", upstream: [{ table: "municipality_permits", filter: { municipality: SPRUCE_GROVE_MUNICIPALITY }, aggregate: "SUM(count) per snapshot_date" }] }),
+      ]
+    );
+    const permitsSeriesId: string = permitsSer.rows[0].id;
+
+    // Upsert incorporations series_metadata.
+    const incorpSer = await client.query<{ id: string }>(
+      `INSERT INTO substrate.series_metadata
+         (slug, domain, name, source_id, unit, unit_type, cadence, geo_id,
+          description, tags, upstream_key, is_derived, derivation_lineage)
+       VALUES
+         ($1, 'business_licence_proxy', 'Spruce Grove incorporations (licence proxy)',
+          $2, 'incorporations', 'count', 'period', $3,
+          'PROXY: regional_indicators.Incorporations for Spruce Grove CSDUID.',
+          ARRAY['tri-region','licence-proxy','spruce-grove','derived']::text[],
+          $4::jsonb, TRUE, $5::jsonb)
+       ON CONFLICT (slug) DO UPDATE SET
+         name = EXCLUDED.name,
+         source_id = EXCLUDED.source_id,
+         description = EXCLUDED.description,
+         tags = EXCLUDED.tags,
+         upstream_key = EXCLUDED.upstream_key,
+         is_derived = EXCLUDED.is_derived,
+         derivation_lineage = EXCLUDED.derivation_lineage
+       RETURNING id`,
+      [
+        INCORP_SERIES_SLUG, sourceId, spruceId,
+        JSON.stringify({ kind: "derived", upstream_table: "regional_indicators", csduid: spruceCsduid, indicator: "Incorporations" }),
+        JSON.stringify({ v: 1, kind: "proxy", upstream: [{ table: "regional_indicators", filter: { csduid: spruceCsduid, indicator: "Incorporations" } }] }),
+      ]
+    );
+    const incorpSeriesId: string = incorpSer.rows[0].id;
+
+    // Fetch permit rows since yesterday.
+    interface PermitRow { snapshot_date: string; total_count: string }
+    const permits = await client.query<PermitRow>(
+      `SELECT snapshot_date, SUM(count)::text AS total_count
+         FROM municipality_permits
+         WHERE municipality = $1 AND snapshot_date >= $2
+         GROUP BY snapshot_date
+         ORDER BY snapshot_date`,
+      [SPRUCE_GROVE_MUNICIPALITY, since]
+    );
+
+    // Fetch incorporations rows (year-granular --since uses the year portion).
+    interface IncorpRow { period: string; value: string }
+    const incorp = await client.query<IncorpRow>(
+      `SELECT period, value::text AS value
+         FROM regional_indicators
+         WHERE csduid = $1 AND indicator = 'Incorporations'
+           AND period >= $2
+         ORDER BY period`,
+      [spruceCsduid, since.slice(0, 4)]
+    );
+
+    // Parse a period string to a DATE string (YYYY-MM-DD).
+    function periodToDate(period: string): string | null {
+      const m4 = /^\d{4}$/.exec(period);
+      if (m4) return `${period}-01-01`;
+      const mq = /^(\d{4})-Q([1-4])$/.exec(period);
+      if (mq) {
+        const startMonth = (Number(mq[2]) - 1) * 3 + 1;
+        return `${mq[1]}-${String(startMonth).padStart(2, "0")}-01`;
+      }
+      const mm = /^(\d{4})-(\d{2})$/.exec(period);
+      if (mm) return `${period}-01`;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(period)) return period;
+      return null;
+    }
+
+    // Write permits observations.
+    let permitsObs = 0;
+    for (const r of permits.rows) {
+      const value = Number(r.total_count);
+      if (!Number.isFinite(value)) continue;
+      const result = await client.query(
+        `INSERT INTO substrate.observations
+           (series_id, period, geo_id, entity_id, value, raw_value, qualifier, collected_at)
+         VALUES ($1, $2::date, $3, NULL, $4, NULL, NULL, NOW())
+         ON CONFLICT (series_id, period, geo_id, entity_id) DO UPDATE SET
+           value = EXCLUDED.value, collected_at = EXCLUDED.collected_at`,
+        [permitsSeriesId, r.snapshot_date, spruceId, value]
+      );
+      permitsObs += result.rowCount ?? 0;
+    }
+
+    // Write incorporations observations.
+    let incorpObs = 0;
+    for (const r of incorp.rows) {
+      const periodDate = periodToDate(r.period);
+      if (!periodDate) continue;
+      const value = Number(r.value);
+      if (!Number.isFinite(value)) continue;
+      const result = await client.query(
+        `INSERT INTO substrate.observations
+           (series_id, period, geo_id, entity_id, value, raw_value, qualifier, collected_at)
+         VALUES ($1, $2::date, $3, NULL, $4, $5, NULL, NOW())
+         ON CONFLICT (series_id, period, geo_id, entity_id) DO UPDATE SET
+           value = EXCLUDED.value, raw_value = EXCLUDED.raw_value, collected_at = EXCLUDED.collected_at`,
+        [incorpSeriesId, periodDate, spruceId, value, r.period]
+      );
+      incorpObs += result.rowCount ?? 0;
+    }
+
+    await client.query(SQL.logEntry, [`substrate.observations.${PERMITS_SERIES_SLUG}`, permitsObs, "ok", null]);
+    await client.query(SQL.logEntry, [`substrate.observations.${INCORP_SERIES_SLUG}`, incorpObs, "ok", null]);
+
+    await client.query("COMMIT");
+    console.log(`[collector] spruce-grove-proxy: ${permitsObs} permit obs, ${incorpObs} incorp obs (since ${since})`);
+    return permitsObs + incorpObs;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    const msg = err instanceof Error ? err.message : String(err);
+    await pool.query(SQL.logEntry, [`substrate.observations.${PERMITS_SERIES_SLUG}`, 0, "error", msg]).catch(() => {});
+    await pool.query(SQL.logEntry, [`substrate.observations.${INCORP_SERIES_SLUG}`, 0, "error", msg]).catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Phase: Stony Plain business entities
+// ---------------------------------------------------------------------------
+
+// ArcGIS feature types reused internally.
+interface StonyPlainFeature {
+  attributes: {
+    FID: number;
+    NAME: string | null;
+    CATEGORY: string | null;
+    Linc: number | null;
+    Roll: number | null;
+  };
+  geometry?: { x: number; y: number };
+}
+
+interface StonyPlainQueryResponse {
+  features: StonyPlainFeature[];
+  exceededTransferLimit?: boolean;
+}
+
+async function fetchStonyPlainFeatures(): Promise<StonyPlainFeature[]> {
+  const SOURCE_BASE = "https://services.arcgis.com/ScgF04sks0ZKbWe3";
+  const QUERY_URL =
+    `${SOURCE_BASE}/arcgis/rest/services/ToSP_Businesses/FeatureServer/0/query` +
+    `?where=1%3D1&outFields=FID,NAME,CATEGORY,Linc,Roll&f=json&returnGeometry=true`;
+
+  const all: StonyPlainFeature[] = [];
+  const pageSize = 2000;
+  let offset = 0;
+  while (offset < 50_000) {
+    const url = `${QUERY_URL}&resultOffset=${offset}&resultRecordCount=${pageSize}`;
+    const res = await fetchWithRetry(url, { userAgent: "tamrack-stony-plain-businesses" });
+    const body = (await res.json()) as StonyPlainQueryResponse;
+    if (!Array.isArray(body.features)) {
+      throw new Error(`ArcGIS query returned no features array at offset=${offset}`);
+    }
+    all.push(...body.features);
+    if (body.features.length < pageSize) break;
+    offset += body.features.length;
+  }
+  return all;
+}
+
+/**
+ * Fetch the Stony Plain ArcGIS business directory and upsert each business as
+ * a substrate.entities row (kind='business'), plus write one daily count
+ * observation to substrate.observations.
+ *
+ * Idempotent: ON CONFLICT (slug) DO UPDATE refreshes last_seen without
+ * touching first_seen. Runs that miss a business leave last_seen stale —
+ * that is how closures are detected.
+ *
+ * snapshot_log source string: substrate.entities.business.stony-plain
+ */
+export async function collectStonyPlainEntities(_today: string): Promise<number> {
+  const SOURCE_NAME_SP = "Stony Plain ArcGIS Online";
+  const SOURCE_BASE_SP = "https://services.arcgis.com/ScgF04sks0ZKbWe3";
+  const QUERY_URL_SP =
+    `${SOURCE_BASE_SP}/arcgis/rest/services/ToSP_Businesses/FeatureServer/0/query` +
+    `?where=1%3D1&outFields=FID,NAME,CATEGORY,Linc,Roll&f=json&returnGeometry=true`;
+  const ENTITY_KIND = "business";
+  const STONY_PLAIN_SLUG = "stony-plain";
+  const SERIES_SLUG = "stony-plain-businesses";
+
+  const features = await fetchStonyPlainFeatures();
+  const valid = features.filter((f) => f.attributes && typeof f.attributes.FID === "number");
+  console.log(`[collector] stony-plain-entities: fetched ${features.length} features, ${valid.length} with valid FID`);
+
+  const pool = await getDb();
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const parent = await client.query<{ id: string }>(
+      `SELECT id FROM substrate.geo_dimension WHERE slug = $1`,
+      [STONY_PLAIN_SLUG]
+    );
+    if (parent.rowCount === 0) {
+      const msg = `geo_dimension row for ${STONY_PLAIN_SLUG} not found`;
+      await pool.query(SQL.logEntry, [`substrate.entities.${ENTITY_KIND}.stony-plain`, 0, "error", msg]);
+      await client.query("ROLLBACK");
+      return 0;
+    }
+    const stonyId: string = parent.rows[0].id;
+
+    const src = await client.query<{ id: string }>(
+      `INSERT INTO substrate.sources (name, base_url, auth_type)
+       VALUES ($1, $2, 'public')
+       ON CONFLICT (name) DO UPDATE SET base_url = EXCLUDED.base_url
+       RETURNING id`,
+      [SOURCE_NAME_SP, SOURCE_BASE_SP]
+    );
+    const sourceId: string = src.rows[0].id;
+
+    // Upsert series_metadata (entity+observation dual storage).
+    const ser = await client.query<{ id: string }>(
+      `INSERT INTO substrate.series_metadata
+         (slug, domain, name, source_id, unit, unit_type, cadence, geo_id,
+          description, tags, upstream_key, storage_kind, entity_kind)
+       VALUES
+         ($1, 'business_directory', 'Stony Plain active businesses',
+          $2, 'businesses', 'count', 'daily', $3,
+          'Per-business entities (kind=business) with first_seen/last_seen presence, plus one daily count observation.',
+          ARRAY['tri-region','business-directory','direct-fetch']::text[],
+          $4::jsonb, 'entity+observation', $5)
+       ON CONFLICT (slug) DO UPDATE SET
+         name = EXCLUDED.name,
+         source_id = EXCLUDED.source_id,
+         description = EXCLUDED.description,
+         tags = EXCLUDED.tags,
+         upstream_key = EXCLUDED.upstream_key,
+         storage_kind = EXCLUDED.storage_kind,
+         entity_kind = EXCLUDED.entity_kind
+       RETURNING id`,
+      [
+        SERIES_SLUG, sourceId, stonyId,
+        JSON.stringify({ kind: "arcgis", url: QUERY_URL_SP }),
+        ENTITY_KIND,
+      ]
+    );
+    const seriesId: string = ser.rows[0].id;
+
+    // Upsert one entity row per business.
+    let entityUpserts = 0;
+    for (const f of valid) {
+      const slug = `stony-plain-biz-${f.attributes.FID}`;
+      const name = (f.attributes.NAME ?? "(unnamed)").trim() || "(unnamed)";
+      const lon = f.geometry?.x != null && Number.isFinite(f.geometry.x)
+        ? Math.round(f.geometry.x * 1_000_000) / 1_000_000
+        : null;
+      const lat = f.geometry?.y != null && Number.isFinite(f.geometry.y)
+        ? Math.round(f.geometry.y * 1_000_000) / 1_000_000
+        : null;
+      const attrs = {
+        FID: f.attributes.FID,
+        NAME: f.attributes.NAME,
+        CATEGORY: f.attributes.CATEGORY,
+        Linc: f.attributes.Linc,
+        Roll: f.attributes.Roll,
+      };
+      const r = await client.query(
+        `INSERT INTO substrate.entities
+           (slug, kind, name, geo_id, attrs, centroid_lat, centroid_lon, source_id, first_seen, last_seen)
+         VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, CURRENT_DATE, CURRENT_DATE)
+         ON CONFLICT (slug) DO UPDATE SET
+           name = EXCLUDED.name,
+           geo_id = EXCLUDED.geo_id,
+           attrs = EXCLUDED.attrs,
+           centroid_lat = EXCLUDED.centroid_lat,
+           centroid_lon = EXCLUDED.centroid_lon,
+           source_id = EXCLUDED.source_id,
+           last_seen = CURRENT_DATE`,
+        [slug, ENTITY_KIND, name, stonyId, JSON.stringify(attrs), lat, lon, sourceId]
+      );
+      entityUpserts += r.rowCount ?? 0;
+    }
+
+    // Active count today (for the daily observation row).
+    const activeCount = await client.query<{ n: number }>(
+      `SELECT count(*)::int AS n
+         FROM substrate.entities
+         WHERE kind = $1 AND geo_id = $2 AND last_seen = CURRENT_DATE`,
+      [ENTITY_KIND, stonyId]
+    );
+
+    // Daily count observation.
+    await client.query(
+      `INSERT INTO substrate.observations
+         (series_id, period, geo_id, entity_id, value, raw_value, qualifier, collected_at)
+       VALUES ($1, CURRENT_DATE, $2, NULL, $3, NULL, NULL, NOW())
+       ON CONFLICT (series_id, period, geo_id, entity_id) DO UPDATE SET
+         value = EXCLUDED.value, collected_at = EXCLUDED.collected_at`,
+      [seriesId, stonyId, activeCount.rows[0].n]
+    );
+
+    await client.query(SQL.logEntry, [
+      `substrate.entities.${ENTITY_KIND}.stony-plain`,
+      entityUpserts,
+      "ok",
+      null,
+    ]);
+
+    await client.query("COMMIT");
+    console.log(`[collector] stony-plain-entities: ${entityUpserts} entities upserted, ${activeCount.rows[0].n} active today`);
+    return entityUpserts;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    const msg = err instanceof Error ? err.message : String(err);
+    await pool.query(SQL.logEntry, [`substrate.entities.${ENTITY_KIND}.stony-plain`, 0, "error", msg]).catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main orchestrator
 // ---------------------------------------------------------------------------
 
@@ -1357,6 +1772,18 @@ const PHASES: {
     key: "jobbank",
     sources: ["jobbank", "all"],
     fn: (today) => collectJobBankData(today),
+  },
+  {
+    name: "Spruce Grove Licence Proxy",
+    key: "spruce-grove-proxy",
+    sources: ["spruce-grove-proxy", "all"],
+    fn: (today) => collectSpruceGroveProxy(today),
+  },
+  {
+    name: "Stony Plain Business Entities",
+    key: "stony-plain-entities",
+    sources: ["stony-plain-entities", "all"],
+    fn: (today) => collectStonyPlainEntities(today),
   },
 ];
 
