@@ -60,6 +60,11 @@ import {
   fetchMortgageRate,
 } from "./data-sources-cmhc";
 
+import {
+  fetchOpenTenderOpportunities,
+  ProcurementAccessBlockedError,
+} from "./data-sources-procurement";
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -89,6 +94,7 @@ export type SourceName =
   | "projects"
   | "macro"
   | "housing"
+  | "procurement"
   | "all";
 
 // ---------------------------------------------------------------------------
@@ -201,6 +207,34 @@ const SQL = {
     VALUES ($1, $2, $3, $4, $5)
     ON CONFLICT(period, cma, metric)
     DO UPDATE SET value = EXCLUDED.value, unit = EXCLUDED.unit, collected_at = NOW()`,
+  upsertOpportunity: `
+    INSERT INTO opportunities (
+      reference_number, solicitation_number, title, buyer, category,
+      procurement_method, gsin, gsin_description, unspsc, unspsc_description,
+      regions_of_opportunity, regions_of_delivery, publication_date,
+      closing_date, expected_start_date, expected_end_date, status,
+      notice_url, matched_terms, source
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+    ON CONFLICT (reference_number, publication_date) DO UPDATE SET
+      solicitation_number = EXCLUDED.solicitation_number,
+      title               = EXCLUDED.title,
+      buyer               = EXCLUDED.buyer,
+      category            = EXCLUDED.category,
+      procurement_method  = EXCLUDED.procurement_method,
+      gsin                = EXCLUDED.gsin,
+      gsin_description    = EXCLUDED.gsin_description,
+      unspsc              = EXCLUDED.unspsc,
+      unspsc_description  = EXCLUDED.unspsc_description,
+      regions_of_opportunity = EXCLUDED.regions_of_opportunity,
+      regions_of_delivery    = EXCLUDED.regions_of_delivery,
+      closing_date        = EXCLUDED.closing_date,
+      expected_start_date = EXCLUDED.expected_start_date,
+      expected_end_date   = EXCLUDED.expected_end_date,
+      status              = EXCLUDED.status,
+      notice_url          = EXCLUDED.notice_url,
+      matched_terms       = EXCLUDED.matched_terms,
+      collected_at        = NOW()`,
   logEntry: `
     INSERT INTO snapshot_log (taken_at, source, records_inserted, status, error)
     VALUES (NOW(), $1, $2, $3, $4)`,
@@ -1112,6 +1146,65 @@ export async function collectCMHCHousing(): Promise<number> {
 }
 
 // ---------------------------------------------------------------------------
+// Phase: Procurement (demand-side feed — CanadaBuys open tenders)
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch the CanadaBuys open-tender CSV and upsert the IT/software/AI/data-
+ * relevant, nationally-deliverable notices into the `opportunities` table.
+ *
+ * Stores ALL statuses including already-closed notices (excludeClosed: false)
+ * so amendments update mutable fields in place and so the table retains the
+ * award/recompete-timing history; the read layer (readOpportunities) derives
+ * open-vs-closed at query time. Every row UPSERTs on
+ * (reference_number, publication_date) — amendment re-publishes update
+ * closing_date/status rather than inserting duplicates.
+ *
+ * Writes a snapshot_log row on success AND failure (source: "procurement").
+ */
+export async function collectProcurementData(_today: string): Promise<number> {
+  const pool = await getDb();
+
+  let tenders: Awaited<ReturnType<typeof fetchOpenTenderOpportunities>>;
+  try {
+    tenders = await fetchOpenTenderOpportunities({
+      relevantOnly: true,
+      excludeClosed: false,
+    });
+  } catch (e) {
+    if (e instanceof ProcurementAccessBlockedError) {
+      await pool.query(SQL.logEntry, ["procurement", 0, "error", e.message]);
+      return 0;
+    }
+    throw e;
+  }
+
+  if (tenders.length === 0) {
+    await pool.query(SQL.logEntry, ["procurement", 0, "ok", "no relevant tenders"]);
+    return 0;
+  }
+
+  let inserted = 0;
+  await withTransaction(async (client: pg.PoolClient) => {
+    for (const t of tenders) {
+      // The natural key needs both parts; skip notices missing either.
+      if (!t.referenceNumber || !t.publicationDate) continue;
+      await client.query(SQL.upsertOpportunity, [
+        t.referenceNumber, t.solicitationNumber, t.title, t.buyer, t.category,
+        t.procurementMethod, t.gsin, t.gsinDescription, t.unspsc, t.unspscDescription,
+        t.regionsOfOpportunity, t.regionsOfDelivery, t.publicationDate,
+        t.closingDate, t.expectedStartDate, t.expectedEndDate, t.status,
+        t.noticeUrl, JSON.stringify(t.matchedTerms), "canadabuys",
+      ]);
+      inserted++;
+    }
+  });
+
+  await pool.query(SQL.logEntry, ["procurement", inserted, "ok", null]);
+  return inserted;
+}
+
+// ---------------------------------------------------------------------------
 // Main orchestrator
 // ---------------------------------------------------------------------------
 
@@ -1168,6 +1261,12 @@ const PHASES: {
     key: "cmhc_housing",
     sources: ["housing", "all"],
     fn: () => collectCMHCHousing(),
+  },
+  {
+    name: "Procurement",
+    key: "procurement",
+    sources: ["procurement", "all"],
+    fn: (today) => collectProcurementData(today),
   },
 ];
 

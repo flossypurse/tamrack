@@ -13,6 +13,7 @@ import {
   fetchImmigrationByCMA,
 } from "../src/lib/data-sources-ircc";
 import { fetchCrudeOilProduction } from "../src/lib/data-sources-cer";
+import { fetchOpenTenderOpportunities } from "../src/lib/data-sources-procurement";
 
 async function main() {
   const which = process.argv[2] ?? "major-projects";
@@ -43,6 +44,19 @@ async function main() {
       console.log("rows:", rows.length);
       console.log("distinct provinces:", [...new Set(rows.map((r) => r.province))]);
       console.log("first 3:", JSON.stringify(rows.slice(0, 3), null, 2));
+      break;
+    }
+    case "procurement": {
+      // Live fetch, full feed (open + closed) so we see what the collector stores.
+      const all = await fetchOpenTenderOpportunities({ excludeClosed: false });
+      const open = all.filter((r) => !r.closingDate || r.closingDate.slice(0, 10) >= new Date().toISOString().slice(0, 10));
+      console.log("relevant rows (all statuses):", all.length);
+      console.log("of which still open:", open.length);
+      console.log("with reference+publication key:", all.filter((r) => r.referenceNumber && r.publicationDate).length);
+      console.log("distinct matched-term sets (sample):");
+      console.log([...new Set(all.slice(0, 50).map((r) => r.matchedTerms.join("+")))].slice(0, 12));
+      console.log("soonest-closing 5:");
+      console.log(JSON.stringify(open.slice(0, 5).map((r) => ({ title: r.title, buyer: r.buyer, closingDate: r.closingDate, matchedTerms: r.matchedTerms })), null, 2));
       break;
     }
     default:
