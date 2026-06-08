@@ -1,7 +1,6 @@
 // Federal and provincial infrastructure, energy, wildfire, tourism, and tax data sources
 // Mixed formats: JSON, CSV, fixed-width text, CKAN APIs
 
-import { FIRE_ENDPOINTS } from "./data-sources-fire";
 import { getDb } from "./db";
 
 // ============================================================
@@ -447,25 +446,11 @@ export async function fetchWildfireHistorical(): Promise<WildfireRecord[]> {
 }
 
 // ============================================================
-// CWFIS Active Fires (Natural Resources Canada)
+// Wildfire data (Natural Resources Canada / Alberta Open Data)
 // ============================================================
-
-// Active-fires URL lives in data-sources-fire.ts (FIRE_ENDPOINTS.CWFIS_ACTIVE_FIRES)
-// so both callers stay in sync when NRCan rolls the endpoint again.
 
 const HISTORICAL_WILDFIRE_CSV_URL =
   "https://open.alberta.ca/dataset/a221e7a0-4f46-4be7-9c5a-e29de9a3447e/resource/80480824-0c50-456c-9723-f9d4fc136141/download/fp-historical-wildfire-data-2006-2025.csv";
-
-export interface CWFISFire {
-  agency: string;
-  firename: string;
-  lat: number;
-  lon: number;
-  startdate: string;
-  hectares: number;
-  stageOfControl: string;
-  responseType: string;
-}
 
 export interface HistoricalWildfire {
   year: number;
@@ -488,53 +473,6 @@ export interface WildfireCauseBreakdown {
   cause: string;
   count: number;
   totalHectares: number;
-}
-
-/**
- * Fetch active fires from CWFIS (Canadian Wildland Fire Information System),
- * filtered to Alberta (agency === "ab").
- */
-export async function fetchCWFISActiveFires(): Promise<CWFISFire[]> {
-  try {
-    const rows = await fetchCSV(FIRE_ENDPOINTS.CWFIS_ACTIVE_FIRES);
-    return rows
-      .filter((r) => {
-        const agency = (r["agency_code"] ?? r["agency"] ?? r["Agency"] ?? "").toUpperCase();
-        return agency === "AB";
-      })
-      .map((r) => ({
-        agency: r["agency_code"] ?? r["agency"] ?? r["Agency"] ?? "",
-        firename:
-          r["agency_fire_id"] ??
-          r["national_fire_id"] ??
-          r["firename"] ??
-          r["FireName"] ??
-          r["fire_name"] ??
-          "",
-        lat: parseFloat(r["latitude"] ?? r["lat"] ?? r["Lat"] ?? "0") || 0,
-        lon: parseFloat(r["longitude"] ?? r["lon"] ?? r["Lon"] ?? "0") || 0,
-        startdate:
-          r["record_start"] ??
-          r["situation_report_date"] ??
-          r["startdate"] ??
-          r["StartDate"] ??
-          r["start_date"] ??
-          "",
-        hectares:
-          parseFloat(r["fire_size"] ?? r["hectares"] ?? r["Hectares"] ?? r["ha"] ?? "0") || 0,
-        stageOfControl:
-          r["stage_of_control_status"] ??
-          r["stage_of_control"] ??
-          r["StageOfControl"] ??
-          r["status"] ??
-          "",
-        responseType:
-          r["response_type"] ?? r["ResponseType"] ?? r["type"] ?? "",
-      }));
-  } catch (err) {
-    console.error("CWFIS active fires fetch error:", err);
-    return [];
-  }
 }
 
 /**
