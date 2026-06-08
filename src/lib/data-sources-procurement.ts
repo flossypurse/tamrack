@@ -241,8 +241,9 @@ export async function fetchOpenTenderOpportunities(
   const todayIso = new Date().toISOString().slice(0, 10);
 
   const res = await fetch(CANADABUYS_OPEN_TENDERS_URL, {
-    next: { revalidate: 3600 },
     // The CanadaBuys CDN returns 403 to the default runtime user-agent.
+    // No Next.js fetch cache — the only caller is the daily collector (plain
+    // Node worker), so re-fetching is already bounded to once per day.
     headers: {
       "User-Agent": "Mozilla/5.0 (compatible; TamrackCollector/1.0; +https://tamrack.ca)",
       Accept: "text/csv,*/*",
@@ -394,15 +395,19 @@ export async function readOpportunities(
   const where: string[] = [];
   const params: unknown[] = [];
 
+  // closing_date is stored as the source's full ISO datetime (e.g.
+  // "2026-06-30T14:00:00"), so compare on the date portion only — otherwise a
+  // date-only bound like "2026-06-30" sorts BEFORE that day's timestamped rows
+  // and silently drops every tender closing on the bound date.
   if (opts.openOnly) {
     // Keep rows with no closing date (standing notices) and rows closing today
-    // or later. Calendar-date string compare matches how the data is stored.
+    // or later.
     params.push(todayIso);
-    where.push(`(closing_date = '' OR closing_date >= $${params.length})`);
+    where.push(`(closing_date = '' OR LEFT(closing_date, 10) >= $${params.length})`);
   }
   if (opts.closingBefore) {
     params.push(opts.closingBefore);
-    where.push(`(closing_date <> '' AND closing_date <= $${params.length})`);
+    where.push(`(closing_date <> '' AND LEFT(closing_date, 10) <= $${params.length})`);
   }
 
   const whereSql = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
