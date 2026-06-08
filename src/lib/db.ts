@@ -497,6 +497,53 @@ const MIGRATION_SQL = `
       UNIQUE (reference_number, publication_date)
     );
     CREATE INDEX IF NOT EXISTS idx_opportunities_closing ON opportunities(closing_date, collected_at DESC);
+    -- Job Bank hiring signals (latent-demand feed, 2026-06-07)
+    -- Canada Job Bank monthly open data (ESDC, Open Government Licence).
+    -- Tier-B rows = postings for manual-process roles (dispatchers, admin,
+    -- bookkeepers, inventory/logistics) that signal automatable operations
+    -- work = latent demand for back-office software. NO employer name is in
+    -- the source (ESDC strips it for privacy), so this is an aggregate
+    -- sector/geo hiring-strain signal, not a per-company lead.
+    --
+    -- Two tables: per-posting rows (jobbank_postings) keyed (wic_id, data_month)
+    -- so each monthly snapshot accumulates a distinct row; and a small monthly
+    -- aggregate (jobbank_monthly) that carries the total-Alberta denominator so
+    -- the read layer can report the Tier-B ratio + month-over-month momentum
+    -- without re-fetching the large CSV.
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS jobbank_postings (
+      id                SERIAL PRIMARY KEY,
+      wic_id            TEXT NOT NULL,
+      data_month        TEXT NOT NULL,
+      job_title         TEXT DEFAULT '',
+      noc21_code        TEXT DEFAULT '',
+      noc21_name        TEXT DEFAULT '',
+      matched_noc_code  TEXT DEFAULT '',
+      matched_noc_name  TEXT DEFAULT '',
+      city              TEXT DEFAULT '',
+      province          TEXT DEFAULT '',
+      economic_region   TEXT DEFAULT '',
+      naics_sector      TEXT DEFAULT '',
+      first_posting_date TEXT DEFAULT '',
+      vacancy_count     INTEGER DEFAULT 1,
+      employment_type   TEXT DEFAULT '',
+      employment_term   TEXT DEFAULT '',
+      salary_min        DOUBLE PRECISION DEFAULT 0,
+      salary_max        DOUBLE PRECISION DEFAULT 0,
+      salary_per        TEXT DEFAULT '',
+      source            TEXT NOT NULL DEFAULT 'jobbank',
+      collected_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (wic_id, data_month)
+    );
+    CREATE INDEX IF NOT EXISTS idx_jobbank_month_noc ON jobbank_postings(data_month, matched_noc_code);
+    CREATE INDEX IF NOT EXISTS idx_jobbank_city ON jobbank_postings(data_month, city);
+
+    CREATE TABLE IF NOT EXISTS jobbank_monthly (
+      data_month             TEXT PRIMARY KEY,
+      total_alberta_postings INTEGER DEFAULT 0,
+      tier_b_postings        INTEGER DEFAULT 0,
+      collected_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
 
     -- ============================================================
     -- CRM tables

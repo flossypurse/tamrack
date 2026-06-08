@@ -14,6 +14,7 @@ import {
 } from "../src/lib/data-sources-ircc";
 import { fetchCrudeOilProduction } from "../src/lib/data-sources-cer";
 import { fetchOpenTenderOpportunities } from "../src/lib/data-sources-procurement";
+import { fetchJobBankPostings } from "../src/lib/data-sources-jobbank";
 
 async function main() {
   const which = process.argv[2] ?? "major-projects";
@@ -57,6 +58,23 @@ async function main() {
       console.log([...new Set(all.slice(0, 50).map((r) => r.matchedTerms.join("+")))].slice(0, 12));
       console.log("soonest-closing 5:");
       console.log(JSON.stringify(open.slice(0, 5).map((r) => ({ title: r.title, buyer: r.buyer, closingDate: r.closingDate, matchedTerms: r.matchedTerms })), null, 2));
+      break;
+    }
+    case "jobbank": {
+      const { postings: all, month } = await fetchJobBankPostings({ province: "Alberta", tierBOnly: false });
+      const tierB = all.filter((p) => !!p.matchedNocCode);
+      console.log("data month:", month);
+      console.log("total Alberta postings:", all.length);
+      console.log("Tier-B (automatable-role) postings:", tierB.length);
+      const byNoc: Record<string, number> = {};
+      const byCity: Record<string, number> = {};
+      for (const p of tierB) {
+        byNoc[p.matchedNocName] = (byNoc[p.matchedNocName] || 0) + 1;
+        byCity[p.city || "Not stated"] = (byCity[p.city || "Not stated"] || 0) + 1;
+      }
+      console.log("top NOC roles:", Object.entries(byNoc).sort((a, b) => b[1] - a[1]).slice(0, 8));
+      console.log("top cities:", Object.entries(byCity).sort((a, b) => b[1] - a[1]).slice(0, 6));
+      console.log("sample rows:", JSON.stringify(tierB.slice(0, 3).map((p) => ({ title: p.jobTitle, noc: p.matchedNocName, city: p.city, sector: p.naicsSector, posted: p.firstPostingDate })), null, 2));
       break;
     }
     default:

@@ -64,6 +64,7 @@ import {
   fetchOpenTenderOpportunities,
   ProcurementAccessBlockedError,
 } from "./data-sources-procurement";
+import { fetchJobBankPostings } from "./data-sources-jobbank";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -95,6 +96,7 @@ export type SourceName =
   | "macro"
   | "housing"
   | "procurement"
+  | "jobbank"
   | "all";
 
 // ---------------------------------------------------------------------------
@@ -235,6 +237,39 @@ const SQL = {
       notice_url          = EXCLUDED.notice_url,
       matched_terms       = EXCLUDED.matched_terms,
       collected_at        = NOW()`,
+  upsertJobBankPosting: `
+    INSERT INTO jobbank_postings (
+      wic_id, data_month, job_title, noc21_code, noc21_name, matched_noc_code,
+      matched_noc_name, city, province, economic_region, naics_sector,
+      first_posting_date, vacancy_count, employment_type, employment_term,
+      salary_min, salary_max, salary_per, source
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+    ON CONFLICT (wic_id, data_month) DO UPDATE SET
+      job_title          = EXCLUDED.job_title,
+      noc21_code         = EXCLUDED.noc21_code,
+      noc21_name         = EXCLUDED.noc21_name,
+      matched_noc_code   = EXCLUDED.matched_noc_code,
+      matched_noc_name   = EXCLUDED.matched_noc_name,
+      city               = EXCLUDED.city,
+      province           = EXCLUDED.province,
+      economic_region    = EXCLUDED.economic_region,
+      naics_sector       = EXCLUDED.naics_sector,
+      first_posting_date = EXCLUDED.first_posting_date,
+      vacancy_count      = EXCLUDED.vacancy_count,
+      employment_type    = EXCLUDED.employment_type,
+      employment_term    = EXCLUDED.employment_term,
+      salary_min         = EXCLUDED.salary_min,
+      salary_max         = EXCLUDED.salary_max,
+      salary_per         = EXCLUDED.salary_per,
+      collected_at       = NOW()`,
+  upsertJobBankMonthly: `
+    INSERT INTO jobbank_monthly (data_month, total_alberta_postings, tier_b_postings)
+    VALUES ($1, $2, $3)
+    ON CONFLICT (data_month) DO UPDATE SET
+      total_alberta_postings = EXCLUDED.total_alberta_postings,
+      tier_b_postings        = EXCLUDED.tier_b_postings,
+      collected_at           = NOW()`,
   logEntry: `
     INSERT INTO snapshot_log (taken_at, source, records_inserted, status, error)
     VALUES (NOW(), $1, $2, $3, $4)`,
@@ -1205,6 +1240,55 @@ export async function collectProcurementData(_today: string): Promise<number> {
 }
 
 // ---------------------------------------------------------------------------
+// Phase: Job Bank hiring signals (latent-demand feed)
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch the latest Canada Job Bank monthly snapshot, store the Alberta Tier-B
+ * postings (manual-process roles that signal automatable operations work) plus
+ * a monthly aggregate. The monthly CSV is a complete snapshot of one month and
+ * CKAN keeps prior months as separate resources, so storing each month as it's
+ * collected builds the month-over-month momentum series cheaply.
+ *
+ * One fetch (all Alberta postings) → derive the total denominator + the Tier-B
+ * subset. Returns the number of Tier-B rows upserted. snapshot_log on ok/error.
+ */
+export async function collectJobBankData(_today: string): Promise<number> {
+  const pool = await getDb();
+
+  // One fetch of all Alberta postings; the fetcher never throws (returns []).
+  // The result bundles the authoritative data month from the same CKAN lookup,
+  // so rows are always stored under the month they actually came from.
+  const { postings: all, month } = await fetchJobBankPostings({
+    province: "Alberta",
+    tierBOnly: false,
+  });
+  if (all.length === 0) {
+    await pool.query(SQL.logEntry, ["jobbank", 0, "error", "no postings (fetch failed or empty feed)"]);
+    return 0;
+  }
+
+  const tierB = all.filter((p) => !!p.matchedNocCode && !!p.wicId);
+  // Fall back to the current month only if CKAN didn't return one.
+  const dataMonth = month || new Date().toISOString().slice(0, 7);
+
+  await withTransaction(async (client: pg.PoolClient) => {
+    for (const p of tierB) {
+      await client.query(SQL.upsertJobBankPosting, [
+        p.wicId, dataMonth, p.jobTitle, p.noc21Code, p.noc21Name, p.matchedNocCode,
+        p.matchedNocName, p.city, p.province, p.economicRegion, p.naicsSector,
+        p.firstPostingDate, p.vacancyCount, p.employmentType, p.employmentTerm,
+        p.salaryMin, p.salaryMax, p.salaryPer, "jobbank",
+      ]);
+    }
+    await client.query(SQL.upsertJobBankMonthly, [dataMonth, all.length, tierB.length]);
+  });
+
+  await pool.query(SQL.logEntry, ["jobbank", tierB.length, "ok", null]);
+  return tierB.length;
+}
+
+// ---------------------------------------------------------------------------
 // Main orchestrator
 // ---------------------------------------------------------------------------
 
@@ -1267,6 +1351,12 @@ const PHASES: {
     key: "procurement",
     sources: ["procurement", "all"],
     fn: (today) => collectProcurementData(today),
+  },
+  {
+    name: "Job Bank Hiring",
+    key: "jobbank",
+    sources: ["jobbank", "all"],
+    fn: (today) => collectJobBankData(today),
   },
 ];
 
