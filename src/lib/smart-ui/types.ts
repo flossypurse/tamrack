@@ -67,7 +67,7 @@ export interface DashboardConfig {
   sources: SourceCitation[];
 }
 
-export type Card = LineCard | ScorecardCard | StoryCard;
+export type Card = LineCard | ScorecardCard | StoryCard | TableCard;
 
 export interface LineCard {
   id: string;
@@ -87,6 +87,42 @@ export interface ScorecardCard {
   unit?: string;
   data: DataBinding;
   delta?: { yoy?: boolean };
+}
+
+/**
+ * One row in a TableCard. Column values are always strings for render
+ * simplicity; numeric values should be pre-formatted by the composer
+ * (e.g. "2026-06-30", "147 postings").
+ */
+export interface TableRow {
+  /** Ordered cell values matching `columns`. */
+  cells: string[];
+  /** Optional URL for the first-column link (e.g. a tender notice URL). */
+  link_url?: string;
+}
+
+/**
+ * Table card — a labelled column set plus an array of data rows.
+ * Sourced from list-shape tool payloads (opportunities rows, hiring
+ * breakdowns) rather than time-series points.
+ *
+ * The composer picks which columns to surface and which payload array
+ * to use; the renderer handles truncation and mobile collapse.
+ *
+ * `empty_message` is shown when `rows` is empty — the composer should
+ * set this to a meaningful "no results" note (e.g. "no open tenders
+ * found for this filter").
+ */
+export interface TableCard {
+  id: string;
+  type: "table";
+  title: string;
+  caption?: string;
+  /** Column header labels, matching `rows[].cells` by index. */
+  columns: string[];
+  rows: TableRow[];
+  empty_message?: string;
+  data: DataBinding;
 }
 
 /**

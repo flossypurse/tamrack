@@ -15,6 +15,7 @@ import type { DashboardConfig, ToolCallResult } from "@/lib/smart-ui/types";
 
 import { CardLine } from "./card-line";
 import { CardScorecard } from "./card-scorecard";
+import { CardTable } from "./card-table";
 
 interface Props {
   dashboard: DashboardConfig;
@@ -59,6 +60,9 @@ export function SmartUiDashboard({ dashboard, toolResultsByCardId }: Props) {
             return (
               <CardScorecard key={card.id} card={card} toolData={data} />
             );
+          }
+          if (card.type === "table") {
+            return <CardTable key={card.id} card={card} toolData={data} />;
           }
           return null;
         })}

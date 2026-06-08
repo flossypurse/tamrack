@@ -30,15 +30,23 @@ import type { DashboardConfig, QueryPlan, ToolCallResult } from "./types";
 
 const JUDGE_MODEL = "claude-haiku-4-5-20251001";
 
-// Tools whose results are time series (carry data.points). Municipality and
-// catalog results have no series, so they're excluded from the sample-size and
-// recency checks rather than failing them.
+// Tools whose results are time series (carry data.points). Municipality,
+// catalog, and list tools (opportunities, hiring) have no series, so
+// they're excluded from the sample-size and recency checks rather than
+// failing them.
 const TIME_SERIES_TOOLS = new Set([
   "tamrack_macro",
   "tamrack_regional",
   "tamrack_housing",
   "tamrack_energy",
   "tamrack_business",
+]);
+
+// List tools: served_from check applies (empty = vacuous) but sample_size
+// and recency checks are skipped (no data.points). The judge still runs.
+const LIST_TOOLS = new Set([
+  "tamrack_opportunities",
+  "tamrack_hiring",
 ]);
 
 // Thresholds. Tunable; chosen for Tamrack's annual-cadence macro data.
@@ -146,10 +154,13 @@ function checkRecency(summaries: ToolSummary[]): TruthfulnessCheck | null {
 }
 
 function checkServedFrom(summaries: ToolSummary[]): TruthfulnessCheck | null {
-  // Time-series cards only — same exclusion as sample_size/recency. An errored
-  // municipality/catalog lookup is normal data-absence, not a truthfulness
-  // failure, so it must not drag a good time-series dashboard below the line.
-  const series = summaries.filter((s) => isTimeSeriesCard(s.tool));
+  // Time-series cards + list cards — same exclusion as sample_size/recency for
+  // municipality/catalog. An errored municipality/catalog lookup is normal
+  // data-absence, not a truthfulness failure, so it must not drag a good
+  // time-series or list dashboard below the line.
+  const series = summaries.filter(
+    (s) => isTimeSeriesCard(s.tool) || (s.tool ? LIST_TOOLS.has(s.tool) : false),
+  );
   if (series.length === 0) return null;
   // An errored time-series result means no data was fetched — treat as empty.
   const values = series.map((s) =>

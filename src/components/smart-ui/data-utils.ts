@@ -13,9 +13,13 @@
  * envelope reaches this renderer, so `extractPoints` only has to know
  * about the macro shape. The `payload.rows` fallback here is a defensive
  * second pass for tools that emit a narrow {date, value} rows shape.
+ *
+ * v1.2 adds `extractTableRows` for list tools (tamrack_opportunities,
+ * tamrack_hiring). These read the full payload from `toolData` and map
+ * known field names to display strings.
  */
 
-import type { SeriesPoint } from "@/lib/smart-ui/types";
+import type { SeriesPoint, TableRow } from "@/lib/smart-ui/types";
 
 export function extractPoints(toolData: unknown): SeriesPoint[] {
   if (!toolData || typeof toolData !== "object") return [];
@@ -68,4 +72,109 @@ export function formatTickValue(value: number): string {
     return value.toFixed(2);
   }
   return value.toLocaleString();
+}
+
+/**
+ * Extract table rows from the full tool payload for list-shape tools.
+ *
+ * For tamrack_opportunities: maps tender row fields to the standard
+ * column set ["Title", "Buyer", "Closes", "Category", "Method"] and
+ * attaches noticeUrl as link_url on each row.
+ *
+ * For tamrack_hiring: resolves the most granular breakdown available in
+ * the payload (byNoc > bySector > byCity) and maps to display strings.
+ *
+ * Falls back to `cardRows` (the composer-provided pre-formatted rows)
+ * when the payload shape isn't recognised — this protects against future
+ * tool schema changes without breaking the renderer.
+ */
+export function extractTableRows(
+  toolName: string,
+  toolData: unknown,
+  cardRows: TableRow[],
+): TableRow[] {
+  if (!toolData || typeof toolData !== "object") return cardRows;
+
+  const env = toolData as {
+    data?: {
+      payload?: {
+        rows?: unknown[];
+        summary?: {
+          byNoc?: unknown[];
+          bySector?: unknown[];
+          byCity?: unknown[];
+        } | null;
+      };
+    };
+  };
+
+  const payload = env.data?.payload;
+  if (!payload) return cardRows;
+
+  if (toolName === "tamrack_opportunities") {
+    const rows = Array.isArray(payload.rows) ? payload.rows : [];
+    if (rows.length === 0) return [];
+    return rows.map((r) => {
+      if (!r || typeof r !== "object") return { cells: [] };
+      const row = r as Record<string, unknown>;
+      const title = truncate(String(row.title ?? ""), 60);
+      const buyer = String(row.buyer ?? "");
+      const closes = String(row.closingDate ?? row.expectedStartDate ?? "open");
+      const category = String(row.category ?? "");
+      const method = String(row.procurementMethod ?? "");
+      const link_url = typeof row.noticeUrl === "string" ? row.noticeUrl : undefined;
+      return {
+        cells: [title, buyer, closes, category, method],
+        ...(link_url ? { link_url } : {}),
+      };
+    });
+  }
+
+  if (toolName === "tamrack_hiring") {
+    const s = payload.summary;
+    if (!s || typeof s !== "object") return [];
+    const summary = s as {
+      byNoc?: unknown[];
+      bySector?: unknown[];
+      byCity?: unknown[];
+    };
+
+    // Prefer byNoc (most granular); fall through to bySector, then byCity.
+    if (Array.isArray(summary.byNoc) && summary.byNoc.length > 0) {
+      return summary.byNoc.map((r) => {
+        if (!r || typeof r !== "object") return { cells: [] };
+        const row = r as Record<string, unknown>;
+        return {
+          cells: [
+            String(row.code ?? ""),
+            String(row.name ?? ""),
+            String(row.count ?? ""),
+            String(row.vacancies ?? ""),
+          ],
+        };
+      });
+    }
+    if (Array.isArray(summary.bySector) && summary.bySector.length > 0) {
+      return summary.bySector.map((r) => {
+        if (!r || typeof r !== "object") return { cells: [] };
+        const row = r as Record<string, unknown>;
+        return { cells: [String(row.sector ?? ""), String(row.count ?? "")] };
+      });
+    }
+    if (Array.isArray(summary.byCity) && summary.byCity.length > 0) {
+      return summary.byCity.map((r) => {
+        if (!r || typeof r !== "object") return { cells: [] };
+        const row = r as Record<string, unknown>;
+        return { cells: [String(row.city ?? ""), String(row.count ?? "")] };
+      });
+    }
+    return [];
+  }
+
+  return cardRows;
+}
+
+function truncate(s: string, max: number): string {
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1) + "…";
 }
