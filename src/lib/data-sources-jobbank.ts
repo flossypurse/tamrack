@@ -181,9 +181,10 @@ function clean(val: string | undefined): string {
  */
 async function resolveLatestEnglishUrl(): Promise<{ url: string; month: string } | null> {
   try {
+    // Only ever called from the daily collector (plain Node worker), so the
+    // Next.js fetch cache doesn't apply — caching is bounded by the once-daily run.
     const res = await fetch(CKAN_PACKAGE_API, {
       headers: { "User-Agent": UA },
-      next: { revalidate: 3600 },
     });
     if (!res.ok) {
       console.error(`[jobbank] CKAN API ${res.status}`);
@@ -275,9 +276,8 @@ export async function fetchJobBankPostings(
         "User-Agent": UA,
         Accept: "text/csv,*/*",
       },
-      // Cache for 6 hours — the monthly file is static once published, but the
-      // CKAN API may point to a different URL after month rollover.
-      next: { revalidate: 21600 },
+      // No Next.js fetch cache here — the only caller is the daily collector
+      // (plain Node worker), so re-fetching is already bounded to once per day.
     });
     if (!res.ok) {
       console.error(`[jobbank] CSV fetch ${res.status} from ${csvUrl}`);
