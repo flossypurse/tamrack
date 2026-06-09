@@ -10,7 +10,8 @@ import {
 
 const VALID_SOURCES: SourceName[] = [
   "regional", "energy", "municipalities", "wells",
-  "immigration", "projects", "macro", "housing", "procurement", "jobbank", "all",
+  "immigration", "projects", "macro", "housing", "procurement", "jobbank",
+  "spruce-grove-proxy", "stony-plain-entities", "all",
 ];
 
 /**

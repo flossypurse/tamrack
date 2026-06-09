@@ -81,20 +81,20 @@ function roundCoord(v: number | null | undefined): number | null {
   return Math.round(v * 1_000_000) / 1_000_000;
 }
 
-async function main() {
-  const dryRun = process.argv.includes("--dry-run");
+/**
+ * Fetch the Stony Plain business directory from ArcGIS Online and upsert each
+ * business as a substrate.entities row (kind='business'), plus write one daily
+ * count observation to substrate.observations.
+ *
+ * @returns Number of entity rows touched (upserted) in this run.
+ */
+export async function fetchStonyPlainBusinesses(): Promise<number> {
   console.log(`[fetch] ${QUERY_URL}`);
   const features = await fetchAllFeatures();
   console.log(`[fetch] ${features.length} features`);
 
   const valid = features.filter((f) => f.attributes && typeof f.attributes.FID === "number");
   console.log(`[fetch] ${valid.length} features with valid FID`);
-
-  if (dryRun) {
-    console.log("[dry-run] sample feature:", JSON.stringify(valid[0], null, 2));
-    console.log(`[dry-run] would upsert: 1 source, ${valid.length} entities (kind='${ENTITY_KIND}')`);
-    return;
-  }
 
   const pool = await getDb();
   const client = await pool.connect();
@@ -237,12 +237,31 @@ async function main() {
     console.log(`[refresh] latest_observations: ${refreshed ? "refreshed" : "skipped (advisory lock held)"}`);
 
     console.log("[done]   snapshot committed");
+    return entityUpserts;
   } catch (err) {
     await client.query("ROLLBACK");
     throw err;
   } finally {
     client.release();
   }
+}
+
+async function main() {
+  const dryRun = process.argv.includes("--dry-run");
+  console.log(`[fetch] ${QUERY_URL}`);
+  const features = await fetchAllFeatures();
+  console.log(`[fetch] ${features.length} features`);
+
+  const valid = features.filter((f) => f.attributes && typeof f.attributes.FID === "number");
+  console.log(`[fetch] ${valid.length} features with valid FID`);
+
+  if (dryRun) {
+    console.log("[dry-run] sample feature:", JSON.stringify(valid[0], null, 2));
+    console.log(`[dry-run] would upsert: 1 source, ${valid.length} entities (kind='${ENTITY_KIND}')`);
+    return;
+  }
+
+  await fetchStonyPlainBusinesses();
 }
 
 main()

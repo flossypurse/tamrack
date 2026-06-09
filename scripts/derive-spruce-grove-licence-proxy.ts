@@ -46,8 +46,8 @@ const SOURCE_NAME = "Tri-Region licence proxy";
 const SPRUCE_GROVE_SLUG = "spruce-grove";
 const SPRUCE_GROVE_MUNICIPALITY = "Spruce Grove"; // matches municipality_permits.municipality
 
-const PERMITS_SERIES_SLUG = "spruce-grove-licence-proxy-dev-permits";
-const INCORP_SERIES_SLUG = "spruce-grove-licence-proxy-incorporations";
+export const PERMITS_SERIES_SLUG = "spruce-grove-licence-proxy-dev-permits";
+export const INCORP_SERIES_SLUG = "spruce-grove-licence-proxy-incorporations";
 
 interface PermitRow {
   snapshot_date: string;
@@ -92,10 +92,16 @@ function parseSince(): string | null {
   return v;
 }
 
-async function main() {
-  const dryRun = process.argv.includes("--dry-run");
-  const since = parseSince();
-  if (since) console.log(`[opts] --since=${since} (upstream rows older than this are skipped)`);
+/**
+ * Derive Spruce Grove licence-proxy observations from existing upstream tables.
+ *
+ * @param since  Optional YYYY-MM-DD date; upstream rows older than this are
+ *               skipped. Pass yesterday's date in production to avoid
+ *               re-deriving frozen history on every run. Pass null for a full
+ *               backfill (first run / recovery).
+ * @returns Total number of observation rows written (permits + incorporations).
+ */
+export async function deriveSpruceGroveLicenceProxy(since: string | null): Promise<number> {
   const pool = await getDb();
   const client = await pool.connect();
   try {
@@ -179,14 +185,6 @@ async function main() {
       throw new Error(
         `${collisions.length} period collision(s) detected in incorporations source data. Split the series by granularity (annual / quarterly / monthly) or pre-filter the source before re-running. See [guard] log lines above for details.`
       );
-    }
-
-    if (dryRun) {
-      console.log("[dry-run] sample permits row:", permits.rows[0] ?? "(none)");
-      console.log("[dry-run] sample incorp row:", incorp.rows[0] ?? "(none)");
-      console.log("[dry-run] skipping writes");
-      await client.query("ROLLBACK");
-      return;
     }
 
     // Upsert source.
@@ -329,12 +327,63 @@ async function main() {
     console.log(`[refresh] substrate.latest_observations: ${refreshed ? "refreshed" : "skipped (advisory lock held by another caller)"}`);
 
     console.log("[done] proxy derivation committed");
+    return permitsObs + incorpObs;
   } catch (err) {
     await client.query("ROLLBACK");
     throw err;
   } finally {
     client.release();
   }
+}
+
+async function main() {
+  const dryRun = process.argv.includes("--dry-run");
+  const since = parseSince();
+  if (since) console.log(`[opts] --since=${since} (upstream rows older than this are skipped)`);
+
+  if (dryRun) {
+    // Dry-run path: connect and fetch data but skip writes.
+    const pool = await getDb();
+    const client = await pool.connect();
+    try {
+      const parent = await client.query(
+        `SELECT id, csduid FROM substrate.geo_dimension WHERE slug = $1`,
+        [SPRUCE_GROVE_SLUG]
+      );
+      if (parent.rowCount === 0) {
+        throw new Error(`geo_dimension row for ${SPRUCE_GROVE_SLUG} not found`);
+      }
+      const spruceId: string = parent.rows[0].id;
+      const spruceCsduid: string = parent.rows[0].csduid;
+      const permits = await client.query<PermitRow>(
+        `SELECT snapshot_date, SUM(count)::text AS total_count
+           FROM municipality_permits
+           WHERE municipality = $1
+             AND ($2::text IS NULL OR snapshot_date >= $2)
+           GROUP BY snapshot_date
+           ORDER BY snapshot_date`,
+        [SPRUCE_GROVE_MUNICIPALITY, since]
+      );
+      const incorp = await client.query<IncorpRow>(
+        `SELECT period, value::text AS value
+           FROM regional_indicators
+           WHERE csduid = $1 AND indicator = 'Incorporations'
+             AND ($2::text IS NULL OR period >= $2)
+           ORDER BY period`,
+        [spruceCsduid, since ? since.slice(0, 4) : null]
+      );
+      console.log(`[dry-run] geo_id=${spruceId}`);
+      console.log("[dry-run] sample permits row:", permits.rows[0] ?? "(none)");
+      console.log("[dry-run] sample incorp row:", incorp.rows[0] ?? "(none)");
+      console.log(`[dry-run] would upsert: ${permits.rowCount} permit obs, ${incorp.rowCount} incorp obs`);
+      console.log("[dry-run] skipping writes");
+    } finally {
+      client.release();
+    }
+    return;
+  }
+
+  await deriveSpruceGroveLicenceProxy(since);
 }
 
 main()
