@@ -44,22 +44,22 @@ git rev-parse --abbrev-ref HEAD             # on fly-migration (or FF it after)
 npx tsc --noEmit                            # type gate
 # If you changed dependencies: re-sync the lockfile or `npm ci` fails in Docker:
 npm install --package-lock-only && git add package-lock.json && git commit -m "build: sync lockfile"
-flyctl deploy --local-only -c fly.toml        -a tamrack-webui
-flyctl deploy --local-only -c fly.worker.toml -a tamrack-collector-worker
+flyctl deploy --local-only -c fly.toml        -a tamrack-webui         --build-arg GIT_SHA=$(git rev-parse HEAD)
+flyctl deploy --local-only -c fly.worker.toml -a tamrack-collector-worker --build-arg GIT_SHA=$(git rev-parse HEAD)
 curl -s https://tamrack-webui.fly.dev/api/health    # {"status":"ok",...}
 git push origin fly-migration               # origin now == deployed
 ```
 
-**To VERIFY git matches what's running (no SHA is baked into the image yet):**
+**To VERIFY git matches what's running:**
+
+Definitive check — one command:
+```bash
+curl -s https://tamrack-webui.fly.dev/api/health
+# compare git_sha to: git rev-parse origin/fly-migration
+```
+If `git_sha` matches `origin/fly-migration` the deployed image is in sync. If it differs (or is `null` on an old image), fall back to:
 1. `git rev-parse HEAD` must equal `git rev-parse origin/fly-migration` and the tree must be clean.
 2. `flyctl releases -a tamrack-webui` / `-a tamrack-collector-worker` — the latest release time should be ≥ the latest `fly-migration` commit time. An older release ⇒ unpushed/undeployed local commits exist.
-3. Behavioral spot-check against HEAD inside the worker container (the DB is Fly-allowlisted, so this is also how you verify collectors):
-   ```bash
-   flyctl ssh console -a tamrack-collector-worker -C "sh -c 'cd /app && npx tsx -e \"import(\\\"/app/src/lib/collector\\\").then(m=>console.log(m.getPhaseNames().length,\\\"phases\\\"))\"'"
-   ```
-   The phase count / tool list must match HEAD. (For long inline scripts, base64-encode locally and `echo <b64> | base64 -d | sh` in the container to avoid quoting hell.)
-
-**Durable fix (recommended, not yet done):** bake the commit into both images so sync is answerable directly — add `ARG GIT_SHA=` + `ENV GIT_SHA=$GIT_SHA` to `Dockerfile` and `Dockerfile.worker`, deploy with `--build-arg GIT_SHA=$(git rev-parse HEAD)`, and have `GET /api/health` return `git_sha: process.env.GIT_SHA`. Then `curl …/api/health` vs `git rev-parse origin/fly-migration` is a one-line, definitive sync check.
 
 ## Auth
 
