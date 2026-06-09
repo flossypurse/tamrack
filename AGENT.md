@@ -29,6 +29,38 @@ Deployed live. Invite-only access. Focus is on growing early-access usage.
 
 **Health check:** `GET /api/health` (120 s timeout, max 3 retries).
 
+### Deploy = git sync (READ THIS BEFORE DEPLOYING)
+
+There is **no deploy CI**. `flyctl deploy --local-only` builds the image from your **local working tree**, not from a git ref — so nothing keeps git and production in sync except discipline. The invariants:
+
+- **The deploy line is `fly-migration`, NOT `main`.** (AGENT.md elsewhere says "merge to main goes live" — that is aspirational; ignore it. `main` is far behind and only used as the GitHub default branch for scheduled Actions.) Deploy from `fly-migration` (or a branch you immediately fast-forward it to).
+- **Always deploy from a clean tree at a committed SHA**, and **deploy webui AND worker together** — they share `src/lib/collector.ts`, `src/lib/db.ts`, `package.json`, and the lockfile, so a half-deploy splits the code across the two apps.
+- **After deploying, immediately `git push origin fly-migration`** so `origin/fly-migration` == the deployed source. A direct push to `fly-migration` triggers no CI (build.yml only runs on PRs targeting it), so it is safe.
+
+**Deploy checklist (run in order):**
+```bash
+git status                                  # MUST be clean
+git rev-parse --abbrev-ref HEAD             # on fly-migration (or FF it after)
+npx tsc --noEmit                            # type gate
+# If you changed dependencies: re-sync the lockfile or `npm ci` fails in Docker:
+npm install --package-lock-only && git add package-lock.json && git commit -m "build: sync lockfile"
+flyctl deploy --local-only -c fly.toml        -a tamrack-webui
+flyctl deploy --local-only -c fly.worker.toml -a tamrack-collector-worker
+curl -s https://tamrack-webui.fly.dev/api/health    # {"status":"ok",...}
+git push origin fly-migration               # origin now == deployed
+```
+
+**To VERIFY git matches what's running (no SHA is baked into the image yet):**
+1. `git rev-parse HEAD` must equal `git rev-parse origin/fly-migration` and the tree must be clean.
+2. `flyctl releases -a tamrack-webui` / `-a tamrack-collector-worker` — the latest release time should be ≥ the latest `fly-migration` commit time. An older release ⇒ unpushed/undeployed local commits exist.
+3. Behavioral spot-check against HEAD inside the worker container (the DB is Fly-allowlisted, so this is also how you verify collectors):
+   ```bash
+   flyctl ssh console -a tamrack-collector-worker -C "sh -c 'cd /app && npx tsx -e \"import(\\\"/app/src/lib/collector\\\").then(m=>console.log(m.getPhaseNames().length,\\\"phases\\\"))\"'"
+   ```
+   The phase count / tool list must match HEAD. (For long inline scripts, base64-encode locally and `echo <b64> | base64 -d | sh` in the container to avoid quoting hell.)
+
+**Durable fix (recommended, not yet done):** bake the commit into both images so sync is answerable directly — add `ARG GIT_SHA=` + `ENV GIT_SHA=$GIT_SHA` to `Dockerfile` and `Dockerfile.worker`, deploy with `--build-arg GIT_SHA=$(git rev-parse HEAD)`, and have `GET /api/health` return `git_sha: process.env.GIT_SHA`. Then `curl …/api/health` vs `git rev-parse origin/fly-migration` is a one-line, definitive sync check.
+
 ## Auth
 
 Email-only magic-link via NextAuth v5 + Mailgun (no SMTP). Google OAuth optional (`GOOGLE_CLIENT_ID` env). Landing page at `/login` is the only public-facing auth surface.
