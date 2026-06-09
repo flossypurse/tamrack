@@ -381,7 +381,12 @@ export function computeLeadScores(
     };
   });
 
-  // Normalize each dimension across all geos
+  // Normalize each dimension across all geos. A geo with no data for a signal
+  // contributes 0 (raw), so it normalizes toward the floor — intended for a
+  // demand-heat LEAD ranking: absence of evidence is a weak lead, not a
+  // neutral one. The coverage flags below tell consumers WHICH dimensions are
+  // backed by real data so a low score from a coverage gap is distinguishable
+  // from a low score from observed-low demand.
   const hiringNorm = minMaxNormalize(rawList.map((r) => r.hiringAdjustedCount));
   const permitNorm = minMaxNormalize(rawList.map((r) => r.permitAdjustedCount));
   const formationNorm = minMaxNormalize(rawList.map((r) => r.incorporations));
@@ -458,8 +463,11 @@ export function computeLeadScores(
           "sector/geo strain, not per-company leads.",
         "City-to-geo matching is name-based; Job Bank city spellings that " +
           "differ from the registry name will be missed (coverage.hasHiring = false).",
-        "Permit data covers municipalities with active permit collection only; " +
-          "geos without permit snapshots show permitExpansion = 0.5 (neutral).",
+        "Permit data covers municipalities with active permit collection only. " +
+          "A geo with no permit (or hiring/formation) data contributes 0 on that " +
+          "dimension and ranks low there — absence of evidence reads as a weak " +
+          "lead, not a neutral one. Use the per-row coverage flags to tell a " +
+          "coverage gap apart from observed-low demand.",
       ],
     },
   };

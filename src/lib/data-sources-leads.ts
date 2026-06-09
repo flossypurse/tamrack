@@ -30,7 +30,8 @@
  *   municipality_permits: snapshot_date TEXT, municipality TEXT,
  *                          group_name TEXT, count INTEGER, total_value FLOAT
  *     The scorer aggregates all group_name rows per (municipality, snapshot_date).
- *     If the table is empty the permit dimension is 0 for all geos.
+ *     If NO geo has permit data the dimension has no variance and normalizes to
+ *     a flat 0.5; if SOME do, geos without it contribute 0 and rank low there.
  *
  *   regional_indicators: csduid TEXT, municipality TEXT, indicator TEXT,
  *                         period TEXT, value FLOAT
