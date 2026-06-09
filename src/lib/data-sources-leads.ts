@@ -341,10 +341,14 @@ async function fetchOpenTenderCount(): Promise<number> {
  */
 export async function readLeadScores(limitToSlugs?: string[]): Promise<LeadScoreResult> {
   // Build registry lookup maps
-  const registryNames = new Map<string, string>(); // lowercased name -> slug
+  const registryNames = new Map<string, string>(); // lookup key -> slug
   for (const m of MUNICIPALITY_REGISTRY) {
     registryNames.set(m.name.toLowerCase(), m.slug);
-    // Also map slug variations (e.g. "wood-buffalo" -> "wood-buffalo")
+    // municipality_permits.municipality stores the registry slug verbatim
+    // (e.g. "grande-prairie", "strathcona"), so the raw slug must be a key or
+    // any multi-word slug silently fails to match. Also map the de-hyphenated
+    // form so name-style values still resolve.
+    registryNames.set(m.slug, m.slug);
     registryNames.set(m.slug.replace(/-/g, " "), m.slug);
   }
 
