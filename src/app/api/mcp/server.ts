@@ -6,6 +6,7 @@ import { registerEnergyTool } from "./tools/energy";
 import { registerEntitiesTool } from "./tools/entities";
 import { registerHiringTool } from "./tools/hiring";
 import { registerHousingTool } from "./tools/housing";
+import { registerLeadsTool } from "./tools/leads";
 import { registerMacroTool } from "./tools/macro";
 import { registerMunicipalityTool } from "./tools/municipality";
 import { registerOpportunitiesTool } from "./tools/opportunities";
@@ -37,10 +38,11 @@ export const MCP_SERVER_INFO = {
  * request, and pairing 1:1 keeps server state isolated too. Tool registration
  * is fast (no I/O) so per-request instantiation is cheap.
  *
- * Tamrack v1 ships 12 tools: tamrack_catalog (discovery) + 8 typed surfaces
+ * Tamrack v1 ships 13 tools: tamrack_catalog (discovery) + 8 typed surfaces
  * + tamrack_entities (chamber-of-commerce operator directory)
  * + tamrack_opportunities (demand-side contract feed)
- * + tamrack_hiring (latent-demand hiring signals). Per-tool
+ * + tamrack_hiring (latent-demand hiring signals)
+ * + tamrack_leads (per-geo demand-heat composite ranking). Per-tool
  * scope checks run inside each handler against the AsyncLocalStorage
  * auth context (`lib/auth-context.ts`).
  */
@@ -63,6 +65,7 @@ export function createMcpServer(): McpServer {
   registerEntitiesTool(server);
   registerOpportunitiesTool(server);
   registerHiringTool(server);
+  registerLeadsTool(server);
 
   return server;
 }

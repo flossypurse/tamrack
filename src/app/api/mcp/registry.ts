@@ -40,6 +40,7 @@ export type ToolDomain =
   | "municipality"
   | "opportunities"
   | "hiring"
+  | "leads"
   // v2-deferred domains follow
   | "entities"
   | "safety"
@@ -158,6 +159,11 @@ export const TOOL_DOMAINS: DomainDescriptor[] = [
     name: "hiring",
     description:
       "Latent-demand hiring signals — Alberta postings for manual-process/automatable back-office roles (Canada Job Bank), with NOC/sector/city breakdowns and month-over-month momentum. Aggregate strain signal, not per-company leads.",
+  },
+  {
+    name: "leads",
+    description:
+      "Per-geo demand-heat composite — municipalities ranked by a weighted aggregate of hiring momentum, permit expansion, business formation, and provincial procurement backdrop. Directional signal, not per-company leads.",
   },
   // Deferred to v2 — the domains exist conceptually so the catalog can
   // advertise them and so Parcel 6's docs read coherently.
@@ -479,6 +485,29 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     ],
   },
 
+  tamrack_leads: {
+    name: "tamrack_leads",
+    status: "planned",
+    domain: "leads",
+    description:
+      "Per-geo demand-heat composite — ranks Alberta municipalities by a weighted aggregate of hiring momentum (Job Bank Tier-B postings + MoM growth), permit expansion (municipality permit volume + growth), business formation (Incorporations from Alberta Regional Dashboard), and provincial procurement backdrop (open CanadaBuys tenders). Compute-on-read, no DB writes. Flipped to live by tools/leads.ts.",
+    parameters_summary:
+      "dataset (enum: ranking; default ranking); optional limit (1-100, trims output after full-set normalization).",
+    response_summary:
+      "Envelope with data.payload.rankings[] — each geo has { geo, slug, csduid, rank, score, subScores, raw, coverage } — plus meta { computedAt, hiringMonth, permitSnapshotDate, formationPeriod, openTenderCount, geoCount, caveats[] }.",
+    indicators: ["ranking"],
+    example_invocations: [
+      {
+        description: "Top 10 Alberta municipalities by demand-heat composite score.",
+        arguments: { dataset: "ranking", limit: 10 },
+      },
+      {
+        description: "Full geo ranking for all registry municipalities.",
+        arguments: { dataset: "ranking" },
+      },
+    ],
+  },
+
   // ── v2-deferred tools ──────────────────────────────────────────────────
 
   tamrack_entities: {
@@ -586,6 +615,7 @@ const TOOL_ORDER: readonly string[] = [
   "tamrack_entities",
   "tamrack_opportunities",
   "tamrack_hiring",
+  "tamrack_leads",
   "tamrack_safety",
   "tamrack_immigration",
   "tamrack_politics",
