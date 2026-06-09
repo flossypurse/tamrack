@@ -88,6 +88,8 @@ FOR tamrack_hiring (signals):
   - default (no specific breakdown asked) → byNoc rows.
   Also prepend a summary row using totalAlbertaPostings + tierBPostings when available.
   Momentum (month-over-month change) should appear in the card caption, not a separate row.
+  REQUIRED: set "breakdown_key" to exactly one of "byNoc", "bySector", or "byCity" matching
+  the breakdown you chose above. The renderer uses this to pull the right data array.
 
 ANTI-FABRICATION applies to table cards too:
   - Never invent row values not present in the envelope summary.
@@ -186,7 +188,8 @@ those with the literal strings from the envelopes you receive.
         { "cells": ["val1", "val2", "val3"], "link_url": "https://..." }
       ],
       "empty_message": "no results found",
-      "data": { "tool": "<tool name>", "args": { /* args */ } }
+      "data": { "tool": "<tool name>", "args": { /* args */ } },
+      "breakdown_key": "byNoc"
     }
   ],
   "sources": [

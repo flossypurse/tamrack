@@ -19,7 +19,7 @@
  * known field names to display strings.
  */
 
-import type { SeriesPoint, TableRow } from "@/lib/smart-ui/types";
+import type { HiringBreakdownKey, SeriesPoint, TableRow } from "@/lib/smart-ui/types";
 
 export function extractPoints(toolData: unknown): SeriesPoint[] {
   if (!toolData || typeof toolData !== "object") return [];
@@ -81,8 +81,9 @@ export function formatTickValue(value: number): string {
  * column set ["Title", "Buyer", "Closes", "Category", "Method"] and
  * attaches noticeUrl as link_url on each row.
  *
- * For tamrack_hiring: resolves the most granular breakdown available in
- * the payload (byNoc > bySector > byCity) and maps to display strings.
+ * For tamrack_hiring: when `breakdownKey` is present, renders exactly
+ * that breakdown array; when absent, falls back to the fixed
+ * byNoc > bySector > byCity precedence (backward-compatible).
  *
  * Falls back to `cardRows` (the composer-provided pre-formatted rows)
  * when the payload shape isn't recognised — this protects against future
@@ -92,6 +93,7 @@ export function extractTableRows(
   toolName: string,
   toolData: unknown,
   cardRows: TableRow[],
+  breakdownKey?: HiringBreakdownKey,
 ): TableRow[] {
   if (!toolData || typeof toolData !== "object") return cardRows;
 
@@ -139,8 +141,19 @@ export function extractTableRows(
       byCity?: unknown[];
     };
 
-    // Prefer byNoc (most granular); fall through to bySector, then byCity.
-    if (Array.isArray(summary.byNoc) && summary.byNoc.length > 0) {
+    // When the composer set breakdown_key, use it directly.
+    // When absent, fall through the fixed byNoc > bySector > byCity precedence.
+    const key: HiringBreakdownKey | undefined =
+      breakdownKey ??
+      (Array.isArray(summary.byNoc) && summary.byNoc.length > 0
+        ? "byNoc"
+        : Array.isArray(summary.bySector) && summary.bySector.length > 0
+          ? "bySector"
+          : Array.isArray(summary.byCity) && summary.byCity.length > 0
+            ? "byCity"
+            : undefined);
+
+    if (key === "byNoc" && Array.isArray(summary.byNoc)) {
       return summary.byNoc.map((r) => {
         if (!r || typeof r !== "object") return { cells: [] };
         const row = r as Record<string, unknown>;
@@ -154,14 +167,14 @@ export function extractTableRows(
         };
       });
     }
-    if (Array.isArray(summary.bySector) && summary.bySector.length > 0) {
+    if (key === "bySector" && Array.isArray(summary.bySector)) {
       return summary.bySector.map((r) => {
         if (!r || typeof r !== "object") return { cells: [] };
         const row = r as Record<string, unknown>;
         return { cells: [String(row.sector ?? ""), String(row.count ?? "")] };
       });
     }
-    if (Array.isArray(summary.byCity) && summary.byCity.length > 0) {
+    if (key === "byCity" && Array.isArray(summary.byCity)) {
       return summary.byCity.map((r) => {
         if (!r || typeof r !== "object") return { cells: [] };
         const row = r as Record<string, unknown>;

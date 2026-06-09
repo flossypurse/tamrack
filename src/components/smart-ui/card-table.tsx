@@ -31,7 +31,7 @@ interface Props {
 }
 
 export function CardTable({ card, toolData }: Props) {
-  const rows = extractTableRows(card.data.tool, toolData, card.rows ?? []);
+  const rows = extractTableRows(card.data.tool, toolData, card.rows ?? [], card.breakdown_key);
   const columns = card.columns ?? [];
   const labelStrip = card.caption ?? `${card.title.toLowerCase()} · alberta`;
 

@@ -102,6 +102,13 @@ export interface TableRow {
 }
 
 /**
+ * Which tamrack_hiring breakdown the composer chose for a table card.
+ * Drives the renderer so it uses the same breakdown the composer used
+ * to pick column headers — eliminates the fixed-precedence guess.
+ */
+export type HiringBreakdownKey = "byNoc" | "bySector" | "byCity";
+
+/**
  * Table card — a labelled column set plus an array of data rows.
  * Sourced from list-shape tool payloads (opportunities rows, hiring
  * breakdowns) rather than time-series points.
@@ -112,6 +119,12 @@ export interface TableRow {
  * `empty_message` is shown when `rows` is empty — the composer should
  * set this to a meaningful "no results" note (e.g. "no open tenders
  * found for this filter").
+ *
+ * `breakdown_key` is set by the composer on tamrack_hiring cards to
+ * record which breakdown (byNoc / bySector / byCity) matches the
+ * columns it chose. The renderer uses this when present; when absent
+ * it falls back to the fixed byNoc > bySector > byCity precedence so
+ * existing cards without the field continue to render correctly.
  */
 export interface TableCard {
   id: string;
@@ -123,6 +136,11 @@ export interface TableCard {
   rows: TableRow[];
   empty_message?: string;
   data: DataBinding;
+  /**
+   * For tamrack_hiring cards: which breakdown the composer chose.
+   * Absent on tamrack_opportunities cards (not applicable there).
+   */
+  breakdown_key?: HiringBreakdownKey;
 }
 
 /**
