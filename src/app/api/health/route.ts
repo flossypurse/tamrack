@@ -66,7 +66,7 @@ export async function GET(request: Request) {
   const deep = searchParams.get("deep") === "1";
 
   if (!deep) {
-    return NextResponse.json({ status: "ok", timestamp: new Date().toISOString() });
+    return NextResponse.json({ status: "ok", timestamp: new Date().toISOString(), git_sha: process.env.GIT_SHA ?? null });
   }
 
   const probes: { source: string; url: string; headers?: Record<string, string> }[] = [
@@ -125,6 +125,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     status: allOk ? "healthy" : "degraded",
     timestamp: new Date().toISOString(),
+    git_sha: process.env.GIT_SHA ?? null,
     sources: results,
     summary: {
       total: results.length,

@@ -56,6 +56,9 @@ FROM node:22-slim AS runtime
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+ARG GIT_SHA=
+ENV GIT_SHA=$GIT_SHA
+
 WORKDIR /app
 
 # Create a non-root user to run the app
