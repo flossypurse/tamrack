@@ -54,6 +54,10 @@ import { rolloverSubstratePartitions } from "./src/workflows/partition-rollover"
 import { refreshLatestObservations } from "./src/workflows/refresh-matview";
 import { snapshotLogHygiene } from "./src/workflows/snapshot-log-hygiene";
 
+// Research loop workflows (gated — schedule intentionally omitted)
+import { researchOperator } from "./src/workflows/research-operator";
+import { processResearchQueue } from "./src/workflows/process-research-queue";
+
 // ---------------------------------------------------------------------------
 // Phase definitions
 // ---------------------------------------------------------------------------
@@ -255,7 +259,33 @@ async function main() {
   resonate.register("snapshotLogHygiene", snapshotLogHygiene);
   resonate.register("refreshLatestObservations", refreshLatestObservations);
 
-  console.log("[worker] Registered dailyCollection + signals + ops workflows");
+  // Research loop workflows — gated. Registered so the worker can receive
+  // dispatches from external triggers and from processResearchQueue RPCs.
+  // No cron schedule is registered here: scaled runs require explicit
+  // operator sign-off. To enable the queue drain, bootstrap the schedule
+  // manually via the Resonate admin API or uncomment the block below after
+  // confirming ANTHROPIC_TAMRACK_API_TOKEN is set and budget is authorized.
+  // See scripts/verify-research-loop.ts for the dry-run harness.
+  resonate.register("researchOperator", researchOperator);
+  resonate.register("processResearchQueue", processResearchQueue);
+
+  // Uncomment to enable the queue-drain cron (gated — requires sign-off):
+  // try {
+  //   await resonate.schedule("process-research-queue", "0 */4 * * *", "processResearchQueue", { mode: "live", batchSize: 5 });
+  //   console.log("[worker] Scheduled process-research-queue cron: 0 */4 * * *");
+  // } catch (e) {
+  //   const msg = e instanceof Error ? e.message : String(e);
+  //   if (msg.includes("HTTP 403")) {
+  //     console.log("[worker] Skipping process-research-queue schedule.create (403 with prefix-scoped token); existing schedule preserved");
+  //   } else if (msg.includes("HTTP 401")) {
+  //     console.error("[worker] FATAL: token rejected scheduling process-research-queue");
+  //     throw e;
+  //   } else {
+  //     throw e;
+  //   }
+  // }
+
+  console.log("[worker] Registered dailyCollection + signals + ops + research-loop workflows");
 
   // The SDK encodes schedule.promiseId as the literal template
   // "{{.id}}.{{.timestamp}}", which starts with "{" — no prefix-scoped
