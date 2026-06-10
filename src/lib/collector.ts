@@ -72,6 +72,7 @@ import { collectPolitics } from "./collect-politics";
 import { collectFiscal } from "./collect-fiscal";
 import { collectEnvironment } from "./collect-environment";
 import { collectBusinessLicences } from "./collect-business-licences";
+import { resolveAllOperators } from "./entity-resolution";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -112,6 +113,7 @@ export type SourceName =
   | "fiscal"
   | "environment"
   | "business-licences"
+  | "entity-resolution"
   | "all";
 
 // ---------------------------------------------------------------------------
@@ -1832,6 +1834,12 @@ const PHASES: {
     key: "business-licences",
     sources: ["business-licences", "all"],
     fn: (today) => collectBusinessLicences(today),
+  },
+  {
+    name: "Entity Resolution",
+    key: "entity-resolution",
+    sources: ["entity-resolution", "all"],
+    fn: (today) => resolveAllOperators(today),
   },
 ];
 

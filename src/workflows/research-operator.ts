@@ -34,6 +34,7 @@ import {
 } from "../lib/data-sources-intel-profiles";
 import { markQueueFailed } from "../lib/data-sources-intel-queue";
 import { geocodeMunicipality, searchPlaces, type PlaceSummary } from "../lib/data-sources-google";
+import { getOperatorSignals, type OperatorSignals } from "../lib/entity-resolution";
 import { captureError } from "../lib/observability";
 
 // ---------------------------------------------------------------------------
@@ -485,11 +486,32 @@ ${schemaDescription}`;
   const totalDuration_ms =
     (research.usage?.duration_ms ?? 0) + composeDuration_ms;
 
+  // Entity resolution: attach OUR-substrate signals (resolved from named feeds
+  // — municipal licences, well licences, federal contracts) as a distinct,
+  // provenance-tagged block. This is the differential over open-web research:
+  // `signals` (above) is web-derived; `tamrack_signals` is resolved from our
+  // own data. Read-only here (no alias writes during a research run).
+  let ourSignals: OperatorSignals | null = null;
+  try {
+    ourSignals = await getOperatorSignals(
+      { id: operator.id, name: operator.name, city: operator.city },
+      { persist: false },
+    );
+  } catch (e) {
+    console.warn(`[research] getOperatorSignals failed for ${operator.id}:`, e);
+  }
+  const structured = {
+    ...(parsed.structured as unknown as Record<string, unknown>),
+    ...(ourSignals && ourSignals.resolved_sources.length > 0
+      ? { tamrack_signals: ourSignals }
+      : {}),
+  };
+
   return {
     profile_schema: "v1",
     researcher: "agent-research-loop",
     raw_profile_md: research.rawMd,
-    structured: parsed.structured as unknown as Record<string, unknown>,
+    structured,
     sources: research.sources,
     data_gaps: parsed.data_gaps ?? [],
     // Coerce + clamp: the model may emit confidence as a string ("0.75") or
