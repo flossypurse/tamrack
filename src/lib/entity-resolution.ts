@@ -39,8 +39,28 @@ function sameLocality(a?: string | null, b?: string | null): boolean {
 // Accept a name match when similarity is high on its own, or moderate with a
 // corroborating locality (city) match — the second arm catches the common case
 // where the same business appears in two feeds with slightly different names.
+const VERY_HIGH = 0.78;
 const STRONG = 0.6;
 const MODERATE = 0.42;
+
+function firstToken(name: string): string {
+  return normalizeBusinessName(name).split(" ")[0] ?? "";
+}
+
+/**
+ * Guard against generic-token false positives (e.g. "Site Resources Ltd" vs
+ * "ARC Resources Ltd" both reduce to a shared "resources"). Below VERY_HIGH we
+ * require the distinctive leading token to match — brand words lead, legal forms
+ * and industry words don't.
+ */
+function acceptMatch(opName: string, candName: string, sim: number, cityMatch: boolean): boolean {
+  if (sim >= VERY_HIGH) return true;
+  const ft1 = firstToken(opName), ft2 = firstToken(candName);
+  const distinctiveFirst = ft1.length >= 3 && ft1 === ft2;
+  if (sim >= STRONG && distinctiveFirst) return true;
+  if (sim >= MODERATE && cityMatch && distinctiveFirst) return true;
+  return false;
+}
 
 export type ResolvedSourceKey =
   | "edmonton_licence"
@@ -143,8 +163,7 @@ export async function getOperatorSignals(
     );
     for (const r of lic.rows) {
       const cityMatch = sameLocality(r.city, op.city);
-      const accept = r.sim >= STRONG || (r.sim >= MODERATE && cityMatch);
-      if (!accept) continue;
+      if (!acceptMatch(op.name, r.trade_name, r.sim, cityMatch)) continue;
       const conf = Math.min(0.99, r.sim + (cityMatch ? 0.1 : 0));
       out.business_licence = {
         source: r.source as "edmonton" | "calgary",
@@ -176,7 +195,7 @@ export async function getOperatorSignals(
         LIMIT 1`,
       [q],
     );
-    if (well.rows[0] && well.rows[0].sim >= STRONG) {
+    if (well.rows[0] && acceptMatch(op.name, well.rows[0].licensee, well.rows[0].sim, false)) {
       const w = well.rows[0];
       out.well_activity = {
         licences: w.licences, latest_filing: w.latest,
@@ -203,7 +222,7 @@ export async function getOperatorSignals(
         LIMIT 1`,
       [q],
     ).catch(() => ({ rows: [] as never[] }));
-    if (fc.rows[0] && fc.rows[0].sim >= STRONG) {
+    if (fc.rows[0] && acceptMatch(op.name, fc.rows[0].vendor, fc.rows[0].sim, false)) {
       const c = fc.rows[0];
       out.federal_contracts = {
         count: c.cnt, total_value_cad: Number(c.total), latest_date: c.latest,

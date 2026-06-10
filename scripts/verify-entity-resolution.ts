@@ -66,6 +66,18 @@ async function main() {
   const sD = await getOperatorSignals({ id: opD, name: "Totally Unmatched Widgets Co", city: "Devon" });
   ok("D resolves nothing (no false positives)", sD.resolved_sources.length === 0, JSON.stringify(sD.resolved_sources));
 
+  // generic-token false-positive guard: "Site Resources" must NOT match "ARC Resources"
+  const opE = randomUUID();
+  await mkOp(opE, "Site Resources Ltd.", "Calgary");
+  for (let i = 0; i < 5; i++)
+    await pool.query(
+      `INSERT INTO well_licences (licence_number, well_name, licensee, substance, classification, surface_location, filing_date)
+       VALUES ($1,$2,'ARC RESOURCES LTD.','Gas','New','01-02-003-04','2025-05-01')`,
+      [`ARC-${i}`, `ArcWell ${i}`],
+    );
+  const sE = await getOperatorSignals({ id: opE, name: "Site Resources Ltd.", city: "Calgary" });
+  ok("E does NOT match ARC Resources (generic-token guard)", sE.well_activity == null, JSON.stringify(sE.well_activity));
+
   // persistence pass
   const resolved = await resolveAllOperators("2026-06-10");
   ok("resolveAllOperators counts 3 resolved", resolved === 3, `got ${resolved}`);
