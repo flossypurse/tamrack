@@ -45,6 +45,25 @@ export type ResearchMode = "dry-run" | "live";
 export interface ResearchOperatorInput {
   operatorId: string;
   mode?: ResearchMode;
+  /**
+   * Queue attempt number for this operator (from claimQueueBatch). Folded into
+   * the ctx.run step IDs so a re-queued/retried operator does NOT replay the
+   * previous attempt's cached step results (which would silently re-write the
+   * stale profile instead of doing fresh research). Defaults to 1.
+   */
+  attempt?: number;
+}
+
+/**
+ * Coerce a model-supplied confidence into a finite number in [0,1].
+ * The model may return a string ("0.75"), a number out of range, or nothing;
+ * writeProfile throws on anything not finite-in-[0,1], which would fail the
+ * queue row permanently. Defaults to 0.5 when unparseable.
+ */
+function clampConfidence(raw: unknown): number {
+  const n = typeof raw === "number" ? raw : parseFloat(String(raw ?? ""));
+  if (!Number.isFinite(n)) return 0.5;
+  return Math.min(1, Math.max(0, n));
 }
 
 export interface ResearchResult {
@@ -291,6 +310,18 @@ Write a concise research markdown summary with source citations.`;
             }
           }
         }
+      } else if (content && typeof content === "object") {
+        // An error block ({ type: "web_search_tool_result_error", error_code }).
+        // Without this the failed search is silently dropped and the profile is
+        // composed from an empty result set — log it so it's observable.
+        const errCode = (content as Record<string, unknown>).error_code;
+        console.warn(
+          JSON.stringify({
+            event: "researchOperator.web_search_error",
+            operatorId: operator.id,
+            error_code: errCode ?? "unknown",
+          }),
+        );
       }
     }
   }
@@ -461,7 +492,10 @@ ${schemaDescription}`;
     structured: parsed.structured as unknown as Record<string, unknown>,
     sources: research.sources,
     data_gaps: parsed.data_gaps ?? [],
-    confidence: parsed.confidence ?? 0.5,
+    // Coerce + clamp: the model may emit confidence as a string ("0.75") or
+    // out of range. writeProfile rejects anything not finite-in-[0,1], which
+    // would throw at the write step and fail the queue row permanently.
+    confidence: clampConfidence(parsed.confidence),
     confidence_breakdown: parsed.confidence_breakdown ?? {},
     cost_usd: totalCostUsd,
     tokens_in: totalTokensIn,
@@ -639,13 +673,15 @@ export function* researchOperator(
   ctx: Context,
   input: ResearchOperatorInput
 ): Generator<any, OperatorResearchResult, any> {
-  const { operatorId, mode = "dry-run" } = input;
+  const { operatorId, mode = "dry-run", attempt = 1 } = input;
 
-  // Step IDs scoped by (operatorId + ISO-date) so daily replays get fresh
-  // cache entries while mid-run replays reuse the same step ID.
+  // Step IDs scoped by (operatorId + ISO-date + attempt). The attempt number
+  // ensures a re-queued/retried operator does NOT replay the previous run's
+  // cached step results (Resonate promises created with an explicit id are
+  // global-scoped); a mid-run crash on the SAME attempt still reuses the id.
   const today = new Date().toISOString().split("T")[0];
   const stepId = (suffix: string) =>
-    `researchOperator.${operatorId}.${today}.${suffix}`;
+    `researchOperator.${operatorId}.${today}.a${attempt}.${suffix}`;
 
   // --- Step 1: Load operator ---
   const operator: IntelOperator | null = yield* ctx.run(

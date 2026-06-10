@@ -90,7 +90,7 @@ Saved dashboards persist in `smart_dashboards` table; telemetry in `smart_query_
 
 ## MCP Server
 
-Hosted endpoint at `/api/mcp` — Streamable HTTP transport, Bearer auth (`tk_*` keys). Thirteen live tools: `tamrack_catalog`, `tamrack_municipality`, `tamrack_regional`, `tamrack_real_estate`, `tamrack_macro`, `tamrack_housing`, `tamrack_business`, `tamrack_energy`, `tamrack_search`, `tamrack_entities`, `tamrack_opportunities`, `tamrack_hiring`, `tamrack_leads`. Seven more are catalogued as `"deferred"`.
+Hosted endpoint at `/api/mcp` — Streamable HTTP transport, Bearer auth (`tk_*` keys). Nineteen live tools: `tamrack_catalog`, `tamrack_municipality`, `tamrack_regional`, `tamrack_real_estate`, `tamrack_macro`, `tamrack_housing`, `tamrack_business`, `tamrack_energy`, `tamrack_search`, `tamrack_entities`, `tamrack_opportunities`, `tamrack_hiring`, `tamrack_leads`, `tamrack_immigration`, `tamrack_health`, `tamrack_safety`, `tamrack_politics`, `tamrack_fiscal`, `tamrack_environment`. One more (`tamrack_signals`) is catalogued as `"deferred"`.
 
 `tamrack_leads` (scope `tamrack:economy:read`) is the per-geo demand-heat composite: ranks the registry municipalities by a weighted blend of hiring momentum, permit expansion, business formation, and a provincial procurement backdrop. Compute-on-read over existing tables (no new storage). Aggregate directional ranking, not guaranteed per-company leads. Also `GET /api/leads?limit=N`.
 
@@ -102,7 +102,7 @@ See [src/app/api/mcp/AGENT.md](src/app/api/mcp/AGENT.md) for registration comman
 
 ## Data Collection Worker
 
-`worker.ts` runs 12 collection phases as a Resonate durable workflow (`dailyCollection`) on a `0 6 * * *` (6 AM UTC) schedule. Each phase is a separate `ctx.run` step; regional indicators are further split one step per indicator for fault isolation. Step IDs are date-scoped to prevent Resonate's resolved-step cache from replaying stale results on a new day's fire.
+`worker.ts` runs 17 collection phases as a Resonate durable workflow (`dailyCollection`) on a `0 6 * * *` (6 AM UTC) schedule. Each phase is a separate `ctx.run` step; regional indicators are further split one step per indicator for fault isolation. Step IDs are date-scoped to prevent Resonate's resolved-step cache from replaying stale results on a new day's fire.
 
 Phases: `regional` (per-indicator), `energy`, `municipalities`, `wells`, `immigration`, `projects`, `macro`, `housing`, `procurement`, `jobbank`, `spruce-grove-proxy`, `stony-plain-entities`.
 

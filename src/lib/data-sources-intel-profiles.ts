@@ -74,7 +74,7 @@ const PROFILE_FIELDS = `
   structured,
   sources,
   data_gaps,
-  confidence,
+  confidence::float8 AS confidence,
   confidence_breakdown,
   cost_usd,
   tokens_in,

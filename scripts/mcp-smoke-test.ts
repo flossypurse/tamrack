@@ -305,16 +305,26 @@ async function main(): Promise<void> {
       `got status=${entitiesEntry?.status}`,
     );
 
-    // Remaining 7 v2-deferred tools should still report status=deferred.
-    const deferredNames = [
+    // The 6 breadth verticals are now live (each reads a daily-collected table).
+    const nowLiveNames = [
       "tamrack_safety",
       "tamrack_immigration",
       "tamrack_politics",
       "tamrack_fiscal",
       "tamrack_environment",
       "tamrack_health",
-      "tamrack_signals",
     ];
+    for (const n of nowLiveNames) {
+      const t = tools.find((x) => x.name === n);
+      check(
+        `tools[] includes ${n} with status=live`,
+        t?.status === "live",
+        `got ${String(t?.status)}`,
+      );
+    }
+
+    // Only tamrack_signals remains v2-deferred.
+    const deferredNames = ["tamrack_signals"];
     for (const n of deferredNames) {
       const t = tools.find((x) => x.name === n);
       check(

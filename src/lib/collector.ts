@@ -1,7 +1,7 @@
 /**
  * Alberta Pulse — Shared Collection Logic
  *
- * Runs the 7 data collection phases using Postgres via getDb()/withTransaction().
+ * Runs the 17 data collection phases using Postgres via getDb()/withTransaction().
  * Used by both the API route (/api/admin/collect) and the Resonate worker.
  *
  * Each phase is independent — failures in one don't block others.

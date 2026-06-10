@@ -116,10 +116,14 @@ export function* processResearchQueue(
 
   // --- Step 3: Dispatch researchOperator for each claimed row via RPC ---
   for (const row of batch) {
-    const rpcId = stepId(`research.${row.operator_id}`);
+    // Fold the attempt number into the RPC id + input so a re-claimed operator
+    // (attempts incremented) dispatches a fresh run instead of replaying the
+    // previous attempt's cached promise.
+    const rpcId = stepId(`research.${row.operator_id}.a${row.attempts}`);
     const rpcInput: ResearchOperatorInput = {
       operatorId: row.operator_id,
       mode,
+      attempt: row.attempts,
     };
 
     try {

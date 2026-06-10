@@ -1,12 +1,15 @@
 /**
  * Dry-run verification for the research-loop engine.
  *
- * Exercises the full load → stub-research → compose → writeProfile →
- * queue-done plumbing WITHOUT making any paid API calls (mode='dry-run').
+ * Exercises the load → stub-research → compose → writeProfile → queue-done
+ * data path by calling the pure step helpers directly, WITHOUT any paid API
+ * calls (mode='dry-run'). It does NOT stand up a Resonate server, so the
+ * generator orchestration (ctx.run step IDs, ctx.beginRpc dispatch, TTL/retry)
+ * is not covered here — that needs a live Resonate integration test.
  *
  * Prerequisites:
- *   DATABASE_URL pointing to a fresh/empty Postgres database
- *   (see the npm script in package.json or the README for the test DB setup).
+ *   DATABASE_URL pointing to a fresh/empty PostgreSQL 16+ database. The example
+ *   below uses a local throwaway cluster; any empty Postgres 16 URL works.
  *
  * Usage:
  *   DATABASE_URL="postgresql://postgres@127.0.0.1:54399/tamrack_verify_research" \
