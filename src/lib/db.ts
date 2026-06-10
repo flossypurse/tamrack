@@ -2138,6 +2138,62 @@ const MIGRATION_SQL = `
       name               = EXCLUDED.name,
       description        = EXCLUDED.description,
       tags               = EXCLUDED.tags;
+
+    -- ============================================================
+    -- Named business licences — per-business entity records from
+    -- Edmonton and Calgary open data (Socrata). Feeds entity
+    -- resolution. Natural key: (source, licence_id).
+    --
+    -- licence_id nullability: Edmonton externalid and Calgary
+    -- getbusid are stable IDs present on all rows. If a row somehow
+    -- arrives with an empty id, COALESCE falls back to a synthetic
+    -- key so the UNIQUE constraint never collides on blank strings.
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS business_licences (
+      id           SERIAL PRIMARY KEY,
+      source       TEXT NOT NULL,
+      licence_id   TEXT NOT NULL,
+      trade_name   TEXT NOT NULL,
+      legal_name   TEXT,
+      address      TEXT,
+      city         TEXT,
+      locality     TEXT,
+      category     TEXT,
+      status       TEXT,
+      issue_date   TEXT,
+      expiry_date  TEXT,
+      latitude     DOUBLE PRECISION,
+      longitude    DOUBLE PRECISION,
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (source, licence_id)
+    );
+
+    -- ALTER before index: on a pre-existing business_licences table the
+    -- CREATE TABLE above is a no-op; new columns must arrive via ALTER.
+    ALTER TABLE business_licences ADD COLUMN IF NOT EXISTS legal_name TEXT;
+    ALTER TABLE business_licences ADD COLUMN IF NOT EXISTS city TEXT;
+    ALTER TABLE business_licences ADD COLUMN IF NOT EXISTS locality TEXT;
+    ALTER TABLE business_licences ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
+    ALTER TABLE business_licences ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
+
+    CREATE INDEX IF NOT EXISTS idx_biz_lic_source_status
+      ON business_licences (source, status);
+    CREATE INDEX IF NOT EXISTS idx_biz_lic_trade_name_lower
+      ON business_licences (LOWER(trade_name));
+
+    DO $biz_trgm$ BEGIN
+      IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm')
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE schemaname = 'public'
+          AND tablename  = 'business_licences'
+          AND indexname  = 'idx_biz_lic_trade_name_trgm'
+      ) THEN
+        CREATE INDEX idx_biz_lic_trade_name_trgm
+          ON business_licences
+          USING GIN (trade_name gin_trgm_ops);
+      END IF;
+    END $biz_trgm$;
 `;
 
 /**

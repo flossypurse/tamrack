@@ -40,6 +40,7 @@ import { collectSafety } from "./src/lib/collect-safety";
 import { collectPolitics } from "./src/lib/collect-politics";
 import { collectFiscal } from "./src/lib/collect-fiscal";
 import { collectEnvironment } from "./src/lib/collect-environment";
+import { collectBusinessLicences } from "./src/lib/collect-business-licences";
 
 import { getDb } from "./src/lib/db";
 import { captureError, initObservability } from "./src/lib/observability";
@@ -87,6 +88,7 @@ const NON_REGIONAL_PHASES = [
   { name: "politics",             fn: (today: string) => collectPolitics(today) },
   { name: "fiscal",               fn: (today: string) => collectFiscal(today) },
   { name: "environment",          fn: (today: string) => collectEnvironment(today) },
+  { name: "business-licences",    fn: (today: string) => collectBusinessLicences(today) },
 ] as const;
 
 // Slug-safe key for Resonate step IDs (must be deterministic across replays).

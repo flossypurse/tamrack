@@ -71,6 +71,7 @@ import { collectSafety } from "./collect-safety";
 import { collectPolitics } from "./collect-politics";
 import { collectFiscal } from "./collect-fiscal";
 import { collectEnvironment } from "./collect-environment";
+import { collectBusinessLicences } from "./collect-business-licences";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -110,6 +111,7 @@ export type SourceName =
   | "politics"
   | "fiscal"
   | "environment"
+  | "business-licences"
   | "all";
 
 // ---------------------------------------------------------------------------
@@ -1824,6 +1826,12 @@ const PHASES: {
     key: "environment",
     sources: ["environment", "all"],
     fn: (today) => collectEnvironment(today),
+  },
+  {
+    name: "Business Licences",
+    key: "business-licences",
+    sources: ["business-licences", "all"],
+    fn: (today) => collectBusinessLicences(today),
   },
 ];
 
