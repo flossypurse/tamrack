@@ -6,6 +6,7 @@ import { registerEnergyTool } from "./tools/energy";
 import { registerEntitiesTool } from "./tools/entities";
 import { registerHiringTool } from "./tools/hiring";
 import { registerHousingTool } from "./tools/housing";
+import { registerImmigrationTool } from "./tools/immigration";
 import { registerLeadsTool } from "./tools/leads";
 import { registerMacroTool } from "./tools/macro";
 import { registerMunicipalityTool } from "./tools/municipality";
@@ -66,6 +67,7 @@ export function createMcpServer(): McpServer {
   registerOpportunitiesTool(server);
   registerHiringTool(server);
   registerLeadsTool(server);
+  registerImmigrationTool(server);
 
   return server;
 }

@@ -2378,6 +2378,62 @@ export async function getImmigrationTimeSeries(
   return rows;
 }
 
+/**
+ * Permanent-resident landings by immigration category for the most recent
+ * stored year (province-level rows, where cma = ''). Optionally pin a year.
+ */
+export async function getImmigrationByCategory(
+  province: string = "Alberta",
+  year?: number
+): Promise<{ year: number; category: string; total: number }[]> {
+  const pool = await getDb();
+  const { rows } = await pool.query(
+    `SELECT year, category, SUM(count) AS total
+       FROM immigration_records
+      WHERE LOWER(province) = LOWER($1)
+        AND cma = ''
+        AND category <> ''
+        AND year = COALESCE($2, (
+          SELECT MAX(year) FROM immigration_records
+           WHERE LOWER(province) = LOWER($1) AND cma = ''
+        ))
+      GROUP BY year, category
+      ORDER BY total DESC`,
+    [province, year ?? null]
+  );
+  return rows.map((r) => ({
+    year: Number(r.year),
+    category: r.category as string,
+    total: Number(r.total),
+  }));
+}
+
+/**
+ * Permanent-resident landings by Census Metropolitan Area (Edmonton/Calgary)
+ * for the most recent stored year. Optionally pin a year.
+ */
+export async function getImmigrationByCMA(
+  year?: number
+): Promise<{ year: number; cma: string; total: number }[]> {
+  const pool = await getDb();
+  const { rows } = await pool.query(
+    `SELECT year, cma, SUM(count) AS total
+       FROM immigration_records
+      WHERE cma <> ''
+        AND year = COALESCE($1, (
+          SELECT MAX(year) FROM immigration_records WHERE cma <> ''
+        ))
+      GROUP BY year, cma
+      ORDER BY total DESC`,
+    [year ?? null]
+  );
+  return rows.map((r) => ({
+    year: Number(r.year),
+    cma: r.cma as string,
+    total: Number(r.total),
+  }));
+}
+
 // ============================================================
 // Major projects
 // ============================================================
