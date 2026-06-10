@@ -67,7 +67,7 @@ export interface DashboardConfig {
   sources: SourceCitation[];
 }
 
-export type Card = LineCard | ScorecardCard | StoryCard;
+export type Card = LineCard | ScorecardCard | StoryCard | TableCard;
 
 export interface LineCard {
   id: string;
@@ -87,6 +87,60 @@ export interface ScorecardCard {
   unit?: string;
   data: DataBinding;
   delta?: { yoy?: boolean };
+}
+
+/**
+ * One row in a TableCard. Column values are always strings for render
+ * simplicity; numeric values should be pre-formatted by the composer
+ * (e.g. "2026-06-30", "147 postings").
+ */
+export interface TableRow {
+  /** Ordered cell values matching `columns`. */
+  cells: string[];
+  /** Optional URL for the first-column link (e.g. a tender notice URL). */
+  link_url?: string;
+}
+
+/**
+ * Which tamrack_hiring breakdown the composer chose for a table card.
+ * Drives the renderer so it uses the same breakdown the composer used
+ * to pick column headers — eliminates the fixed-precedence guess.
+ */
+export type HiringBreakdownKey = "byNoc" | "bySector" | "byCity";
+
+/**
+ * Table card — a labelled column set plus an array of data rows.
+ * Sourced from list-shape tool payloads (opportunities rows, hiring
+ * breakdowns) rather than time-series points.
+ *
+ * The composer picks which columns to surface and which payload array
+ * to use; the renderer handles truncation and mobile collapse.
+ *
+ * `empty_message` is shown when `rows` is empty — the composer should
+ * set this to a meaningful "no results" note (e.g. "no open tenders
+ * found for this filter").
+ *
+ * `breakdown_key` is set by the composer on tamrack_hiring cards to
+ * record which breakdown (byNoc / bySector / byCity) matches the
+ * columns it chose. The renderer uses this when present; when absent
+ * it falls back to the fixed byNoc > bySector > byCity precedence so
+ * existing cards without the field continue to render correctly.
+ */
+export interface TableCard {
+  id: string;
+  type: "table";
+  title: string;
+  caption?: string;
+  /** Column header labels, matching `rows[].cells` by index. */
+  columns: string[];
+  rows: TableRow[];
+  empty_message?: string;
+  data: DataBinding;
+  /**
+   * For tamrack_hiring cards: which breakdown the composer chose.
+   * Absent on tamrack_opportunities cards (not applicable there).
+   */
+  breakdown_key?: HiringBreakdownKey;
 }
 
 /**

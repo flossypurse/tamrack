@@ -122,6 +122,12 @@ function projectToolEnvelope(
       return projectEnergy(args, payload);
     case "tamrack_business":
       return projectBusiness(args, payload);
+    case "tamrack_opportunities":
+    case "tamrack_hiring":
+      // List/table tools: no time-series projection. Return empty points so
+      // the normalizer doesn't flag them as "no projection rule" — the
+      // composer and renderer consume data.payload directly via TableCard.
+      return { points: [], from: `payload (list shape — no time series)` };
     default:
       return null;
   }
