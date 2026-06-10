@@ -41,7 +41,7 @@ To revoke: `DELETE /api/api-keys` with `{ "keyId": "..." }`.
 
 ## Tools
 
-Ten tools live. The catalog tool advertises the live schemas; descriptions below are one-line summaries. All tool names use the `tamrack_*` prefix (renamed from `alberta_*` on 2026-05-14 — this IS a breaking change for any agent that hard-codes the old names; the dual-accept window is on the API key prefix, not on tool names).
+Thirteen tools live. The catalog tool advertises the live schemas; descriptions below are one-line summaries. All tool names use the `tamrack_*` prefix (renamed from `alberta_*` on 2026-05-14 — this IS a breaking change for any agent that hard-codes the old names; the dual-accept window is on the API key prefix, not on tool names).
 
 | Tool | Scope | What it returns |
 |------|-------|-----------------|
@@ -55,6 +55,9 @@ Ten tools live. The catalog tool advertises the live schemas; descriptions below
 | `tamrack_energy` | `tamrack:energy:read` | AESO pool price / supply-demand / forecast + CER pipeline throughput / incidents / apportionment / oil production. |
 | `tamrack_search` | `tamrack:economy:read` | Alberta CKAN dataset search — long-tail escape hatch when none of the above fit. |
 | `tamrack_entities` | `tamrack:economy:read` | Tri-region operator directory (~1,100 businesses from Acheson Business Association + Greater Parkland Regional Chamber). action='search' (name/category/city/source filters) \| action='get' (by id) \| action='list_categories' (taxonomy + counts). Backed by the `intel_operators` Postgres table, seeded out-of-band. Base directory only — enrichment data lives in a downstream workflow. |
+| `tamrack_opportunities` | `tamrack:economy:read` | Demand-side feed — CanadaBuys federal open tenders (IT/software/AI/data, nationally deliverable), soonest-closing first. Reads the `opportunities` table. |
+| `tamrack_hiring` | `tamrack:economy:read` | Latent-demand hiring signals — Alberta postings for automatable back-office roles (Canada Job Bank), NOC/sector/city breakdowns + month-over-month momentum. Aggregate strain signal, not per-company leads. |
+| `tamrack_leads` | `tamrack:economy:read` | Per-geo demand-heat composite — ranks registry municipalities by hiring momentum + permit expansion + business formation + a provincial procurement backdrop. Compute-on-read; aggregate directional ranking with per-row coverage flags, not guaranteed per-company leads. |
 
 Seven more tools (`tamrack_safety`, `tamrack_immigration`, `tamrack_politics`, `tamrack_fiscal`, `tamrack_environment`, `tamrack_health`, `tamrack_signals`) are advertised in the catalog with `status: "deferred"`. They land when the corresponding substrate work is done.
 

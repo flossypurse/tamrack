@@ -90,7 +90,9 @@ Saved dashboards persist in `smart_dashboards` table; telemetry in `smart_query_
 
 ## MCP Server
 
-Hosted endpoint at `/api/mcp` — Streamable HTTP transport, Bearer auth (`tk_*` keys). Twelve live tools: `tamrack_catalog`, `tamrack_municipality`, `tamrack_regional`, `tamrack_real_estate`, `tamrack_macro`, `tamrack_housing`, `tamrack_business`, `tamrack_energy`, `tamrack_search`, `tamrack_entities`, `tamrack_opportunities`, `tamrack_hiring`. Seven more are catalogued as `"deferred"`.
+Hosted endpoint at `/api/mcp` — Streamable HTTP transport, Bearer auth (`tk_*` keys). Thirteen live tools: `tamrack_catalog`, `tamrack_municipality`, `tamrack_regional`, `tamrack_real_estate`, `tamrack_macro`, `tamrack_housing`, `tamrack_business`, `tamrack_energy`, `tamrack_search`, `tamrack_entities`, `tamrack_opportunities`, `tamrack_hiring`, `tamrack_leads`. Seven more are catalogued as `"deferred"`.
+
+`tamrack_leads` (scope `tamrack:economy:read`) is the per-geo demand-heat composite: ranks the registry municipalities by a weighted blend of hiring momentum, permit expansion, business formation, and a provincial procurement backdrop. Compute-on-read over existing tables (no new storage). Aggregate directional ranking, not guaranteed per-company leads. Also `GET /api/leads?limit=N`.
 
 `tamrack_opportunities` (scope `tamrack:economy:read`) is the demand-side feed: CanadaBuys federal open tenders (IT/software/AI/data) read from the `opportunities` table. Also reachable via `GET /api/opportunities?type=tenders[&open=1&closing_before=YYYY-MM-DD&limit=N]`.
 
