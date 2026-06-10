@@ -35,6 +35,12 @@ import {
   collectStonyPlainEntities,
 } from "./src/lib/collector";
 
+import { collectHealth } from "./src/lib/collect-health";
+import { collectSafety } from "./src/lib/collect-safety";
+import { collectPolitics } from "./src/lib/collect-politics";
+import { collectFiscal } from "./src/lib/collect-fiscal";
+import { collectEnvironment } from "./src/lib/collect-environment";
+
 import { getDb } from "./src/lib/db";
 import { captureError, initObservability } from "./src/lib/observability";
 
@@ -72,6 +78,11 @@ const NON_REGIONAL_PHASES = [
   { name: "jobbank",              fn: (today: string) => collectJobBankData(today) },
   { name: "spruce-grove-proxy",   fn: (today: string) => collectSpruceGroveProxy(today) },
   { name: "stony-plain-entities", fn: (today: string) => collectStonyPlainEntities(today) },
+  { name: "health",               fn: (today: string) => collectHealth(today) },
+  { name: "safety",               fn: (today: string) => collectSafety(today) },
+  { name: "politics",             fn: (today: string) => collectPolitics(today) },
+  { name: "fiscal",               fn: (today: string) => collectFiscal(today) },
+  { name: "environment",          fn: (today: string) => collectEnvironment(today) },
 ] as const;
 
 // Slug-safe key for Resonate step IDs (must be deterministic across replays).

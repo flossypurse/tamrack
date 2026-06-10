@@ -66,6 +66,11 @@ import {
 } from "./data-sources-procurement";
 import { fetchJobBankPostings } from "./data-sources-jobbank";
 import { fetchWithRetry } from "./fetch-utils";
+import { collectHealth } from "./collect-health";
+import { collectSafety } from "./collect-safety";
+import { collectPolitics } from "./collect-politics";
+import { collectFiscal } from "./collect-fiscal";
+import { collectEnvironment } from "./collect-environment";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -100,6 +105,11 @@ export type SourceName =
   | "jobbank"
   | "spruce-grove-proxy"
   | "stony-plain-entities"
+  | "health"
+  | "safety"
+  | "politics"
+  | "fiscal"
+  | "environment"
   | "all";
 
 // ---------------------------------------------------------------------------
@@ -1784,6 +1794,36 @@ const PHASES: {
     key: "stony-plain-entities",
     sources: ["stony-plain-entities", "all"],
     fn: (today) => collectStonyPlainEntities(today),
+  },
+  {
+    name: "Health",
+    key: "health",
+    sources: ["health", "all"],
+    fn: (today) => collectHealth(today),
+  },
+  {
+    name: "Public Safety",
+    key: "safety",
+    sources: ["safety", "all"],
+    fn: (today) => collectSafety(today),
+  },
+  {
+    name: "Politics",
+    key: "politics",
+    sources: ["politics", "all"],
+    fn: (today) => collectPolitics(today),
+  },
+  {
+    name: "Fiscal",
+    key: "fiscal",
+    sources: ["fiscal", "all"],
+    fn: (today) => collectFiscal(today),
+  },
+  {
+    name: "Environment",
+    key: "environment",
+    sources: ["environment", "all"],
+    fn: (today) => collectEnvironment(today),
   },
 ];
 

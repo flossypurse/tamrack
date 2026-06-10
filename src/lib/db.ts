@@ -591,6 +591,274 @@ const MIGRATION_SQL = `
     CREATE INDEX IF NOT EXISTS idx_immigration ON immigration_records(year, province);
     CREATE INDEX IF NOT EXISTS idx_projects ON major_projects(snapshot_date, source);
 
+    -- ============================================================
+    -- Health data (Alberta Open Data + Alberta Regional Dashboard)
+    -- Three shapes: life expectancy (municipality × period × gender),
+    -- births/deaths (municipality × period × type), and leading
+    -- causes of death (province-wide, year × cause × ranking).
+    -- ============================================================
+
+    CREATE TABLE IF NOT EXISTS health_life_expectancy (
+      id           SERIAL PRIMARY KEY,
+      municipality TEXT NOT NULL,
+      period       TEXT NOT NULL,
+      gender       TEXT NOT NULL DEFAULT 'Both Sexes',
+      value        DOUBLE PRECISION NOT NULL,
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (municipality, period, gender)
+    );
+    CREATE INDEX IF NOT EXISTS idx_health_le_muni_period
+      ON health_life_expectancy (municipality, period);
+
+    CREATE TABLE IF NOT EXISTS health_births_deaths (
+      id           SERIAL PRIMARY KEY,
+      municipality TEXT NOT NULL,
+      period       TEXT NOT NULL,
+      type         TEXT NOT NULL,
+      value        DOUBLE PRECISION NOT NULL,
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (municipality, period, type)
+    );
+    CREATE INDEX IF NOT EXISTS idx_health_bd_muni_period
+      ON health_births_deaths (municipality, period);
+
+    CREATE TABLE IF NOT EXISTS health_causes_of_death (
+      id           SERIAL PRIMARY KEY,
+      year         INTEGER NOT NULL,
+      cause        TEXT NOT NULL,
+      total_deaths INTEGER NOT NULL DEFAULT 0,
+      ranking      INTEGER NOT NULL DEFAULT 0,
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (year, cause)
+    );
+    CREATE INDEX IF NOT EXISTS idx_health_cod_year
+      ON health_causes_of_death (year, ranking);
+
+    -- ============================================================
+    -- Public Safety: Crime Severity Index (per municipality/period) and
+    -- Edmonton Fire Rescue incident summaries (per snapshot/event type).
+    -- 511 road/emergency alerts are intentionally NOT stored (ephemeral,
+    -- ~5-min churn, TTL-bound) — the MCP tool fetches them live on demand.
+    -- ============================================================
+
+    CREATE TABLE IF NOT EXISTS safety_crime_severity (
+      id           SERIAL PRIMARY KEY,
+      municipality TEXT NOT NULL,
+      period       TEXT NOT NULL,
+      csi          DOUBLE PRECISION NOT NULL,
+      unit         TEXT NOT NULL DEFAULT 'Index',
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (municipality, period)
+    );
+    CREATE INDEX IF NOT EXISTS idx_safety_crime_muni
+      ON safety_crime_severity (municipality, period);
+    CREATE INDEX IF NOT EXISTS idx_safety_crime_period
+      ON safety_crime_severity (period);
+
+    CREATE TABLE IF NOT EXISTS safety_fire_by_type (
+      id           SERIAL PRIMARY KEY,
+      snapshot_date TEXT NOT NULL,
+      event_type   TEXT NOT NULL,
+      incident_count INTEGER NOT NULL DEFAULT 0,
+      avg_duration_mins DOUBLE PRECISION NOT NULL DEFAULT 0,
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (snapshot_date, event_type)
+    );
+    CREATE INDEX IF NOT EXISTS idx_safety_fire_date
+      ON safety_fire_by_type (snapshot_date, event_type);
+
+    -- ============================================================
+    -- Politics: elected officials, districts, and recent federal votes.
+    -- Sources: Represent API (open.north.ca), OpenParliament API.
+    -- Slow-moving reference tables + recent activity; served from store.
+    -- ============================================================
+
+    CREATE TABLE IF NOT EXISTS politics_mlas (
+      id             SERIAL PRIMARY KEY,
+      name           TEXT NOT NULL,
+      party          TEXT NOT NULL DEFAULT '',
+      district       TEXT NOT NULL DEFAULT '',
+      email          TEXT NOT NULL DEFAULT '',
+      url            TEXT NOT NULL DEFAULT '',
+      photo_url      TEXT NOT NULL DEFAULT '',
+      office         TEXT NOT NULL DEFAULT 'MLA',
+      collected_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (name, district)
+    );
+    ALTER TABLE politics_mlas ADD COLUMN IF NOT EXISTS photo_url TEXT NOT NULL DEFAULT '';
+    ALTER TABLE politics_mlas ADD COLUMN IF NOT EXISTS office TEXT NOT NULL DEFAULT 'MLA';
+    CREATE INDEX IF NOT EXISTS idx_politics_mlas_party ON politics_mlas(party);
+    CREATE INDEX IF NOT EXISTS idx_politics_mlas_district ON politics_mlas(district);
+
+    CREATE TABLE IF NOT EXISTS politics_mps (
+      id             SERIAL PRIMARY KEY,
+      name           TEXT NOT NULL,
+      party          TEXT NOT NULL DEFAULT '',
+      riding         TEXT NOT NULL DEFAULT '',
+      province       TEXT NOT NULL DEFAULT 'Alberta',
+      email          TEXT NOT NULL DEFAULT '',
+      url            TEXT NOT NULL DEFAULT '',
+      photo_url      TEXT NOT NULL DEFAULT '',
+      collected_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (name, riding)
+    );
+    ALTER TABLE politics_mps ADD COLUMN IF NOT EXISTS photo_url TEXT NOT NULL DEFAULT '';
+    CREATE INDEX IF NOT EXISTS idx_politics_mps_party ON politics_mps(party);
+    CREATE INDEX IF NOT EXISTS idx_politics_mps_riding ON politics_mps(riding);
+
+    CREATE TABLE IF NOT EXISTS politics_electoral_districts (
+      id             SERIAL PRIMARY KEY,
+      name           TEXT NOT NULL,
+      external_id    TEXT NOT NULL,
+      boundary_url   TEXT NOT NULL DEFAULT '',
+      collected_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (external_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_politics_districts_name ON politics_electoral_districts(LOWER(name));
+
+    CREATE TABLE IF NOT EXISTS politics_votes (
+      id             SERIAL PRIMARY KEY,
+      vote_url       TEXT NOT NULL DEFAULT '',
+      session        TEXT NOT NULL,
+      number         INTEGER NOT NULL,
+      vote_date      TEXT NOT NULL DEFAULT '',
+      yea            INTEGER NOT NULL DEFAULT 0,
+      nay            INTEGER NOT NULL DEFAULT 0,
+      paired         INTEGER NOT NULL DEFAULT 0,
+      result         TEXT NOT NULL DEFAULT '',
+      bill_url       TEXT NOT NULL DEFAULT '',
+      description    TEXT NOT NULL DEFAULT '',
+      collected_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (session, number)
+    );
+    CREATE INDEX IF NOT EXISTS idx_politics_votes_date ON politics_votes(vote_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_politics_votes_session ON politics_votes(session, number DESC);
+
+    -- ============================================================
+    -- Fiscal: provincial grant disclosure, federal transfers to Alberta,
+    -- and federal proactive-disclosure contracts. Large CSV/CKAN feeds
+    -- cached daily rather than fetched live.
+    -- ============================================================
+
+    CREATE TABLE IF NOT EXISTS fiscal_ab_grants (
+      id           SERIAL PRIMARY KEY,
+      fiscal_year  TEXT NOT NULL,
+      ministry     TEXT NOT NULL DEFAULT '',
+      recipient    TEXT NOT NULL DEFAULT '',
+      program      TEXT NOT NULL DEFAULT '',
+      amount       DOUBLE PRECISION NOT NULL DEFAULT 0,
+      description  TEXT NOT NULL DEFAULT '',
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (fiscal_year, ministry, recipient, program)
+    );
+    CREATE INDEX IF NOT EXISTS idx_fiscal_ab_grants_fy
+      ON fiscal_ab_grants (fiscal_year, ministry);
+    CREATE INDEX IF NOT EXISTS idx_fiscal_ab_grants_recipient
+      ON fiscal_ab_grants (recipient, fiscal_year);
+
+    CREATE TABLE IF NOT EXISTS fiscal_federal_transfers (
+      id            SERIAL PRIMARY KEY,
+      year          INTEGER NOT NULL,
+      province      TEXT NOT NULL DEFAULT 'Alberta',
+      transfer_type TEXT NOT NULL DEFAULT '',
+      amount        DOUBLE PRECISION NOT NULL DEFAULT 0,
+      collected_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (year, transfer_type)
+    );
+    CREATE INDEX IF NOT EXISTS idx_fiscal_fed_transfers_year
+      ON fiscal_federal_transfers (year DESC, transfer_type);
+
+    CREATE TABLE IF NOT EXISTS fiscal_federal_contracts (
+      id            SERIAL PRIMARY KEY,
+      vendor        TEXT NOT NULL DEFAULT '',
+      department    TEXT NOT NULL DEFAULT '',
+      description   TEXT NOT NULL DEFAULT '',
+      contract_date TEXT NOT NULL DEFAULT '',
+      value         DOUBLE PRECISION NOT NULL DEFAULT 0,
+      province      TEXT NOT NULL DEFAULT 'Alberta',
+      collected_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (vendor, department, contract_date, value)
+    );
+    CREATE INDEX IF NOT EXISTS idx_fiscal_fed_contracts_date
+      ON fiscal_federal_contracts (contract_date DESC, vendor);
+    CREATE INDEX IF NOT EXISTS idx_fiscal_fed_contracts_dept
+      ON fiscal_federal_contracts (department, contract_date DESC);
+
+    -- ============================================================
+    -- Environment snapshots (daily time-series for real-time feeds):
+    -- AQHI by station/date, water levels by station/date, earthquakes by
+    -- USGS event id, and a daily active-wildfire count summary (the
+    -- active-fire feed has no stable per-fire id, so only a count is kept).
+    -- ============================================================
+
+    CREATE TABLE IF NOT EXISTS env_aqhi_snapshots (
+      id            SERIAL PRIMARY KEY,
+      snapshot_date TEXT NOT NULL,
+      location_id   TEXT NOT NULL,
+      location_name TEXT NOT NULL DEFAULT '',
+      aqhi          DOUBLE PRECISION NOT NULL DEFAULT 0,
+      observation_time TEXT NOT NULL DEFAULT '',
+      latitude      DOUBLE PRECISION NOT NULL DEFAULT 0,
+      longitude     DOUBLE PRECISION NOT NULL DEFAULT 0,
+      collected_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (snapshot_date, location_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_env_aqhi_date
+      ON env_aqhi_snapshots (snapshot_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_env_aqhi_location
+      ON env_aqhi_snapshots (location_id, snapshot_date DESC);
+
+    CREATE TABLE IF NOT EXISTS env_water_snapshots (
+      id            SERIAL PRIMARY KEY,
+      snapshot_date TEXT NOT NULL,
+      station_id    TEXT NOT NULL,
+      station_name  TEXT NOT NULL DEFAULT '',
+      water_level   DOUBLE PRECISION,
+      discharge     DOUBLE PRECISION,
+      reading_time  TEXT NOT NULL DEFAULT '',
+      latitude      DOUBLE PRECISION NOT NULL DEFAULT 0,
+      longitude     DOUBLE PRECISION NOT NULL DEFAULT 0,
+      collected_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (snapshot_date, station_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_env_water_date
+      ON env_water_snapshots (snapshot_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_env_water_station
+      ON env_water_snapshots (station_id, snapshot_date DESC);
+
+    CREATE TABLE IF NOT EXISTS env_earthquake_events (
+      id            SERIAL PRIMARY KEY,
+      event_id      TEXT NOT NULL,
+      snapshot_date TEXT NOT NULL,
+      magnitude     DOUBLE PRECISION NOT NULL DEFAULT 0,
+      location      TEXT NOT NULL DEFAULT '',
+      latitude      DOUBLE PRECISION NOT NULL DEFAULT 0,
+      longitude     DOUBLE PRECISION NOT NULL DEFAULT 0,
+      depth_km      DOUBLE PRECISION NOT NULL DEFAULT 0,
+      event_time    TEXT NOT NULL DEFAULT '',
+      source        TEXT NOT NULL DEFAULT 'USGS',
+      collected_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (event_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_env_quake_date
+      ON env_earthquake_events (snapshot_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_env_quake_magnitude
+      ON env_earthquake_events (magnitude DESC);
+
+    CREATE TABLE IF NOT EXISTS env_wildfire_daily (
+      id              SERIAL PRIMARY KEY,
+      snapshot_date   TEXT NOT NULL,
+      active_count    INTEGER NOT NULL DEFAULT 0,
+      total_size_ha   DOUBLE PRECISION NOT NULL DEFAULT 0,
+      out_of_control  INTEGER NOT NULL DEFAULT 0,
+      being_held      INTEGER NOT NULL DEFAULT 0,
+      under_control   INTEGER NOT NULL DEFAULT 0,
+      collected_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (snapshot_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_env_wildfire_date
+      ON env_wildfire_daily (snapshot_date DESC);
+
     -- Named-entity directory: tri-region operators and (later) other entity sets.
     -- Seeded out-of-band by scripts/seed-intel-operators.ts from a private
     -- workspace source. Read via src/lib/data-sources-intel.ts.

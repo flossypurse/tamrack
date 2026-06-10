@@ -14,6 +14,11 @@ import { registerOpportunitiesTool } from "./tools/opportunities";
 import { registerRealEstateTool } from "./tools/real-estate";
 import { registerRegionalTool } from "./tools/regional";
 import { registerSearchTool } from "./tools/search";
+import { registerHealthTool } from "./tools/health";
+import { registerSafetyTool } from "./tools/safety";
+import { registerPoliticsTool } from "./tools/politics";
+import { registerFiscalTool } from "./tools/fiscal";
+import { registerEnvironmentTool } from "./tools/environment";
 
 /**
  * Server identity advertised in `InitializeResult.serverInfo`.
@@ -68,6 +73,11 @@ export function createMcpServer(): McpServer {
   registerHiringTool(server);
   registerLeadsTool(server);
   registerImmigrationTool(server);
+  registerHealthTool(server);
+  registerSafetyTool(server);
+  registerPoliticsTool(server);
+  registerFiscalTool(server);
+  registerEnvironmentTool(server);
 
   return server;
 }
