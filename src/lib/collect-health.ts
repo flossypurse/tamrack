@@ -67,6 +67,7 @@ export async function collectHealth(today: string): Promise<number> {
 
   const pool = await getDb();
   let totalRows = 0;
+  const errors: string[] = [];
 
   // --- Life expectancy ---
   try {
@@ -84,8 +85,9 @@ export async function collectHealth(today: string): Promise<number> {
       });
       totalRows += points.length;
     }
-  } catch {
+  } catch (e) {
     // Non-fatal: life-expectancy failure does not abort causes-of-death
+    errors.push(`life_expectancy: ${e instanceof Error ? e.message : String(e)}`);
   }
 
   // --- Births and deaths ---
@@ -104,8 +106,8 @@ export async function collectHealth(today: string): Promise<number> {
       });
       totalRows += points.length;
     }
-  } catch {
-    // Non-fatal
+  } catch (e) {
+    errors.push(`births_deaths: ${e instanceof Error ? e.message : String(e)}`);
   }
 
   // --- Leading causes of death ---
@@ -124,11 +126,20 @@ export async function collectHealth(today: string): Promise<number> {
       });
       totalRows += causes.length;
     }
-  } catch {
-    // Non-fatal
+  } catch (e) {
+    errors.push(`causes_of_death: ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  await pool.query(SQL.logEntry, ["health", totalRows, "ok", null]);
+  if (errors.length > 0) {
+    await pool.query(SQL.logEntry, [
+      "health",
+      totalRows,
+      "error",
+      errors.join("; "),
+    ]);
+  } else {
+    await pool.query(SQL.logEntry, ["health", totalRows, "ok", null]);
+  }
   return totalRows;
 }
 

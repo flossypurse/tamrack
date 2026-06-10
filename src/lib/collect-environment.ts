@@ -21,7 +21,9 @@
  *   - Returns the total number of rows upserted across all feeds.
  */
 
-import { getDb } from "./db";
+import type pg from "pg";
+
+import { getDb, withTransaction } from "./db";
 import {
   fetchAlbertaAQHI,
   fetchAlbertaWaterLevels,
@@ -110,17 +112,19 @@ export async function collectEnvironment(today: string): Promise<number> {
   try {
     const readings = await fetchAlbertaAQHI();
     if (readings.length > 0) {
-      for (const r of readings) {
-        await pool.query(SQL_UPSERT_AQHI, [
-          today,
-          r.locationId,
-          r.location,
-          r.aqhi,
-          r.observationTime,
-          r.latitude,
-          r.longitude,
-        ]);
-      }
+      await withTransaction(async (client: pg.PoolClient) => {
+        for (const r of readings) {
+          await client.query(SQL_UPSERT_AQHI, [
+            today,
+            r.locationId,
+            r.location,
+            r.aqhi,
+            r.observationTime,
+            r.latitude,
+            r.longitude,
+          ]);
+        }
+      });
       totalRows += readings.length;
     }
   } catch (e) {
@@ -135,18 +139,20 @@ export async function collectEnvironment(today: string): Promise<number> {
   try {
     const stations = await fetchAlbertaWaterLevels();
     if (stations.length > 0) {
-      for (const s of stations) {
-        await pool.query(SQL_UPSERT_WATER, [
-          today,
-          s.stationId,
-          s.stationName,
-          s.waterLevel,
-          s.discharge,
-          s.date,
-          s.latitude,
-          s.longitude,
-        ]);
-      }
+      await withTransaction(async (client: pg.PoolClient) => {
+        for (const s of stations) {
+          await client.query(SQL_UPSERT_WATER, [
+            today,
+            s.stationId,
+            s.stationName,
+            s.waterLevel,
+            s.discharge,
+            s.date,
+            s.latitude,
+            s.longitude,
+          ]);
+        }
+      });
       totalRows += stations.length;
     }
   } catch (e) {
@@ -163,20 +169,22 @@ export async function collectEnvironment(today: string): Promise<number> {
   try {
     const quakes = await fetchAlbertaEarthquakes(30);
     if (quakes.length > 0) {
-      for (const q of quakes) {
-        if (!q.id) continue;
-        await pool.query(SQL_UPSERT_QUAKE, [
-          q.id,
-          today,
-          q.magnitude,
-          q.location,
-          q.latitude,
-          q.longitude,
-          q.depth,
-          q.time,
-          q.source,
-        ]);
-      }
+      await withTransaction(async (client: pg.PoolClient) => {
+        for (const q of quakes) {
+          if (!q.id) continue;
+          await client.query(SQL_UPSERT_QUAKE, [
+            q.id,
+            today,
+            q.magnitude,
+            q.location,
+            q.latitude,
+            q.longitude,
+            q.depth,
+            q.time,
+            q.source,
+          ]);
+        }
+      });
       totalRows += quakes.length;
     }
   } catch (e) {
@@ -339,13 +347,13 @@ export async function readEarthquakes(
   minMagnitude?: number,
 ): Promise<EarthquakeRow[]> {
   const pool = await getDb();
-  const cutoff = new Date(Date.now() - days * 86400_000)
-    .toISOString()
-    .slice(0, 10);
+  // Window on when the quake actually happened (event_time, ISO 8601 and so
+  // lexically date-sortable), NOT when it was collected (snapshot_date).
+  const cutoff = new Date(Date.now() - days * 86400_000).toISOString();
   const { rows } = await pool.query<EarthquakeRow>(
     `SELECT event_id, snapshot_date, magnitude, location, latitude, longitude, depth_km, event_time, source
        FROM env_earthquake_events
-       WHERE snapshot_date >= $1
+       WHERE event_time >= $1
          AND ($2::double precision IS NULL OR magnitude >= $2)
        ORDER BY event_time DESC`,
     [cutoff, minMagnitude ?? null],

@@ -44,7 +44,7 @@ const SQL = {
     INSERT INTO fiscal_federal_transfers
       (year, province, transfer_type, amount)
     VALUES ($1, $2, $3, $4)
-    ON CONFLICT (year, transfer_type) DO UPDATE SET
+    ON CONFLICT (year, province, transfer_type) DO UPDATE SET
       amount       = EXCLUDED.amount,
       collected_at = NOW()`,
 
@@ -86,6 +86,7 @@ export async function collectFiscal(_today: string): Promise<number> {
     const grants = await fetchAlbertaGrants();
     if (grants.length > 0) {
       const batch = grants.slice(0, 500);
+      let n = 0;
       await withTransaction(async (client: pg.PoolClient) => {
         for (const g of batch) {
           if (!g.fiscalYear) continue;
@@ -97,9 +98,10 @@ export async function collectFiscal(_today: string): Promise<number> {
             g.amount,
             g.description,
           ]);
+          n++;
         }
       });
-      totalRows += batch.length;
+      totalRows += n;
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -111,6 +113,7 @@ export async function collectFiscal(_today: string): Promise<number> {
   try {
     const transfers = await fetchFederalTransfers();
     if (transfers.length > 0) {
+      let n = 0;
       await withTransaction(async (client: pg.PoolClient) => {
         for (const t of transfers) {
           if (!t.year || !t.transferType) continue;
@@ -120,9 +123,10 @@ export async function collectFiscal(_today: string): Promise<number> {
             t.transferType,
             t.amount,
           ]);
+          n++;
         }
       });
-      totalRows += transfers.length;
+      totalRows += n;
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

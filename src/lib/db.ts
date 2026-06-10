@@ -763,7 +763,7 @@ const MIGRATION_SQL = `
       transfer_type TEXT NOT NULL DEFAULT '',
       amount        DOUBLE PRECISION NOT NULL DEFAULT 0,
       collected_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      UNIQUE (year, transfer_type)
+      UNIQUE (year, province, transfer_type)
     );
     CREATE INDEX IF NOT EXISTS idx_fiscal_fed_transfers_year
       ON fiscal_federal_transfers (year DESC, transfer_type);

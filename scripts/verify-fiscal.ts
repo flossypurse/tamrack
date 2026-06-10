@@ -60,19 +60,19 @@ async function seedTransfers(pool: Awaited<ReturnType<typeof getDb>>) {
   await pool.query(
     `INSERT INTO fiscal_federal_transfers (year, province, transfer_type, amount)
      VALUES ($1, $2, $3, $4)
-     ON CONFLICT (year, transfer_type) DO UPDATE SET amount = EXCLUDED.amount`,
+     ON CONFLICT (year, province, transfer_type) DO UPDATE SET amount = EXCLUDED.amount`,
     [2024, "Alberta", "Canada Health Transfer", 8500000000],
   );
   await pool.query(
     `INSERT INTO fiscal_federal_transfers (year, province, transfer_type, amount)
      VALUES ($1, $2, $3, $4)
-     ON CONFLICT (year, transfer_type) DO UPDATE SET amount = EXCLUDED.amount`,
+     ON CONFLICT (year, province, transfer_type) DO UPDATE SET amount = EXCLUDED.amount`,
     [2024, "Alberta", "Canada Social Transfer", 2100000000],
   );
   await pool.query(
     `INSERT INTO fiscal_federal_transfers (year, province, transfer_type, amount)
      VALUES ($1, $2, $3, $4)
-     ON CONFLICT (year, transfer_type) DO UPDATE SET amount = EXCLUDED.amount`,
+     ON CONFLICT (year, province, transfer_type) DO UPDATE SET amount = EXCLUDED.amount`,
     [2023, "Alberta", "Canada Health Transfer", 8000000000],
   );
 }
