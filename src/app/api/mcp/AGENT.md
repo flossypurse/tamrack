@@ -41,7 +41,7 @@ To revoke: `DELETE /api/api-keys` with `{ "keyId": "..." }`.
 
 ## Tools
 
-Thirteen tools live. The catalog tool advertises the live schemas; descriptions below are one-line summaries. All tool names use the `tamrack_*` prefix (renamed from `alberta_*` on 2026-05-14 — this IS a breaking change for any agent that hard-codes the old names; the dual-accept window is on the API key prefix, not on tool names).
+Nineteen tools live. The catalog tool advertises the live schemas; descriptions below are one-line summaries. All tool names use the `tamrack_*` prefix (renamed from `alberta_*` on 2026-05-14 — this IS a breaking change for any agent that hard-codes the old names; the dual-accept window is on the API key prefix, not on tool names).
 
 | Tool | Scope | What it returns |
 |------|-------|-----------------|
@@ -58,8 +58,16 @@ Thirteen tools live. The catalog tool advertises the live schemas; descriptions 
 | `tamrack_opportunities` | `tamrack:economy:read` | Demand-side feed — CanadaBuys federal open tenders (IT/software/AI/data, nationally deliverable), soonest-closing first. Reads the `opportunities` table. |
 | `tamrack_hiring` | `tamrack:economy:read` | Latent-demand hiring signals — Alberta postings for automatable back-office roles (Canada Job Bank), NOC/sector/city breakdowns + month-over-month momentum. Aggregate strain signal, not per-company leads. |
 | `tamrack_leads` | `tamrack:economy:read` | Per-geo demand-heat composite — ranks registry municipalities by hiring momentum + permit expansion + business formation + a provincial procurement backdrop. Compute-on-read; aggregate directional ranking with per-row coverage flags, not guaranteed per-company leads. |
+| `tamrack_immigration` | `tamrack:economy:read` | IRCC permanent-resident landings (Open Government Licence), accumulated daily. `timeseries` (Alberta PR per year) \| `by_category` \| `by_cma` (Edmonton/Calgary). |
+| `tamrack_health` | `tamrack:economy:read` | Alberta health indicators — `life_expectancy`, `births_deaths`, `causes_of_death`. Sources: Alberta Regional Dashboard + Alberta Open Data. |
+| `tamrack_safety` | `tamrack:regional:read` | Public safety — `crime_severity` (CSI per municipality) + `fire_incidents` (Edmonton Fire by type), stored; optional live 511 `alerts`. |
+| `tamrack_politics` | `tamrack:regional:read` | Elected officials + activity — `mlas`, `mps`, `electoral_districts`, recent federal `votes`. Sources: Represent API + OpenParliament. |
+| `tamrack_fiscal` | `tamrack:macro:read` | Government spending — `grants` (Alberta disclosure), `transfers` (federal major transfers to AB), `contracts` (federal proactive disclosure, AB). |
+| `tamrack_environment` | `tamrack:regional:read` | Daily snapshots of real-time feeds — `aqhi`, `water_levels`, `earthquakes` (+ a daily wildfire count summary). |
 
-Seven more tools (`tamrack_safety`, `tamrack_immigration`, `tamrack_politics`, `tamrack_fiscal`, `tamrack_environment`, `tamrack_health`, `tamrack_signals`) are advertised in the catalog with `status: "deferred"`. They land when the corresponding substrate work is done.
+One more tool (`tamrack_signals`) is advertised in the catalog with `status: "deferred"`. It lands when the cross-domain signal-mining substrate work is done.
+
+The six tools above read tables the daily collector populates; on first deploy each returns `served_from: "empty"` until its phase has run once (`served_from: "stored"` thereafter), exactly like `tamrack_hiring`/`tamrack_leads` did.
 
 ## Seeding the entities table
 

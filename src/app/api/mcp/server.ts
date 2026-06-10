@@ -44,13 +44,15 @@ export const MCP_SERVER_INFO = {
  * request, and pairing 1:1 keeps server state isolated too. Tool registration
  * is fast (no I/O) so per-request instantiation is cheap.
  *
- * Tamrack v1 ships 13 tools: tamrack_catalog (discovery) + 8 typed surfaces
+ * Tamrack ships 19 tools: tamrack_catalog (discovery) + 8 typed surfaces
  * + tamrack_entities (chamber-of-commerce operator directory)
  * + tamrack_opportunities (demand-side contract feed)
  * + tamrack_hiring (latent-demand hiring signals)
- * + tamrack_leads (per-geo demand-heat composite ranking). Per-tool
- * scope checks run inside each handler against the AsyncLocalStorage
- * auth context (`lib/auth-context.ts`).
+ * + tamrack_leads (per-geo demand-heat composite ranking)
+ * + 6 breadth verticals (immigration, health, safety, politics, fiscal,
+ *   environment), each reading a daily-collected table. Per-tool scope
+ * checks run inside each handler against the AsyncLocalStorage auth
+ * context (`lib/auth-context.ts`).
  */
 export function createMcpServer(): McpServer {
   const server = new McpServer(MCP_SERVER_INFO, {
