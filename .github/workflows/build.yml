@@ -57,7 +57,7 @@ jobs:
           NEXTAUTH_SECRET: build_placeholder_not_real
           AUTH_SECRET: build_placeholder_not_real
           DATABASE_URL: postgresql://localhost:5432/tamrack_build
-          NEXT_PUBLIC_APP_URL: https://tamrack-webui.fly.dev
+          NEXT_PUBLIC_APP_URL: https://tamrack.ca
           NEXT_PUBLIC_GA_MEASUREMENT_ID: ""
           NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: "false"
           NEXT_PUBLIC_SENTRY_DSN: ""
