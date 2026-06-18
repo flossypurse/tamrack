@@ -43,6 +43,12 @@ export interface FieldMapping {
   salePrice?: string;             // e.g., "TXSLAM"
   acreage?: string;               // e.g., "Area_Acre", "AreaAcre", "Hectares"
 
+  // Count-only zoning-distribution grouping field (for munis with no assessment values).
+  // Overrides `zoning` for the zoningDistribution collector path when set.
+  // Use when the best available grouping field is not a zoning code
+  // (e.g. Lloydminster uses Subdivision; Sturgeon County uses PropertyCode).
+  zoningDistributionField?: string;
+
   // Permit fields
   permitType?: string;
   permitStatus?: string;
@@ -160,7 +166,9 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     },
     capabilities: ["assessments", "permits", "businesses", "dev_permits", "construction"],
     filters: {
-      assessmentWhere: "assessed_value > 0",
+      // assessed_value is stored as TEXT in this Socrata dataset — use IS NOT NULL
+      // instead of a numeric comparison to avoid type-mismatch errors.
+      assessmentWhere: "assessed_value IS NOT NULL AND neighbourhood IS NOT NULL",
     },
     dataSource: "City of Edmonton Open Data (Socrata/SODA)",
     description: "Alberta's capital — 400K+ property assessments, building permits, business licences, development permits, and road construction via open data portal.",
@@ -175,8 +183,10 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     population: 18000,
     status: "live",
     endpoints: {
+      // NOTE: the 2026_Assessments layer contains parcel geometry but NO dollar-value
+      // assessment field (TASS lives in the parcels layer below).  Do NOT register it
+      // as "assessments" or fetchAssessmentsByGroup will hit it and find no TASS.
       parcels: { url: "https://services.arcgis.com/ScgF04sks0ZKbWe3/arcgis/rest/services/Land_Development_Dashboard_Parcels_Public_View/FeatureServer/0", type: "FeatureServer" },
-      assessments: { url: "https://services.arcgis.com/ScgF04sks0ZKbWe3/arcgis/rest/services/2026_Assessments/FeatureServer/0", type: "FeatureServer" },
       businesses: { url: "https://services.arcgis.com/ScgF04sks0ZKbWe3/arcgis/rest/services/ToSP_Businesses/FeatureServer/0", type: "FeatureServer" },
       vacantLots: { url: "https://services.arcgis.com/ScgF04sks0ZKbWe3/arcgis/rest/services/Vacant_Lots/FeatureServer/0", type: "FeatureServer" },
       construction: { url: "https://services.arcgis.com/ScgF04sks0ZKbWe3/arcgis/rest/services/Construction_Projects/FeatureServer/0", type: "FeatureServer" },
@@ -371,21 +381,16 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     population: 28000,
     status: "live",
     endpoints: {
-      assessments: { url: "https://gisweb.fortsask.ca/gisserver/rest/services/Assessment_Inquiry_MIL1/MapServer/0", type: "MapServer" },
+      // The Fort Saskatchewan ArcGIS assessment service requires a token (HTTP 499).
+      // Removing the endpoint prevents the daily collector from hammering a dead URL.
+      // Re-enable once/if a public key becomes available.
     },
-    fields: {
-      assessmentValue: "curr_year",
-      address: "full_address",
-      yearBuilt: "year_built",
-    },
-    capabilities: ["assessments"],
-    filters: {
-      assessmentWhere: "curr_year > 0",
-    },
-    dataSource: "City of Fort Saskatchewan ArcGIS MapServer",
-    description: "Heart of Alberta's Industrial Heartland — 15,400+ parcels with 5-year assessment history (2022-2026). Petrochemical corridor community.",
+    fields: {},
+    capabilities: [],
+    dataSource: "Alberta Regional Dashboard",
+    description: "Heart of Alberta's Industrial Heartland — petrochemical corridor community north of Edmonton. Provincial indicators via Alberta Regional Dashboard.",
     color: "#3b8fdb",
-    notes: ["Assessment data includes 5-year history (2022-2026)"],
+    notes: ["ArcGIS assessment endpoint requires authentication (token-gated, not publicly accessible)", "Fell back to regional dashboard indicators"],
   },
 
   {
@@ -430,6 +435,9 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     fields: {
       address: "FullAddress",
       neighbourhood: "Neighbourhood",
+      // PropertyCode is the closest proxy to zoning available on this layer
+      // (e.g. "R1", "AG", "PU", "EP", "I5"). No dollar-value field present.
+      zoning: "PropertyCode",
     },
     capabilities: ["zoning"],
     dataSource: "Sturgeon County ArcGIS",
@@ -510,8 +518,10 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     },
     fields: {
       address: "ADDRESS",
-      zoning: "LAND_USE_DISTRICT",
-      zoningDescription: "DESCRIPTION",
+      // Real group field is DISTRICTCL (district classification, e.g. "Residential District").
+      // DISTRICTDE is the long description; DISTRICT is short code (e.g. "R-LD").
+      zoning: "DISTRICTCL",
+      zoningDescription: "DISTRICTDE",
     },
     capabilities: ["zoning"],
     dataSource: "City of Airdrie ArcGIS Hub",
@@ -531,7 +541,10 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     },
     fields: {
       address: "ADDRESS",
-      zoning: "LAND_USE",
+      // Real field name on the zoning polygon layer is ZONING_CODE (not LAND_USE).
+      // The layer also exposes ZONING_DESC for human-readable descriptions.
+      zoning: "ZONING_CODE",
+      zoningDescription: "ZONING_DESC",
       neighbourhood: "NEIGHBOURHOOD",
     },
     capabilities: ["zoning"],
@@ -584,7 +597,9 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
       assessmentValue: "AssessValue",
       address: "Short_Legal",
       zoning: "LandUse",
-      neighbourhood: "Census Zone",
+      // ArcGIS field name is "CENSUSZONE" (no space) — the old value "Census Zone"
+      // caused "Unable to complete operation" errors on every neighbourhood query.
+      neighbourhood: "CENSUSZONE",
       yearBuilt: "Year_Built",
       salePrice: "Consideration_amount",
     },
@@ -632,6 +647,11 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
       address: "ADDRESS",
       zoning: "LU_CODE",
       zoningDescription: "LU_DESC",
+      // Banff devPermits: Use_Type (Residential/Commercial/etc.) is the cleanest group field.
+      permitType: "Use_Type",
+      permitDate: "Date_Permit_Issued",
+      permitAddress: "Street_Number",
+      permitStatus: "Application_Status",
     },
     capabilities: ["zoning", "dev_permits"],
     dataSource: "Town of Banff ArcGIS",
@@ -693,12 +713,14 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
       address: "Address",
       subdivision: "Subdivision",
       yearBuilt: "YearBuilt",
+      // No zoning field on this layer — use Subdivision as the distribution grouping.
+      zoningDistributionField: "Subdivision",
     },
     capabilities: ["zoning"],
     dataSource: "City of Lloydminster ArcGIS",
     description: "13,000 parcels on the Alberta/Saskatchewan border. Year built, subdivisions, and lot data.",
     color: "#ca8a04",
-    notes: ["No dollar-value assessments available via public API"],
+    notes: ["No dollar-value assessments available via public API", "Grouped by Subdivision (no zoning field available)"],
   },
 
   {
@@ -709,17 +731,25 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     status: "live",
     endpoints: {
       zoning: { url: "https://geo.sylvanlake.ca/server/rest/services/LandUseService/MapServer/0", type: "MapServer" },
+      // The parcels layer has AssessmentTotal and LUD (land use district) so it
+      // enables assessment-by-zoning grouping.
       parcels: { url: "https://geo.sylvanlake.ca/server/rest/services/ParcelForTownWebMap/FeatureServer/0", type: "FeatureServer" },
-      devPermits: { url: "https://geo.sylvanlake.ca/server/rest/services/DevelopmentMapService/MapServer/0", type: "MapServer" },
+      // DevelopmentMapService/MapServer/0 returns "Service not started" — removed
+      // from active endpoints until the upstream service is restored.
       construction: { url: "https://geo.sylvanlake.ca/server/rest/services/TownProjects/FeatureServer/0", type: "FeatureServer" },
     },
     fields: {
-      zoning: "LAND_USE",
-      address: "ADDRESS",
+      // Parcels layer (ParcelForTownWebMap) exposes AssessmentTotal and LUD.
+      assessmentValue: "AssessmentTotal",
+      zoning: "LUD",
+      address: "FullAddress",
       projectName: "PROJECT_NAME",
       projectPhase: "STATUS",
     },
-    capabilities: ["zoning", "dev_permits", "construction"],
+    capabilities: ["assessments", "zoning", "construction"],
+    filters: {
+      assessmentWhere: "AssessmentTotal > 0",
+    },
     dataSource: "Town of Sylvan Lake ArcGIS",
     description: "Popular lakeside community — comprehensive self-hosted ArcGIS with development, property, and land use data.",
     color: "#0891b2",
@@ -768,12 +798,19 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
       construction: { url: "https://gis.medicinehat.ca/arcgis/rest/services/CityProjects/FeatureServer/0", type: "FeatureServer" },
     },
     fields: {
-      assessmentValue: "ASSESSED_VALUE",
+      // The assessment layer uses GRANDTOTAL (not ASSESSED_VALUE) for parcel value.
+      // It also exposes NEIGHBOURHOOD and ZONINGDESC which enable grouping queries.
+      assessmentValue: "GRANDTOTAL",
       address: "ADDRESS",
+      neighbourhood: "NEIGHBOURHOOD",
+      zoning: "ZONINGDESC",
       projectName: "PROJECT_NAME",
       projectPhase: "STATUS",
     },
-    capabilities: ["assessments", "construction"],
+    capabilities: ["assessments", "construction", "zoning"],
+    filters: {
+      assessmentWhere: "GRANDTOTAL > 0",
+    },
     dataSource: "City of Medicine Hat ArcGIS",
     description: "The Gas City — 18 ArcGIS folders covering assessments, electric, gas, fire, police, transit, parks.",
     color: "#d97706",
@@ -786,14 +823,23 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
     population: 15000,
     status: "live",
     endpoints: {
-      parcels: { url: "https://gis.orrsc.com/server/rest/services/Brooks/Brooks_Property/MapServer/0", type: "MapServer" },
-      zoning: { url: "https://gis.orrsc.com/server/rest/services/Brooks/Brooks_Cadastral/MapServer/0", type: "MapServer" },
+      // Layer 0 in Brooks_Property is a text/annotation layer; layer 22 is the
+      // actual parcels feature layer with assessment values and zoning data.
+      // Brooks_Cadastral/0 is a group layer (not queryable); parcel data with
+      // Land_Use_District lives in Brooks_Property/22.
+      parcels: { url: "https://gis.orrsc.com/server/rest/services/Brooks/Brooks_Property/MapServer/22", type: "MapServer" },
     },
     fields: {
-      address: "ADDRESS",
-      zoning: "ZONE",
+      address: "Civic_Address",
+      // Land_Use_District is the zoning/use classification field.
+      zoning: "Land_Use_District",
+      // GrandTotal is the assessed value (land + improvements).
+      assessmentValue: "GrandTotal",
     },
-    capabilities: ["zoning"],
+    capabilities: ["assessments", "zoning"],
+    filters: {
+      assessmentWhere: "GrandTotal > 0",
+    },
     dataSource: "Brooks via ORRSC ArcGIS",
     description: "Southeast Alberta — property and infrastructure data hosted by Oldman River Regional Services Commission.",
     color: "#a16207",
@@ -815,9 +861,13 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
       construction: { url: "https://services.gpgis.com/server/rest/services/Capital_Projects_Communications/Capital_Projects_Areas/FeatureServer/0", type: "FeatureServer" },
     },
     fields: {
-      assessmentValue: "ASSESSED_VALUE",
+      // Assessment layer field is TOTAL_ASST_VALUE, not ASSESSED_VALUE.
+      // The assessment layer does not contain NEIGHBOURHOOD or zoning — those live
+      // in the separate parcels layer (LAND_USE).  Assessment grouping will fall
+      // back to no groupBy because neither field exists on the assessment layer;
+      // this is a known limitation until GP publishes a joined parcel+assessment layer.
+      assessmentValue: "TOTAL_ASST_VALUE",
       address: "ADDRESS",
-      neighbourhood: "NEIGHBOURHOOD",
       projectName: "PROJECT_NAME",
       projectPhase: "STATUS",
       projectLocation: "LOCATION",
@@ -832,6 +882,9 @@ export const MUNICIPALITY_REGISTRY: MunicipalityConfig[] = [
       businessAddress: "physical_location",
     },
     capabilities: ["assessments", "permits", "businesses", "construction"],
+    filters: {
+      assessmentWhere: "TOTAL_ASST_VALUE > 0",
+    },
     dataSource: "City of Grande Prairie ArcGIS",
     description: "Peace Country's economic hub — 24,400+ permits, 3,100+ business licences with NAICS codes and employee counts, assessments, and capital projects across 46 GIS data folders.",
     color: "#15803d",

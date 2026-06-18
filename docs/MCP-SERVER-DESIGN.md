@@ -151,7 +151,7 @@ Each tool maps to a domain group that's already coherent in the codebase. Parame
 | `alberta_macro` | BoC policy rate, CAD/USD, mortgage 5y, unemployment, CPI, GDP, housing starts, AAX | `data-sources.ts` BoC + StatsCan |
 | `alberta_housing` | CMHC starts, completions, under-construction, vacancy, rents, absorptions, mortgage rate | `data-sources-cmhc.ts` |
 | `alberta_business` | Business licences (Edm/Cal), StatsCan business counts, GHG facilities, top emitters, WCB, non-profits, ISED corp count | `data-sources-business.ts`, `data-sources-retail.ts` |
-| `alberta_energy` | CER pipeline throughput/incidents/apportionment, AESO pool price / supply-demand / forecast, oil production | `data-sources-aeso.ts`, `data-sources-cer.ts` |
+| `alberta_energy` | CER pipeline throughput/incidents/apportionment, oil production | `data-sources-cer.ts` |
 | `alberta_search` | Alberta CKAN dataset search — long-tail escape hatch when none of the above fit | `searchAlbertaDatasets()` |
 
 Each typed tool takes:
@@ -161,7 +161,7 @@ Each typed tool takes:
 - optional `time_range` (`{ from, to }` or named: `last_30d`, `last_year`, `ytd`),
 - optional `limit` for paginated/large responses.
 
-Tool descriptions emphasise the upstream provenance ("CMHC", "BoC", "AESO") so agents can cite sources. Response shapes are typed via zod and returned as JSON content blocks.
+Tool descriptions emphasise the upstream provenance ("CMHC", "BoC", "CER") so agents can cite sources. Response shapes are typed via zod and returned as JSON content blocks.
 
 ### Deferred to v2
 
@@ -211,7 +211,7 @@ Streamable HTTP transport, hosted at `https://albertapulsecheck.ca/api/mcp`. Bea
 - Token theft → arbitrary read access to AP data. Mitigation: per-agent tokens + revocation flow + usage anomaly review.
 - DNS rebinding → spec-mandated `Origin` validation. Don't skip.
 - DoS / abuse → existing rate limit (1000/window/key). Tune up or down per token as needed.
-- Cost amplification → an agent in a loop hammers upstream APIs (StatsCan, CMHC, AESO, etc.). Mitigation: in-memory LRU per tool keyed by parameter signature, 60s TTL; also AP's existing Postgres fallback absorbs most upstream pressure.
+- Cost amplification → an agent in a loop hammers upstream APIs (StatsCan, CMHC, CER, etc.). Mitigation: in-memory LRU per tool keyed by parameter signature, 60s TTL; also AP's existing Postgres fallback absorbs most upstream pressure.
 
 **Streamable HTTP in a Next.js Route Handler is doable but not idiomatic.** The MCP TypeScript SDK ships `StreamableHTTPServerTransport` which expects Node-style req/res. Next Route Handlers expose Web Fetch `Request`/`Response`. Two paths during build:
 

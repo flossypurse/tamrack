@@ -122,6 +122,12 @@ function projectToolEnvelope(
       return projectEnergy(args, payload);
     case "tamrack_business":
       return projectBusiness(args, payload);
+    case "tamrack_opportunities":
+    case "tamrack_hiring":
+      // List/table tools: no time-series projection. Return empty points so
+      // the normalizer doesn't flag them as "no projection rule" — the
+      // composer and renderer consume data.payload directly via TableCard.
+      return { points: [], from: `payload (list shape — no time series)` };
     default:
       return null;
   }
@@ -132,8 +138,7 @@ function projectToolEnvelope(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Housing payload shapes (per
- * `src/app/api/mcp/tools/housing.ts:196-227`):
+ * Housing payload shapes mirror the tamrack_housing MCP handler:
  *   - starts | completions | under_construction | vacancy
  *       → { rows: [{date, edmonton, calgary}] }   (wide; pick a CMA column)
  *   - rents
@@ -248,7 +253,7 @@ function resolveCmaArg(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Energy payload shapes (per `src/app/api/mcp/tools/energy.ts:321-378`).
+ * Energy payload shapes mirror the tamrack_energy MCP handler.
  * Most carry `rows[]` with either a `value`, a `price`, a `throughput`,
  * or a `volume` field. We pick the most natural single-series projection
  * per dataset and let the composer caption it.

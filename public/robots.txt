@@ -1,4 +1,4 @@
-# Tamrack — albertapulsecheck.ca (domain flips to tamrack.ca at cutover; update Sitemap URL below then)
+# Tamrack — tamrack.ca
 User-agent: *
 Allow: /
 Disallow: /api/
@@ -7,4 +7,4 @@ Disallow: /account
 Disallow: /billing
 Disallow: /login
 
-Sitemap: https://albertapulsecheck.ca/sitemap.xml
+Sitemap: https://tamrack.ca/sitemap.xml

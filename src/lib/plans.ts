@@ -32,18 +32,18 @@ export const realEstateFeatures = [
 export const learnFeatures = [
   "8-module Alberta economics course",
   "Interactive quizzes with live data",
-  "Embedded Pulse Charts in every lesson",
+  "Embedded charts in every lesson",
   "Certificate of completion",
   "Shareable on LinkedIn",
   "No account required to start",
 ];
 
 // Condensed free-tier list used on /billing — top highlights from the
-// $0 products (Pulse Charts + Pulse Learn), not a full dupe of the
+// $0 surfaces (chart catalogue + Tamrack Learn), not a full dupe of the
 // /pricing comparison. See /pricing for the full breakdown.
 export const freeTierHighlights = [
   "Browse 110+ live data charts",
   "Embed & share any chart",
   "Public municipality pages (32 Alberta munis)",
-  "Pulse Learn — 8-module Alberta economics course",
+  "Tamrack Learn — 8-module Alberta economics course",
 ];

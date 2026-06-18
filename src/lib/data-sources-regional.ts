@@ -98,10 +98,7 @@ export const REGIONAL_INDICATORS: Record<string, string> = {
   "Cattle and Calves": "Cattle%20and%20Calves",
   "Permanent Resident Landings": "Permanent%20Resident%20Landings",
   "Air Quality Index": "Air%20Quality%20Index",
-  "Employment By Industry": "Employment%20By%20Industry",
   "Employment Insurance Beneficiaries": "Employment%20Insurance%20Beneficiaries",
-  "Population by Language": "Population%20by%20Language",
-  "Total Income": "Total%20Income",
   "Temporary Resident Entries": "Temporary%20Resident%20Entries",
   "Daily Vehicles per KM": "Daily%20Vehicles%20per%20KM",
   "Temporary Resident Stock": "Temporary%20Resident%20Stock",
@@ -117,6 +114,10 @@ function buildUrl(indicatorEncoded: string): string {
   return `${BASE_URL}/${indicatorEncoded}/jsons`;
 }
 
+export function regionalIndicatorUrl(indicator: string): string {
+  return buildUrl(resolveIndicator(canonicalIndicatorName(indicator)));
+}
+
 function resolveIndicator(indicator: string): string {
   // Accept either human-readable name or pre-encoded value
   if (REGIONAL_INDICATORS[indicator]) {
@@ -127,6 +128,28 @@ function resolveIndicator(indicator: string): string {
   if (entry) return entry;
   // Fallback: URL-encode whatever was given
   return encodeURIComponent(indicator);
+}
+
+// Normalize an indicator argument to the canonical human-readable key. Callers
+// across the app pass either the human form ("Total Equalized Assessment")
+// or the encoded form (REGIONAL_INDICATORS["Total Equalized Assessment"] →
+// "Total%20Equalized%20Assessment"). The worker also writes regional_indicators
+// rows directly from collector.ts where the upstream API's
+// IndicatorSummaryDescription is sometimes a generic category
+// ("Property Assessments") rather than the per-key name we requested. Both
+// writers need to land on the same canonical label or the DB ends up with
+// multiple labels for the same underlying series. Exported so collector.ts
+// can apply the same normalization to its aggregation key + insert.
+export function canonicalIndicatorName(input: string): string {
+  if (REGIONAL_INDICATORS[input]) return input;
+  for (const [key, encoded] of Object.entries(REGIONAL_INDICATORS)) {
+    if (encoded === input) return key;
+  }
+  try {
+    return decodeURIComponent(input);
+  } catch {
+    return input;
+  }
 }
 
 function parseRecord(raw: RawRegionalRecord): RegionalDataPoint {
@@ -184,7 +207,8 @@ async function runWithConcurrency<T>(
 export async function fetchRegionalIndicator(
   indicator: string,
 ): Promise<RegionalDataPoint[]> {
-  const encoded = resolveIndicator(indicator);
+  const canonical = canonicalIndicatorName(indicator);
+  const encoded = resolveIndicator(canonical);
   const url = buildUrl(encoded);
 
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -194,7 +218,7 @@ export async function fetchRegionalIndicator(
       }
       const res = await fetch(url, { next: { revalidate: 86400 } });
       if (!res.ok) {
-        console.warn(`[regional] ${indicator}: HTTP ${res.status} (attempt ${attempt + 1})`);
+        console.warn(`[regional] ${canonical}: HTTP ${res.status} (attempt ${attempt + 1})`);
         continue;
       }
 
@@ -203,12 +227,12 @@ export async function fetchRegionalIndicator(
       const body = await res.text();
 
       if (!body || body.length === 0) {
-        console.warn(`[regional] ${indicator}: empty response (attempt ${attempt + 1})`);
+        console.warn(`[regional] ${canonical}: empty response (attempt ${attempt + 1})`);
         continue;
       }
 
       if (!contentType.includes("json") && !body.startsWith("[")) {
-        console.warn(`[regional] ${indicator}: non-JSON response (${contentType}) (attempt ${attempt + 1})`);
+        console.warn(`[regional] ${canonical}: non-JSON response (${contentType}) (attempt ${attempt + 1})`);
         continue;
       }
 
@@ -219,16 +243,16 @@ export async function fetchRegionalIndicator(
       }
 
       // Persist to DB in the background so future fallbacks have data
-      persistToDb(indicator, parsed).catch(() => {});
+      persistToDb(canonical, parsed).catch(() => {});
 
       return parsed;
     } catch (err) {
-      console.warn(`[regional] ${indicator}: fetch error (attempt ${attempt + 1}):`, err);
+      console.warn(`[regional] ${canonical}: fetch error (attempt ${attempt + 1}):`, err);
     }
   }
 
-  console.error(`[regional] ${indicator}: all attempts failed — trying DB fallback`);
-  return dbFallback(indicator);
+  console.error(`[regional] ${canonical}: all attempts failed — trying DB fallback`);
+  return dbFallback(canonical);
 }
 
 /** Persist fetched data to PostgreSQL so future fallbacks have data */

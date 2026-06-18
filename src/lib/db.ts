@@ -9,11 +9,53 @@ let _migrated = false;
 
 function getPool(): pg.Pool {
   if (!_pool) {
+    const dbUrl = process.env.DATABASE_URL ?? "";
+    // Disable cert verification for private/internal Postgres hosts (Railway
+    // 6PN and Crunchy Bridge). Both use self-signed / private CA certificates
+    // that Node's default TLS store won't trust.
+    //
+    // Use URL + searchParams.delete to strip driver-specific params cleanly.
+    // The old regex approach left a leading & when sslmode was the first query
+    // param (e.g. ?sslmode=require&statement_cache_mode=disable → &statement_cache_mode=disable).
+    if (!dbUrl.trim()) {
+      _pool = new pg.Pool({ ssl: undefined });
+      return _pool;
+    }
+    let hasSslMode = false;
+    let cleanUrl = dbUrl;
+    try {
+      const u = new URL(dbUrl);
+      const sslmode = u.searchParams.get("sslmode") ?? "";
+      hasSslMode = ["require", "verify-full", "verify-ca", "prefer"].includes(sslmode);
+      // Strip params that pg-connection-string would misinterpret or that are
+      // intended for other Postgres clients (asyncpg, libpq, node-postgres
+      // statement_cache_mode is not a libpq param and causes warnings).
+      for (const p of ["sslmode", "uselibpqcompat", "statement_cache_mode"]) {
+        u.searchParams.delete(p);
+      }
+      cleanUrl = u.toString();
+    } catch (parseErr) {
+      // Malformed URL — cannot safely strip statement_cache_mode/uselibpqcompat.
+      // Proceeding with the raw URL would leave those params in the connection
+      // string and re-introduce the pg-connection-string bug this refactor fixed.
+      // Crunchy passwords with special chars (# ? & etc.) must be %-encoded.
+      console.error("[db] DATABASE_URL parse failed; statement_cache_mode/uselibpqcompat NOT stripped — fix URL encoding");
+      throw parseErr;
+    }
+    // Pool sizing tuned for Crunchy Bridge hobby-0 (max ~20 connections).
+    // Each Fly machine creates its own pool; with 2 webui machines + 1 worker
+    // machine that's 3 × max = aggregate cap. Set max=5 so the aggregate stays
+    // under 20 with headroom for psql admin sessions.
+    //
+    // rejectUnauthorized:false is a migration-era shortcut for Crunchy's
+    // self-signed CA chain. Tighten to verify-full + bundled CA in a follow-up
+    // (requires shipping the Crunchy root CA cert with the build).
     _pool = new pg.Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_URL?.includes("railway.internal")
-        ? { rejectUnauthorized: false }
-        : undefined,
+      connectionString: hasSslMode ? cleanUrl : dbUrl,
+      ssl: hasSslMode ? { rejectUnauthorized: false } : undefined,
+      max: 5,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 5_000,
     });
   }
   return _pool;
@@ -101,19 +143,6 @@ const MIGRATION_SQL = `
     );
     CREATE INDEX IF NOT EXISTS idx_invites_created_by ON invites(created_by, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_invites_pending ON invites(expires_at) WHERE redeemed_at IS NULL;
-
-    -- Backfill: every existing user (anyone with an api_key, an active
-    -- subscription, or otherwise pre-Tamrack) gets the founder plan so
-    -- the rebrand doesn't blow up paying customers' quotas. New rows
-    -- default to free via the column default above.
-    UPDATE users
-       SET plan = 'founder'
-     WHERE plan = 'free'
-       AND id IN (
-         SELECT DISTINCT user_id FROM api_keys
-         UNION
-         SELECT DISTINCT user_id FROM subscriptions WHERE status IN ('active','trialing','past_due')
-       );
 
     CREATE TABLE IF NOT EXISTS accounts (
       id TEXT PRIMARY KEY,
@@ -209,6 +238,20 @@ const MIGRATION_SQL = `
     -- Realtor: operating area (JSON array of municipality slugs)
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS operating_area TEXT;
 
+    -- Backfill: every existing user (anyone with an api_key, an active
+    -- subscription, or otherwise pre-Tamrack) gets the founder plan so
+    -- the rebrand doesn't blow up paying customers' quotas. New rows
+    -- default to free via the column default above.
+    -- NOTE: must run AFTER both api_keys and subscriptions are created.
+    UPDATE users
+       SET plan = 'founder'
+     WHERE plan = 'free'
+       AND id IN (
+         SELECT DISTINCT user_id FROM api_keys
+         UNION
+         SELECT DISTINCT user_id FROM subscriptions WHERE status IN ('active','trialing','past_due')
+       );
+
     CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id);
     CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe ON subscriptions(stripe_customer_id);
     CREATE INDEX IF NOT EXISTS idx_subscriptions_plan ON subscriptions(plan);
@@ -290,6 +333,24 @@ const MIGRATION_SQL = `
       UNIQUE(snapshot_date, municipality, group_name)
     );
 
+    -- ============================================================
+    -- Zoning distribution (count-only) for munis without assessment $
+    -- Captures parcel/polygon counts by zoning category per day.
+    -- Covers: Cochrane, Airdrie, Spruce Grove, Sturgeon County,
+    --         Leduc County, Lloydminster (and any future no-$ munis).
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS municipality_zoning_distribution (
+      id SERIAL PRIMARY KEY,
+      municipality TEXT NOT NULL,
+      zoning_category TEXT NOT NULL,
+      parcel_count INTEGER NOT NULL DEFAULT 0,
+      snapshot_date TEXT NOT NULL,
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(municipality, zoning_category, snapshot_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_muni_zoning_dist_muni_date
+      ON municipality_zoning_distribution(municipality, snapshot_date);
+
     CREATE TABLE IF NOT EXISTS well_licences (
       id SERIAL PRIMARY KEY,
       filing_date TEXT NOT NULL,
@@ -302,8 +363,43 @@ const MIGRATION_SQL = `
       substance TEXT DEFAULT '',
       licensee TEXT DEFAULT '',
       collected_at TIMESTAMPTZ DEFAULT NOW(),
-      UNIQUE(licence_number)
+      -- History-accumulating key: one row per (licence, filing day). The ALTER
+      -- block below migrates pre-existing tables off the old single-column key.
+      UNIQUE(licence_number, filing_date)
     );
+
+    -- 2026-06-04: Re-key well_licences to accumulate history.
+    --
+    -- BEFORE: UNIQUE(licence_number) — each licence_number had exactly one row,
+    --   so re-collecting a licence (e.g. it appears again in a later day's AER
+    --   file) overwrote its filing_date, destroying the time series.
+    --
+    -- AFTER:  UNIQUE(licence_number, filing_date) — one row per (licence, day).
+    --   A licence appearing on multiple filing dates accumulates a row per date.
+    --   The natural key for a well licence is (licence_number, filing_date):
+    --   licence_number is the AER identifier (immutable per licence); filing_date
+    --   is the date AER published it.
+    --
+    -- Migration is safe on the existing ~140-row table because all three
+    -- filing_dates present (2026-03-14, 2026-06-03, 2026-06-04) are already
+    -- distinct across licence_numbers — there are no (licence_number, filing_date)
+    -- duplicates. If somehow there were, the DROP+ADD sequence leaves the table
+    -- with no unique constraint momentarily; any conflict on ADD would need manual
+    -- dedup first. The constraint names use IF EXISTS / IF NOT EXISTS guards so
+    -- this block is idempotent across multiple boot runs.
+    ALTER TABLE well_licences
+      DROP CONSTRAINT IF EXISTS well_licences_licence_number_key;
+    DO $wl_uniq$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid = 'well_licences'::regclass
+          AND conname   = 'well_licences_licence_number_filing_date_key'
+      ) THEN
+        ALTER TABLE well_licences
+          ADD CONSTRAINT well_licences_licence_number_filing_date_key
+          UNIQUE (licence_number, filing_date);
+      END IF;
+    END $wl_uniq$;
 
     CREATE TABLE IF NOT EXISTS well_licence_daily (
       id SERIAL PRIMARY KEY,
@@ -313,6 +409,12 @@ const MIGRATION_SQL = `
       by_classification TEXT DEFAULT '{}',
       UNIQUE(filing_date)
     );
+
+    -- 2026-06-04: Add by_licensee breakdown to well_licence_daily.
+    --   Tracks how many new licences each licensee/operator received per day.
+    --   Used by the well-licences-new-by-operator substrate series.
+    ALTER TABLE well_licence_daily
+      ADD COLUMN IF NOT EXISTS by_licensee TEXT DEFAULT '{}';
 
     CREATE TABLE IF NOT EXISTS immigration_records (
       id SERIAL PRIMARY KEY,
@@ -338,6 +440,109 @@ const MIGRATION_SQL = `
       location TEXT DEFAULT '',
       municipality TEXT DEFAULT '',
       UNIQUE(snapshot_date, source, name)
+    );
+
+    -- ============================================================
+    -- CMHC Housing Snapshots (2026-06-04)
+    -- Monthly housing starts/completions/under-construction for
+    -- Edmonton and Calgary CMAs, plus vacancy rates and average rents.
+    -- Source: Statistics Canada via CMHC (no API key needed).
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS cmhc_housing_snapshots (
+      id            SERIAL PRIMARY KEY,
+      period        TEXT NOT NULL,
+      cma           TEXT NOT NULL,
+      metric        TEXT NOT NULL,
+      value         DOUBLE PRECISION NOT NULL,
+      unit          TEXT NOT NULL DEFAULT '',
+      collected_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (period, cma, metric)
+    );
+    CREATE INDEX IF NOT EXISTS idx_cmhc_cma_metric ON cmhc_housing_snapshots(cma, metric, period);
+    CREATE INDEX IF NOT EXISTS idx_cmhc_period ON cmhc_housing_snapshots(period DESC);
+
+    -- ============================================================
+    -- Opportunities (demand-side feed, 2026-06-07)
+    -- Federal procurement tenders (CanadaBuys open data). Unlike the macro
+    -- series, each row is a concrete opportunity with a buyer and a deadline.
+    -- High-cardinality, frequently-amended entities — NOT time-series
+    -- observations, so they get their own table rather than substrate.observations.
+    -- Natural key: (reference_number, publication_date) — a notice keeps its
+    -- reference_number across amendments; amendments re-publish, so the pair
+    -- lets re-runs UPDATE the mutable fields (closing_date, status) in place.
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS opportunities (
+      id                     SERIAL PRIMARY KEY,
+      reference_number       TEXT NOT NULL,
+      solicitation_number    TEXT DEFAULT '',
+      title                  TEXT NOT NULL,
+      buyer                  TEXT DEFAULT '',
+      category               TEXT DEFAULT '',
+      procurement_method     TEXT DEFAULT '',
+      gsin                   TEXT DEFAULT '',
+      gsin_description       TEXT DEFAULT '',
+      unspsc                 TEXT DEFAULT '',
+      unspsc_description     TEXT DEFAULT '',
+      regions_of_opportunity TEXT DEFAULT '',
+      regions_of_delivery    TEXT DEFAULT '',
+      publication_date       TEXT NOT NULL,
+      closing_date           TEXT DEFAULT '',
+      expected_start_date    TEXT DEFAULT '',
+      expected_end_date      TEXT DEFAULT '',
+      status                 TEXT DEFAULT '',
+      notice_url             TEXT DEFAULT '',
+      matched_terms          TEXT DEFAULT '[]',
+      source                 TEXT NOT NULL DEFAULT 'canadabuys',
+      collected_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (reference_number, publication_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_opportunities_closing ON opportunities(closing_date, collected_at DESC);
+    -- Job Bank hiring signals (latent-demand feed, 2026-06-07)
+    -- Canada Job Bank monthly open data (ESDC, Open Government Licence).
+    -- Tier-B rows = postings for manual-process roles (dispatchers, admin,
+    -- bookkeepers, inventory/logistics) that signal automatable operations
+    -- work = latent demand for back-office software. NO employer name is in
+    -- the source (ESDC strips it for privacy), so this is an aggregate
+    -- sector/geo hiring-strain signal, not a per-company lead.
+    --
+    -- Two tables: per-posting rows (jobbank_postings) keyed (wic_id, data_month)
+    -- so each monthly snapshot accumulates a distinct row; and a small monthly
+    -- aggregate (jobbank_monthly) that carries the total-Alberta denominator so
+    -- the read layer can report the Tier-B ratio + month-over-month momentum
+    -- without re-fetching the large CSV.
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS jobbank_postings (
+      id                SERIAL PRIMARY KEY,
+      wic_id            TEXT NOT NULL,
+      data_month        TEXT NOT NULL,
+      job_title         TEXT DEFAULT '',
+      noc21_code        TEXT DEFAULT '',
+      noc21_name        TEXT DEFAULT '',
+      matched_noc_code  TEXT DEFAULT '',
+      matched_noc_name  TEXT DEFAULT '',
+      city              TEXT DEFAULT '',
+      province          TEXT DEFAULT '',
+      economic_region   TEXT DEFAULT '',
+      naics_sector      TEXT DEFAULT '',
+      first_posting_date TEXT DEFAULT '',
+      vacancy_count     INTEGER DEFAULT 1,
+      employment_type   TEXT DEFAULT '',
+      employment_term   TEXT DEFAULT '',
+      salary_min        DOUBLE PRECISION DEFAULT 0,
+      salary_max        DOUBLE PRECISION DEFAULT 0,
+      salary_per        TEXT DEFAULT '',
+      source            TEXT NOT NULL DEFAULT 'jobbank',
+      collected_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (wic_id, data_month)
+    );
+    CREATE INDEX IF NOT EXISTS idx_jobbank_month_noc ON jobbank_postings(data_month, matched_noc_code);
+    CREATE INDEX IF NOT EXISTS idx_jobbank_city ON jobbank_postings(data_month, city);
+
+    CREATE TABLE IF NOT EXISTS jobbank_monthly (
+      data_month             TEXT PRIMARY KEY,
+      total_alberta_postings INTEGER DEFAULT 0,
+      tier_b_postings        INTEGER DEFAULT 0,
+      collected_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
     -- ============================================================
@@ -385,6 +590,274 @@ const MIGRATION_SQL = `
     CREATE INDEX IF NOT EXISTS idx_well_licensee ON well_licences(licensee);
     CREATE INDEX IF NOT EXISTS idx_immigration ON immigration_records(year, province);
     CREATE INDEX IF NOT EXISTS idx_projects ON major_projects(snapshot_date, source);
+
+    -- ============================================================
+    -- Health data (Alberta Open Data + Alberta Regional Dashboard)
+    -- Three shapes: life expectancy (municipality × period × gender),
+    -- births/deaths (municipality × period × type), and leading
+    -- causes of death (province-wide, year × cause × ranking).
+    -- ============================================================
+
+    CREATE TABLE IF NOT EXISTS health_life_expectancy (
+      id           SERIAL PRIMARY KEY,
+      municipality TEXT NOT NULL,
+      period       TEXT NOT NULL,
+      gender       TEXT NOT NULL DEFAULT 'Both Sexes',
+      value        DOUBLE PRECISION NOT NULL,
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (municipality, period, gender)
+    );
+    CREATE INDEX IF NOT EXISTS idx_health_le_muni_period
+      ON health_life_expectancy (municipality, period);
+
+    CREATE TABLE IF NOT EXISTS health_births_deaths (
+      id           SERIAL PRIMARY KEY,
+      municipality TEXT NOT NULL,
+      period       TEXT NOT NULL,
+      type         TEXT NOT NULL,
+      value        DOUBLE PRECISION NOT NULL,
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (municipality, period, type)
+    );
+    CREATE INDEX IF NOT EXISTS idx_health_bd_muni_period
+      ON health_births_deaths (municipality, period);
+
+    CREATE TABLE IF NOT EXISTS health_causes_of_death (
+      id           SERIAL PRIMARY KEY,
+      year         INTEGER NOT NULL,
+      cause        TEXT NOT NULL,
+      total_deaths INTEGER NOT NULL DEFAULT 0,
+      ranking      INTEGER NOT NULL DEFAULT 0,
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (year, cause)
+    );
+    CREATE INDEX IF NOT EXISTS idx_health_cod_year
+      ON health_causes_of_death (year, ranking);
+
+    -- ============================================================
+    -- Public Safety: Crime Severity Index (per municipality/period) and
+    -- Edmonton Fire Rescue incident summaries (per snapshot/event type).
+    -- 511 road/emergency alerts are intentionally NOT stored (ephemeral,
+    -- ~5-min churn, TTL-bound) — the MCP tool fetches them live on demand.
+    -- ============================================================
+
+    CREATE TABLE IF NOT EXISTS safety_crime_severity (
+      id           SERIAL PRIMARY KEY,
+      municipality TEXT NOT NULL,
+      period       TEXT NOT NULL,
+      csi          DOUBLE PRECISION NOT NULL,
+      unit         TEXT NOT NULL DEFAULT 'Index',
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (municipality, period)
+    );
+    CREATE INDEX IF NOT EXISTS idx_safety_crime_muni
+      ON safety_crime_severity (municipality, period);
+    CREATE INDEX IF NOT EXISTS idx_safety_crime_period
+      ON safety_crime_severity (period);
+
+    CREATE TABLE IF NOT EXISTS safety_fire_by_type (
+      id           SERIAL PRIMARY KEY,
+      snapshot_date TEXT NOT NULL,
+      event_type   TEXT NOT NULL,
+      incident_count INTEGER NOT NULL DEFAULT 0,
+      avg_duration_mins DOUBLE PRECISION NOT NULL DEFAULT 0,
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (snapshot_date, event_type)
+    );
+    CREATE INDEX IF NOT EXISTS idx_safety_fire_date
+      ON safety_fire_by_type (snapshot_date, event_type);
+
+    -- ============================================================
+    -- Politics: elected officials, districts, and recent federal votes.
+    -- Sources: Represent API (open.north.ca), OpenParliament API.
+    -- Slow-moving reference tables + recent activity; served from store.
+    -- ============================================================
+
+    CREATE TABLE IF NOT EXISTS politics_mlas (
+      id             SERIAL PRIMARY KEY,
+      name           TEXT NOT NULL,
+      party          TEXT NOT NULL DEFAULT '',
+      district       TEXT NOT NULL DEFAULT '',
+      email          TEXT NOT NULL DEFAULT '',
+      url            TEXT NOT NULL DEFAULT '',
+      photo_url      TEXT NOT NULL DEFAULT '',
+      office         TEXT NOT NULL DEFAULT 'MLA',
+      collected_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (name, district)
+    );
+    ALTER TABLE politics_mlas ADD COLUMN IF NOT EXISTS photo_url TEXT NOT NULL DEFAULT '';
+    ALTER TABLE politics_mlas ADD COLUMN IF NOT EXISTS office TEXT NOT NULL DEFAULT 'MLA';
+    CREATE INDEX IF NOT EXISTS idx_politics_mlas_party ON politics_mlas(party);
+    CREATE INDEX IF NOT EXISTS idx_politics_mlas_district ON politics_mlas(district);
+
+    CREATE TABLE IF NOT EXISTS politics_mps (
+      id             SERIAL PRIMARY KEY,
+      name           TEXT NOT NULL,
+      party          TEXT NOT NULL DEFAULT '',
+      riding         TEXT NOT NULL DEFAULT '',
+      province       TEXT NOT NULL DEFAULT 'Alberta',
+      email          TEXT NOT NULL DEFAULT '',
+      url            TEXT NOT NULL DEFAULT '',
+      photo_url      TEXT NOT NULL DEFAULT '',
+      collected_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (name, riding)
+    );
+    ALTER TABLE politics_mps ADD COLUMN IF NOT EXISTS photo_url TEXT NOT NULL DEFAULT '';
+    CREATE INDEX IF NOT EXISTS idx_politics_mps_party ON politics_mps(party);
+    CREATE INDEX IF NOT EXISTS idx_politics_mps_riding ON politics_mps(riding);
+
+    CREATE TABLE IF NOT EXISTS politics_electoral_districts (
+      id             SERIAL PRIMARY KEY,
+      name           TEXT NOT NULL,
+      external_id    TEXT NOT NULL,
+      boundary_url   TEXT NOT NULL DEFAULT '',
+      collected_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (external_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_politics_districts_name ON politics_electoral_districts(LOWER(name));
+
+    CREATE TABLE IF NOT EXISTS politics_votes (
+      id             SERIAL PRIMARY KEY,
+      vote_url       TEXT NOT NULL DEFAULT '',
+      session        TEXT NOT NULL,
+      number         INTEGER NOT NULL,
+      vote_date      TEXT NOT NULL DEFAULT '',
+      yea            INTEGER NOT NULL DEFAULT 0,
+      nay            INTEGER NOT NULL DEFAULT 0,
+      paired         INTEGER NOT NULL DEFAULT 0,
+      result         TEXT NOT NULL DEFAULT '',
+      bill_url       TEXT NOT NULL DEFAULT '',
+      description    TEXT NOT NULL DEFAULT '',
+      collected_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (session, number)
+    );
+    CREATE INDEX IF NOT EXISTS idx_politics_votes_date ON politics_votes(vote_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_politics_votes_session ON politics_votes(session, number DESC);
+
+    -- ============================================================
+    -- Fiscal: provincial grant disclosure, federal transfers to Alberta,
+    -- and federal proactive-disclosure contracts. Large CSV/CKAN feeds
+    -- cached daily rather than fetched live.
+    -- ============================================================
+
+    CREATE TABLE IF NOT EXISTS fiscal_ab_grants (
+      id           SERIAL PRIMARY KEY,
+      fiscal_year  TEXT NOT NULL,
+      ministry     TEXT NOT NULL DEFAULT '',
+      recipient    TEXT NOT NULL DEFAULT '',
+      program      TEXT NOT NULL DEFAULT '',
+      amount       DOUBLE PRECISION NOT NULL DEFAULT 0,
+      description  TEXT NOT NULL DEFAULT '',
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (fiscal_year, ministry, recipient, program)
+    );
+    CREATE INDEX IF NOT EXISTS idx_fiscal_ab_grants_fy
+      ON fiscal_ab_grants (fiscal_year, ministry);
+    CREATE INDEX IF NOT EXISTS idx_fiscal_ab_grants_recipient
+      ON fiscal_ab_grants (recipient, fiscal_year);
+
+    CREATE TABLE IF NOT EXISTS fiscal_federal_transfers (
+      id            SERIAL PRIMARY KEY,
+      year          INTEGER NOT NULL,
+      province      TEXT NOT NULL DEFAULT 'Alberta',
+      transfer_type TEXT NOT NULL DEFAULT '',
+      amount        DOUBLE PRECISION NOT NULL DEFAULT 0,
+      collected_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (year, province, transfer_type)
+    );
+    CREATE INDEX IF NOT EXISTS idx_fiscal_fed_transfers_year
+      ON fiscal_federal_transfers (year DESC, transfer_type);
+
+    CREATE TABLE IF NOT EXISTS fiscal_federal_contracts (
+      id            SERIAL PRIMARY KEY,
+      vendor        TEXT NOT NULL DEFAULT '',
+      department    TEXT NOT NULL DEFAULT '',
+      description   TEXT NOT NULL DEFAULT '',
+      contract_date TEXT NOT NULL DEFAULT '',
+      value         DOUBLE PRECISION NOT NULL DEFAULT 0,
+      province      TEXT NOT NULL DEFAULT 'Alberta',
+      collected_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (vendor, department, contract_date, value)
+    );
+    CREATE INDEX IF NOT EXISTS idx_fiscal_fed_contracts_date
+      ON fiscal_federal_contracts (contract_date DESC, vendor);
+    CREATE INDEX IF NOT EXISTS idx_fiscal_fed_contracts_dept
+      ON fiscal_federal_contracts (department, contract_date DESC);
+
+    -- ============================================================
+    -- Environment snapshots (daily time-series for real-time feeds):
+    -- AQHI by station/date, water levels by station/date, earthquakes by
+    -- USGS event id, and a daily active-wildfire count summary (the
+    -- active-fire feed has no stable per-fire id, so only a count is kept).
+    -- ============================================================
+
+    CREATE TABLE IF NOT EXISTS env_aqhi_snapshots (
+      id            SERIAL PRIMARY KEY,
+      snapshot_date TEXT NOT NULL,
+      location_id   TEXT NOT NULL,
+      location_name TEXT NOT NULL DEFAULT '',
+      aqhi          DOUBLE PRECISION NOT NULL DEFAULT 0,
+      observation_time TEXT NOT NULL DEFAULT '',
+      latitude      DOUBLE PRECISION NOT NULL DEFAULT 0,
+      longitude     DOUBLE PRECISION NOT NULL DEFAULT 0,
+      collected_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (snapshot_date, location_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_env_aqhi_date
+      ON env_aqhi_snapshots (snapshot_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_env_aqhi_location
+      ON env_aqhi_snapshots (location_id, snapshot_date DESC);
+
+    CREATE TABLE IF NOT EXISTS env_water_snapshots (
+      id            SERIAL PRIMARY KEY,
+      snapshot_date TEXT NOT NULL,
+      station_id    TEXT NOT NULL,
+      station_name  TEXT NOT NULL DEFAULT '',
+      water_level   DOUBLE PRECISION,
+      discharge     DOUBLE PRECISION,
+      reading_time  TEXT NOT NULL DEFAULT '',
+      latitude      DOUBLE PRECISION NOT NULL DEFAULT 0,
+      longitude     DOUBLE PRECISION NOT NULL DEFAULT 0,
+      collected_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (snapshot_date, station_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_env_water_date
+      ON env_water_snapshots (snapshot_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_env_water_station
+      ON env_water_snapshots (station_id, snapshot_date DESC);
+
+    CREATE TABLE IF NOT EXISTS env_earthquake_events (
+      id            SERIAL PRIMARY KEY,
+      event_id      TEXT NOT NULL,
+      snapshot_date TEXT NOT NULL,
+      magnitude     DOUBLE PRECISION NOT NULL DEFAULT 0,
+      location      TEXT NOT NULL DEFAULT '',
+      latitude      DOUBLE PRECISION NOT NULL DEFAULT 0,
+      longitude     DOUBLE PRECISION NOT NULL DEFAULT 0,
+      depth_km      DOUBLE PRECISION NOT NULL DEFAULT 0,
+      event_time    TEXT NOT NULL DEFAULT '',
+      source        TEXT NOT NULL DEFAULT 'USGS',
+      collected_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (event_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_env_quake_date
+      ON env_earthquake_events (snapshot_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_env_quake_magnitude
+      ON env_earthquake_events (magnitude DESC);
+
+    CREATE TABLE IF NOT EXISTS env_wildfire_daily (
+      id              SERIAL PRIMARY KEY,
+      snapshot_date   TEXT NOT NULL,
+      active_count    INTEGER NOT NULL DEFAULT 0,
+      total_size_ha   DOUBLE PRECISION NOT NULL DEFAULT 0,
+      out_of_control  INTEGER NOT NULL DEFAULT 0,
+      being_held      INTEGER NOT NULL DEFAULT 0,
+      under_control   INTEGER NOT NULL DEFAULT 0,
+      collected_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (snapshot_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_env_wildfire_date
+      ON env_wildfire_daily (snapshot_date DESC);
 
     -- Named-entity directory: tri-region operators and (later) other entity sets.
     -- Seeded out-of-band by scripts/seed-intel-operators.ts from a private
@@ -501,6 +974,7 @@ const MIGRATION_SQL = `
       user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
       query TEXT NOT NULL,
       query_hash TEXT NOT NULL,
+      title TEXT,
       plan JSONB NOT NULL,
       config JSONB NOT NULL,
       tool_args JSONB NOT NULL,
@@ -510,10 +984,29 @@ const MIGRATION_SQL = `
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       last_viewed TIMESTAMPTZ
     );
+    ALTER TABLE smart_dashboards ADD COLUMN IF NOT EXISTS title TEXT;
+    -- Visibility carve-out for the shared query corpus: default FALSE = shared.
+    -- A private dashboard is excluded from the "what Alberta is asking" feed and
+    -- from promotion nomination; slug-by-link access is unchanged. The ALTER
+    -- must precede the partial index below — the table pre-exists, so the
+    -- CREATE TABLE above is a no-op and the column only arrives via this ALTER.
+    ALTER TABLE smart_dashboards ADD COLUMN IF NOT EXISTS private BOOLEAN NOT NULL DEFAULT FALSE;
     CREATE INDEX IF NOT EXISTS idx_smart_dashboards_user
       ON smart_dashboards(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_smart_dashboards_query_hash
       ON smart_dashboards(query_hash);
+    -- Backs the read-time GROUP BY query_hash aggregate for the shared feed;
+    -- partial so it only spans the rows that feed can surface.
+    CREATE INDEX IF NOT EXISTS idx_smart_dashboards_shared_query_hash
+      ON smart_dashboards(query_hash) WHERE NOT private;
+    -- Phase C — truthfulness gate. score/verdict are written fire-and-forget
+    -- after save; NULL = not-yet-scored (treated as neutral, never flagged).
+    -- ALTERs precede the partial index that references truthfulness_score.
+    ALTER TABLE smart_dashboards ADD COLUMN IF NOT EXISTS truthfulness_score NUMERIC(4,3);
+    ALTER TABLE smart_dashboards ADD COLUMN IF NOT EXISTS truthfulness_verdict JSONB;
+    ALTER TABLE smart_dashboards ADD COLUMN IF NOT EXISTS truthfulness_checked_at TIMESTAMPTZ;
+    CREATE INDEX IF NOT EXISTS idx_smart_dashboards_truthfulness_score
+      ON smart_dashboards(truthfulness_score) WHERE truthfulness_score IS NOT NULL;
 
     -- Telemetry. One row per Smart UI query, regardless of outcome. The
     -- query goes through planner → tool calls → composer; we record token
@@ -538,7 +1031,7 @@ const MIGRATION_SQL = `
       ON smart_query_events(dashboard_id);
 
     -- ============================================================
-    -- Access requests (charter: tamrack/handoffs/2026-05-19-access-request-resonate-charter.md §5)
+    -- Access requests
     -- ============================================================
     -- One row per (lower-cased) email that ever requested access. The
     -- Resonate workflow attaches via id-hash idempotency; UNIQUE(email_lower)
@@ -567,6 +1060,1140 @@ const MIGRATION_SQL = `
     CREATE INDEX IF NOT EXISTS idx_access_requests_status ON access_requests(status, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_access_requests_pending ON access_requests(created_at) WHERE status = 'pending';
     CREATE INDEX IF NOT EXISTS idx_access_requests_source_ip ON access_requests(source_ip, created_at DESC);
+
+    -- ============================================================
+    -- substrate schema — unified data layer scaffolding
+    -- ============================================================
+    --
+    -- Three orthogonal axes:
+    --
+    --   geo_dimension  — political / administrative geography:
+    --                    province, municipality, neighbourhood. Rarely
+    --                    changes; finite cardinality (~1K rows).
+    --
+    --   entities       — slow-changing dimensions located within a geo:
+    --                    businesses, parcels, projects, wells, etc.
+    --                    Higher cardinality (~440K parcels alone).
+    --                    first_seen / last_seen track presence over time
+    --                    without forcing presence into observations.
+    --
+    --   observations   — time-series facts: a value at a (series, period,
+    --                    geo, [entity]) tuple. High-cardinality fact
+    --                    table; partitioned by period.
+    --
+    -- Slug-naming convention (all schemas):
+    --   geo:        ARD-derived (alberta, edmonton, edm-nbhd-2010)
+    --   entities:   <source-abbrev>-<kind>-<natural-key>
+    --                 (stony-plain-biz-<FID>, edm-parcel-<account_number>)
+    --   series:     <scope>-<metric>  OR
+    --               <geo>-<source>-<metric>  for derived/proxy series
+    --                 (edm-parcel-assessed-value,
+    --                  spruce-grove-licence-proxy-dev-permits)
+    --   sources:    human-readable name (UNIQUE on name)
+    --
+    -- The application role on Crunchy can't CREATE EXTENSION, so
+    -- anything that needs one (pgvector for corpus, pg_partman for
+    -- partman.run_maintenance()) is deferred to an admin-run migration.
+    CREATE SCHEMA IF NOT EXISTS substrate;
+
+    CREATE TABLE IF NOT EXISTS substrate.sources (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name        TEXT NOT NULL UNIQUE,
+      base_url    TEXT,
+      auth_type   TEXT,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS substrate.geo_dimension (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug          TEXT NOT NULL UNIQUE,
+      name          TEXT NOT NULL,
+      geo_type      TEXT NOT NULL,
+      csduid        TEXT,
+      parent_id     UUID REFERENCES substrate.geo_dimension(id),
+      centroid_lat  NUMERIC(9, 6),
+      centroid_lon  NUMERIC(9, 6),
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_substrate_geo_parent
+      ON substrate.geo_dimension(parent_id);
+    CREATE INDEX IF NOT EXISTS idx_substrate_geo_type
+      ON substrate.geo_dimension(geo_type);
+
+    CREATE TABLE IF NOT EXISTS substrate.series_metadata (
+      id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug                TEXT NOT NULL UNIQUE,
+      domain              TEXT NOT NULL,
+      name                TEXT NOT NULL,
+      source_id           UUID REFERENCES substrate.sources(id),
+      unit                TEXT,
+      unit_type           TEXT,
+      cadence             TEXT,
+      geo_id              UUID REFERENCES substrate.geo_dimension(id),
+      description         TEXT,
+      tags                TEXT[],
+      upstream_key        JSONB,
+      is_derived          BOOLEAN NOT NULL DEFAULT FALSE,
+      derivation_lineage  JSONB,
+      storage_kind        TEXT NOT NULL DEFAULT 'observation',
+      entity_kind         TEXT,
+      created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT series_metadata_storage_kind_check
+        CHECK (storage_kind IN ('observation', 'entity', 'entity+observation')),
+      CONSTRAINT series_metadata_entity_kind_required
+        CHECK (storage_kind = 'observation' OR entity_kind IS NOT NULL)
+    );
+    -- is_derived + derivation_lineage are the typed signal the composer
+    -- uses to credit proxy series differently from direct-fetch series.
+    -- derivation_lineage shape (when is_derived=TRUE):
+    --   { "v": 1,
+    --     "kind": "proxy" | "rollup" | "join",
+    --     "upstream": [{ "table": "...", "filter": {...} }, ...] }
+    -- The "v" field is a schema version so future shape changes can be
+    -- migrated without ambiguity.
+    --
+    -- storage_kind drives the composer's dispatch:
+    --   'observation'         → query substrate.observations (geo-keyed time-series)
+    --   'entity'              → query substrate.entities (presence dimension)
+    --   'entity+observation'  → both (e.g. parcels: per-entity values over time)
+    -- entity_kind is the substrate.entities.kind value the series refers to
+    -- (NULL for storage_kind='observation'; CHECK enforces this).
+    -- Idempotent ALTER must run BEFORE the indexes below: on an existing
+    -- series_metadata the CREATE TABLE above is a no-op, so the new columns
+    -- have to be added here or the is_derived / storage_kind indexes would
+    -- reference columns that don't exist yet and abort the whole migration
+    -- ("column ... does not exist"). Covers both fresh and pre-existing deploys.
+    ALTER TABLE substrate.series_metadata
+      ADD COLUMN IF NOT EXISTS is_derived BOOLEAN NOT NULL DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS derivation_lineage JSONB,
+      ADD COLUMN IF NOT EXISTS storage_kind TEXT NOT NULL DEFAULT 'observation',
+      ADD COLUMN IF NOT EXISTS entity_kind TEXT;
+    CREATE INDEX IF NOT EXISTS idx_substrate_series_upstream_key
+      ON substrate.series_metadata USING GIN (upstream_key);
+    CREATE INDEX IF NOT EXISTS idx_substrate_series_tags
+      ON substrate.series_metadata USING GIN (tags);
+    CREATE INDEX IF NOT EXISTS idx_substrate_series_domain
+      ON substrate.series_metadata(domain);
+    CREATE INDEX IF NOT EXISTS idx_substrate_series_is_derived
+      ON substrate.series_metadata(is_derived) WHERE is_derived = TRUE;
+    CREATE INDEX IF NOT EXISTS idx_substrate_series_storage_kind
+      ON substrate.series_metadata(storage_kind);
+
+    -- Slow-changing dimension: entities are "things that live at a geo"
+    -- (businesses, parcels, projects, wells). Distinct from geo_dimension,
+    -- which is administrative geography.
+    --
+    -- first_seen: the run-day this slug was first inserted (immutable
+    -- after INSERT).
+    -- last_seen: the run-day this slug was most recently observed in an
+    -- upstream snapshot (overwritten on each refresh).
+    --
+    -- These two columns answer freshness questions about the LATEST run
+    -- and the original-discovery date — they do NOT preserve a closed
+    -- interval of historical presence. Specifically:
+    --
+    --   Supported queries:
+    --     new openings  → WHERE first_seen = CURRENT_DATE AND kind = 'business'
+    --     stale/closed  → WHERE last_seen < CURRENT_DATE - INTERVAL '1 day'
+    --     longevity     → CURRENT_DATE - first_seen (entity's age in days)
+    --
+    --   NOT supported by these columns alone:
+    --     "was X open on 2024-06-15?" — last_seen is overwritten on every
+    --     run, so for any active entity it equals the latest run-day.
+    --     To answer historical-presence queries, pair this with the
+    --     entity-presence count series in substrate.observations (one
+    --     row per geo + kind + period) or a separate presence-log table.
+    CREATE TABLE IF NOT EXISTS substrate.entities (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug          TEXT NOT NULL UNIQUE,
+      kind          TEXT NOT NULL,
+      name          TEXT,
+      geo_id        UUID REFERENCES substrate.geo_dimension(id),
+      attrs         JSONB NOT NULL DEFAULT '{}'::jsonb,
+      centroid_lat  NUMERIC(9, 6),
+      centroid_lon  NUMERIC(9, 6),
+      source_id     UUID REFERENCES substrate.sources(id),
+      first_seen    DATE NOT NULL DEFAULT CURRENT_DATE,
+      last_seen     DATE NOT NULL DEFAULT CURRENT_DATE,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_substrate_entities_kind
+      ON substrate.entities(kind);
+    CREATE INDEX IF NOT EXISTS idx_substrate_entities_geo
+      ON substrate.entities(geo_id);
+    CREATE INDEX IF NOT EXISTS idx_substrate_entities_last_seen
+      ON substrate.entities(last_seen);
+    CREATE INDEX IF NOT EXISTS idx_substrate_entities_attrs
+      ON substrate.entities USING GIN (attrs);
+
+    -- Time-series fact table. Native PG range partitioning on period
+    -- (monthly children). entity_id is nullable: when set, the
+    -- observation is keyed on a specific entity (e.g. a parcel's
+    -- assessed_value); when NULL, the observation is at geo-level
+    -- (e.g. Spruce Grove dev-permit count for a snapshot_date). The
+    -- UNIQUE uses NULLS NOT DISTINCT (PG 15+) so two NULL entity_ids
+    -- for the same (series, period, geo) are treated as a collision
+    -- rather than two distinct rows.
+    --
+    -- Bulk-insert caveat: a single INSERT with multiple rows that share
+    -- (series_id, period, geo_id, NULL) errors out with PG 21000
+    -- ("ON CONFLICT DO UPDATE command cannot affect row a second time")
+    -- because NULLS NOT DISTINCT collapses them into one conflict target.
+    -- Verified against prod 2026-06-01. Bulk loaders should either supply
+    -- a non-NULL entity_id per row, dedupe before INSERT, or use per-row
+    -- INSERTs for the NULL-entity case.
+    CREATE TABLE IF NOT EXISTS substrate.observations (
+      series_id     UUID NOT NULL REFERENCES substrate.series_metadata(id),
+      period        DATE NOT NULL,
+      geo_id        UUID NOT NULL REFERENCES substrate.geo_dimension(id),
+      entity_id     UUID REFERENCES substrate.entities(id),
+      value         DOUBLE PRECISION,
+      raw_value     TEXT,
+      qualifier     TEXT,
+      collected_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE NULLS NOT DISTINCT (series_id, period, geo_id, entity_id)
+    ) PARTITION BY RANGE (period);
+    -- Partitioned index — PG cascades it onto every child partition.
+    CREATE INDEX IF NOT EXISTS idx_substrate_obs_series_geo_period
+      ON substrate.observations (series_id, geo_id, period DESC);
+    CREATE INDEX IF NOT EXISTS idx_substrate_obs_entity_period
+      ON substrate.observations (entity_id, period DESC)
+      WHERE entity_id IS NOT NULL;
+
+    -- Pre-create monthly partitions: 12 back + current + 12 forward
+    -- (25 children). Loop is idempotent (IF NOT EXISTS). A monthly
+    -- Resonate cron will top up the leading edge — until then, fresh
+    -- partitions get added by re-running the boot DDL after a deploy.
+    DO $obs_part$
+    DECLARE
+      v_start DATE;
+      v_end   DATE;
+      v_name  TEXT;
+      i       INT;
+    BEGIN
+      FOR i IN -12..12 LOOP
+        v_start := (date_trunc('month', CURRENT_DATE)::date + make_interval(months => i))::date;
+        v_end   := (v_start + INTERVAL '1 month')::date;
+        v_name  := format('observations_%s', to_char(v_start, 'YYYY_MM'));
+        EXECUTE format(
+          'CREATE TABLE IF NOT EXISTS substrate.%I PARTITION OF substrate.observations
+             FOR VALUES FROM (%L) TO (%L)',
+          v_name, v_start, v_end
+        );
+      END LOOP;
+    END $obs_part$;
+    -- Default partition catches any out-of-range period (typo'd date,
+    -- forgotten rollover). Without it the INSERT would error with
+    -- "no partition of relation found for row" and the collector run aborts.
+    CREATE TABLE IF NOT EXISTS substrate.observations_default
+      PARTITION OF substrate.observations DEFAULT;
+
+    -- Latest observation per (series, geo, entity). Collectors call
+    -- REFRESH MATERIALIZED VIEW CONCURRENTLY at end-of-run so scorecards
+    -- never block on a writer. The first refresh after creation MUST be
+    -- non-concurrent (matview is unpopulated until then), so seed it here
+    -- once if pg_class.relispopulated says it hasn't been refreshed yet.
+    -- High-cardinality writers (e.g. the parcel fetcher, 440K rows) should
+    -- NOT trigger a per-run refresh — pin that to a nightly cron instead;
+    -- see substrate.refresh_latest_observations() below for the wrapped
+    -- entry point that takes an advisory lock to serialize concurrent
+    -- refresh attempts.
+    CREATE MATERIALIZED VIEW IF NOT EXISTS substrate.latest_observations AS
+      SELECT DISTINCT ON (series_id, geo_id, entity_id)
+        series_id, geo_id, entity_id, period, value, collected_at
+      FROM substrate.observations
+      ORDER BY series_id, geo_id, entity_id, period DESC
+    WITH NO DATA;
+    -- UNIQUE INDEX needs NULLS NOT DISTINCT so geo-only observations
+    -- (entity_id IS NULL) get a single matview row instead of one per NULL.
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_substrate_latest_obs_series_geo_entity
+      ON substrate.latest_observations (series_id, geo_id, entity_id)
+      NULLS NOT DISTINCT;
+    DO $matview_seed$
+    BEGIN
+      IF NOT (
+        SELECT relispopulated
+        FROM pg_class
+        WHERE relnamespace = 'substrate'::regnamespace
+          AND relname = 'latest_observations'
+      ) THEN
+        REFRESH MATERIALIZED VIEW substrate.latest_observations;
+      END IF;
+    END $matview_seed$;
+
+    -- Advisory-locked refresh entry point. Two concurrent collectors that
+    -- both want to refresh end up queued in PG's matview lock chain (~2-5 min
+    -- on a 440K-row matview); the advisory lock short-circuits the second
+    -- caller cleanly with a warning. Callers handle the FALSE return by
+    -- logging and continuing — the matview will be refreshed by whoever
+    -- holds the lock.
+    --
+    -- Why session-scoped (pg_advisory_lock) and not transaction-scoped
+    -- (pg_advisory_xact_lock): REFRESH MATERIALIZED VIEW CONCURRENTLY
+    -- cannot run inside a transaction block, so a transaction-scoped
+    -- lock would have nothing to bind to. Session-scoped is correct here.
+    -- On client disconnect / connection drop PG releases all session
+    -- locks automatically — no leak path. Both EXCEPTION-handled SQL
+    -- errors and the happy path explicitly unlock; only a backend SIGKILL
+    -- skips the unlock, and PG cleans up on disconnect in that case too.
+    CREATE OR REPLACE FUNCTION substrate.refresh_latest_observations()
+    RETURNS BOOLEAN LANGUAGE plpgsql AS $refresh$
+    DECLARE
+      v_got_lock BOOLEAN;
+    BEGIN
+      SELECT pg_try_advisory_lock(hashtext('substrate.latest_observations')::bigint)
+        INTO v_got_lock;
+      IF NOT v_got_lock THEN
+        RAISE NOTICE 'substrate.latest_observations refresh skipped — already running';
+        RETURN FALSE;
+      END IF;
+      BEGIN
+        REFRESH MATERIALIZED VIEW CONCURRENTLY substrate.latest_observations;
+        PERFORM pg_advisory_unlock(hashtext('substrate.latest_observations')::bigint);
+        RETURN TRUE;
+      EXCEPTION WHEN OTHERS THEN
+        PERFORM pg_advisory_unlock(hashtext('substrate.latest_observations')::bigint);
+        RAISE;
+      END;
+    END $refresh$;
+
+    -- Forward-compat note for Phase 2 (corpus.narrative_fragments):
+    --
+    --   When the corpus schema lands, narrative_fragments needs an
+    --   entity_kind TEXT column (nullable) so corpus authors can mark
+    --   fragments that describe entity-presence rather than numeric
+    --   observations. Without it, fragments authored for an entity-only
+    --   series (e.g. Stony Plain businesses) will pass through the
+    --   composer's data_threshold check against an empty value column
+    --   and silently fail to fire. Add the column at fragment-table
+    --   creation time, while the table is still empty — zero migration
+    --   cost. The composer reads (series.storage_kind, fragment.entity_kind)
+    --   to dispatch its threshold evaluation against either
+    --   latest_observations.value or count(*) FROM entities.
+
+    -- Major projects, versioned. Each stage change retires the prior row
+    -- (is_current=FALSE, keeps last-seen snapshot_date) and inserts a new
+    -- v_n+1 with today's snapshot_date. No-stage-change days only update
+    -- snapshot_date on the current row, so 'when did this project last
+    -- advance in stage' is answerable from version > 1 rows alone.
+    CREATE TABLE IF NOT EXISTS substrate.major_projects_versioned (
+      id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_name     TEXT NOT NULL,
+      developer        TEXT,
+      municipality     TEXT,
+      csduid           TEXT,
+      estimated_cost   NUMERIC(14,2),
+      stage            TEXT NOT NULL,
+      stage_changed_at DATE,
+      version          INTEGER NOT NULL DEFAULT 1,
+      snapshot_date    DATE NOT NULL DEFAULT CURRENT_DATE,
+      is_current       BOOLEAN NOT NULL DEFAULT TRUE,
+      geo_id           UUID REFERENCES substrate.geo_dimension(id),
+      UNIQUE (project_name, municipality, snapshot_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_substrate_mpv_muni_snapshot
+      ON substrate.major_projects_versioned (municipality, snapshot_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_substrate_mpv_stage_current
+      ON substrate.major_projects_versioned (stage, is_current) WHERE is_current = TRUE;
+    -- Belt-and-suspenders: enforce at most one current row per (project, municipality).
+    -- The procedure already serializes via SELECT … FOR UPDATE, but a partial unique
+    -- index catches any out-of-band write (manual SQL, future bulk insert).
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_substrate_mpv_one_current
+      ON substrate.major_projects_versioned (project_name, municipality)
+      WHERE is_current = TRUE;
+
+    CREATE OR REPLACE PROCEDURE substrate.upsert_major_project(
+      p_project_name   TEXT,
+      p_developer      TEXT,
+      p_municipality   TEXT,
+      p_csduid         TEXT,
+      p_estimated_cost NUMERIC,
+      p_stage          TEXT,
+      p_snapshot_date  DATE
+    ) LANGUAGE plpgsql AS $proc$
+    DECLARE
+      v_current_id      UUID;
+      v_current_stage   TEXT;
+      v_current_version INTEGER;
+    BEGIN
+      SELECT id, stage, version
+        INTO v_current_id, v_current_stage, v_current_version
+        FROM substrate.major_projects_versioned
+        WHERE project_name = p_project_name
+          AND municipality IS NOT DISTINCT FROM p_municipality
+          AND is_current = TRUE
+        FOR UPDATE;
+
+      IF v_current_id IS NULL THEN
+        -- ON CONFLICT closes the race where two concurrent callers both see
+        -- v_current_id = NULL and both try to insert v1. SELECT FOR UPDATE
+        -- only locks rows that exist; it doesn't prevent inserts of new rows.
+        -- The partial unique index idx_substrate_mpv_one_current catches the
+        -- collision; DO NOTHING absorbs it. The loser's params match the
+        -- winner's (same upstream fetch), so no data is lost.
+        INSERT INTO substrate.major_projects_versioned
+          (project_name, developer, municipality, csduid, estimated_cost,
+           stage, stage_changed_at, version, snapshot_date, is_current)
+        VALUES
+          (p_project_name, p_developer, p_municipality, p_csduid, p_estimated_cost,
+           p_stage, p_snapshot_date, 1, p_snapshot_date, TRUE)
+        ON CONFLICT (project_name, municipality) WHERE is_current = TRUE DO NOTHING;
+      ELSIF v_current_stage IS DISTINCT FROM p_stage THEN
+        UPDATE substrate.major_projects_versioned
+          SET is_current = FALSE
+          WHERE id = v_current_id;
+        INSERT INTO substrate.major_projects_versioned
+          (project_name, developer, municipality, csduid, estimated_cost,
+           stage, stage_changed_at, version, snapshot_date, is_current)
+        VALUES
+          (p_project_name, p_developer, p_municipality, p_csduid, p_estimated_cost,
+           p_stage, p_snapshot_date, v_current_version + 1, p_snapshot_date, TRUE);
+      ELSE
+        -- Same stage as last seen: refresh snapshot_date + non-stage fields
+        -- (developer, cost, csduid may drift over time without a stage change).
+        UPDATE substrate.major_projects_versioned
+          SET snapshot_date   = p_snapshot_date,
+              developer       = p_developer,
+              csduid          = p_csduid,
+              estimated_cost  = p_estimated_cost
+          WHERE id = v_current_id;
+      END IF;
+    END;
+    $proc$;
+
+    -- ============================================================
+    -- signals schema — derived analytic tables and classification caches.
+    -- ============================================================
+    CREATE SCHEMA IF NOT EXISTS signals;
+
+    -- G4 dietary-taxonomy cache: one row per Edmonton business licence.
+    -- Food-service rows are LLM-classified; all other categories carry
+    -- dietary_category='unknown' (rule-tagged, no model call) so downstream
+    -- signal queries can LEFT JOIN against the full licence universe.
+    CREATE TABLE IF NOT EXISTS signals.licence_dietary_taxonomy (
+      licence_id         TEXT PRIMARY KEY,
+      trade_name         TEXT,
+      raw_category       TEXT,
+      dietary_category   TEXT NOT NULL,
+      dietary_confidence NUMERIC(3, 2),
+      classified_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_ldt_category
+      ON signals.licence_dietary_taxonomy(dietary_category);
+    -- Enum guard. ADD CONSTRAINT isn't idempotent, so gate on pg_constraint.
+    DO $cnstr$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'licence_dietary_taxonomy_category_check'
+      ) THEN
+        ALTER TABLE signals.licence_dietary_taxonomy
+          ADD CONSTRAINT licence_dietary_taxonomy_category_check
+          CHECK (dietary_category IN ('gf_friendly','allergen_friendly','standard','unknown'));
+      END IF;
+    END $cnstr$;
+
+    -- ============================================================
+    -- Auth: username/password columns
+    -- ALTER before indexes (idempotent; pre-existing table).
+    -- ============================================================
+
+    -- Make email optional (recovery field only, no longer the login identifier).
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_key;
+    ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
+    DROP INDEX IF EXISTS idx_users_email;
+
+    -- Add username, hashed password, phone, and last-login columns.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS username_lower TEXT GENERATED ALWAYS AS (LOWER(username)) STORED;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
+
+    -- Unique index on the generated column (after the ALTER, per boot-DDL rule).
+    CREATE UNIQUE INDEX IF NOT EXISTS uniq_users_username_lower ON users(username_lower);
+
+    -- Restore a non-unique index on email for lookup queries (optional recovery field).
+    CREATE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL;
+
+    -- ============================================================
+    -- Password-reset tokens (1h TTL, single-use).
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT UNIQUE NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_prt_user ON password_reset_tokens(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_prt_pending ON password_reset_tokens(expires_at) WHERE used_at IS NULL;
+
+    -- ============================================================
+    -- pg_trgm extension (required by operator_aliases GIN index)
+    -- The application role cannot CREATE EXTENSION; this is a no-op
+    -- if already enabled by an admin, and will fail gracefully if not.
+    -- ============================================================
+    CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+    -- ============================================================
+    -- corpus schema — narrative & chart primitives
+    -- ============================================================
+    CREATE SCHEMA IF NOT EXISTS corpus;
+
+    -- Chart template library. One row per visual shape variant.
+    -- series_shape values (spec-locked enum, enforced by application):
+    --   'single_line' | 'multi_line' | 'bar_compare' | 'scorecard'
+    --   'sparkline'   | 'stacked_area' | 'bar_ranked' | 'choropleth'
+    --   'stacked_normalized'
+    --
+    -- spec JSONB holds the Vega-Lite partial.  Composer deep-merges
+    -- runtime data into spec.data; never modifies mark, encoding, or
+    -- transform.  The two new signal-layer columns are added via ALTER
+    -- below so this CREATE TABLE is a no-op on pre-existing databases.
+    CREATE TABLE IF NOT EXISTS corpus.chart_templates (
+      id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug                 TEXT NOT NULL UNIQUE,
+      series_shape         TEXT,
+      unit_type            TEXT,
+      cadence              TEXT,
+      spec                 JSONB NOT NULL DEFAULT '{}'::jsonb,
+      tags                 TEXT[],
+      created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    -- Signal-layer columns: must be ALTERed in (CREATE TABLE is a no-op on
+    -- pre-existing tables, so these would never land if placed only in the
+    -- CREATE TABLE above).
+    ALTER TABLE corpus.chart_templates
+      ADD COLUMN IF NOT EXISTS requires_human_review BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE corpus.chart_templates
+      ADD COLUMN IF NOT EXISTS template_available BOOLEAN NOT NULL DEFAULT TRUE;
+
+    CREATE INDEX IF NOT EXISTS idx_corpus_chart_templates_slug
+      ON corpus.chart_templates (slug);
+    CREATE INDEX IF NOT EXISTS idx_corpus_chart_templates_series_shape
+      ON corpus.chart_templates (series_shape);
+    CREATE INDEX IF NOT EXISTS idx_corpus_chart_templates_available
+      ON corpus.chart_templates (template_available) WHERE template_available = TRUE;
+
+    -- Curation ledger for the dashboard -> corpus promotion path. One decision
+    -- per question cluster (query_hash), so an approved/dismissed question drops
+    -- out of the nomination queue and never reappears. query_hash is the PK,
+    -- which also indexes the anti-join the nomination read model uses to exclude
+    -- already-decided questions. status: 'approved' | 'dismissed'.
+    CREATE TABLE IF NOT EXISTS corpus.dashboard_promotions (
+      query_hash          TEXT PRIMARY KEY,
+      status              TEXT NOT NULL CONSTRAINT chk_promotion_status
+                            CHECK (status IN ('approved', 'dismissed')),
+      chart_template_id   UUID REFERENCES corpus.chart_templates(id) ON DELETE SET NULL,
+      source_dashboard_id TEXT,
+      decided_by          TEXT,
+      decided_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      note                TEXT
+    );
+
+    -- Narrative fragment library. One row per citable interpretation unit.
+    -- body_template variable contract (locked — composer always provides):
+    --   {{value}}           current observation value, formatted per unit
+    --   {{value_raw}}       unformatted numeric
+    --   {{unit}}            e.g. "percent", "CAD"
+    --   {{period}}          observation date, formatted
+    --   {{yoy_delta}}       year-over-year change with sign
+    --   {{yoy_pct}}         year-over-year % change
+    --   {{trend_direction}} "rising" | "falling" | "stable"
+    --   {{geo_name}}        e.g. "Alberta", "Edmonton CMA"
+    --
+    -- freshness values: 'permanent' | 'time_bounded' | 'recomputable'
+    --
+    -- embedding vector(1536): added via guarded DO-block below (requires
+    -- the pgvector extension to be pre-enabled by a DB admin).
+    --
+    -- signal_def_id + observed_window + the UNIQUE constraint are signal-
+    -- layer additions applied via ALTER below so they land idempotently on
+    -- pre-existing corpus tables.
+    CREATE TABLE IF NOT EXISTS corpus.narrative_fragments (
+      id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      topic           TEXT,
+      series_ids      UUID[] NOT NULL DEFAULT '{}',
+      geo_scope       TEXT,
+      body_template   TEXT NOT NULL,
+      tone            TEXT,
+      when_to_use     TEXT,
+      data_threshold  JSONB,
+      freshness       TEXT NOT NULL DEFAULT 'permanent',
+      source_path     TEXT,
+      source_lines    INT4RANGE,
+      entity_kind     TEXT,
+      created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    -- Add embedding column only when pgvector is available (requires admin
+    -- to have run: CREATE EXTENSION IF NOT EXISTS vector;).
+    DO $embed_col$ BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_extension WHERE extname = 'vector'
+      ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'corpus'
+          AND table_name   = 'narrative_fragments'
+          AND column_name  = 'embedding'
+      ) THEN
+        ALTER TABLE corpus.narrative_fragments
+          ADD COLUMN embedding vector(1536);
+      END IF;
+    END $embed_col$;
+
+    CREATE INDEX IF NOT EXISTS idx_corpus_nf_series_ids
+      ON corpus.narrative_fragments USING GIN (series_ids);
+
+    -- ivfflat index requires embedding column + pgvector; created only when
+    -- both the extension and the column are present.
+    DO $embed_idx$ BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_extension WHERE extname = 'vector'
+      ) AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'corpus'
+          AND table_name   = 'narrative_fragments'
+          AND column_name  = 'embedding'
+      ) AND NOT EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE schemaname = 'corpus'
+          AND tablename  = 'narrative_fragments'
+          AND indexname  = 'idx_corpus_nf_embedding'
+      ) THEN
+        CREATE INDEX idx_corpus_nf_embedding
+          ON corpus.narrative_fragments
+          USING ivfflat (embedding vector_cosine_ops) WITH (lists = 30);
+      END IF;
+    END $embed_idx$;
+
+    -- Signal-layer FK additions to narrative_fragments.  ALTERs must come
+    -- before the UNIQUE constraint that references signal_def_id.
+    ALTER TABLE corpus.narrative_fragments
+      ADD COLUMN IF NOT EXISTS signal_def_id UUID;
+    ALTER TABLE corpus.narrative_fragments
+      ADD COLUMN IF NOT EXISTS observed_window DATERANGE;
+    -- Extra columns required by activateSignalFragment workflow.
+    -- geo_scope and body_template exist in the CREATE TABLE above for new DBs;
+    -- these ALTERs ensure they land on pre-existing corpus tables as well.
+    ALTER TABLE corpus.narrative_fragments
+      ADD COLUMN IF NOT EXISTS geo_scope TEXT;
+    ALTER TABLE corpus.narrative_fragments
+      ADD COLUMN IF NOT EXISTS body_template TEXT NOT NULL DEFAULT '';
+    -- freshness has a NOT NULL DEFAULT in the CREATE TABLE; the ALTER must
+    -- match that default so pre-existing rows without freshness get a safe value.
+    ALTER TABLE corpus.narrative_fragments
+      ADD COLUMN IF NOT EXISTS freshness TEXT NOT NULL DEFAULT 'permanent';
+    ALTER TABLE corpus.narrative_fragments
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+    -- ============================================================
+    -- signals schema extensions — catalog + event tables
+    -- (Requires corpus schema above to be created first for FK refs)
+    -- ============================================================
+
+    -- Signal catalog. One row per named signal x version.
+    -- signal_type values: 'panel' | 'derived_series' | 'cross_alloc'
+    --                     | 'composite_score' | 'index' | 'operator_panel'
+    -- cadence values:     'daily' | 'weekly' | 'monthly' | 'annual'
+    --
+    -- narrative_template_id + chart_template_id FKs must come AFTER the
+    -- corpus tables are created above.
+    CREATE TABLE IF NOT EXISTS signals.signal_definitions (
+      id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug                  TEXT NOT NULL,
+      version               INTEGER NOT NULL DEFAULT 1,
+      signal_type           TEXT NOT NULL,
+      series_scope          UUID[] NOT NULL DEFAULT '{}',
+      geo_scope             TEXT NOT NULL,
+      window_days           INTEGER NOT NULL DEFAULT 365,
+      threshold_pct         NUMERIC(6,3),
+      narrative_template_id UUID REFERENCES corpus.narrative_fragments(id) ON DELETE SET NULL,
+      chart_template_id     UUID REFERENCES corpus.chart_templates(id) ON DELETE SET NULL,
+      active                BOOLEAN NOT NULL DEFAULT TRUE,
+      superseded_by         UUID REFERENCES signals.signal_definitions(id),
+      cadence               TEXT NOT NULL DEFAULT 'daily',
+      incremental_enabled   BOOLEAN NOT NULL DEFAULT FALSE,
+      last_wall_ms          INTEGER,
+      priority              INTEGER NOT NULL DEFAULT 100,
+      created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      deprecated_at         TIMESTAMPTZ,
+      UNIQUE (slug, version)
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_def_slug_active
+      ON signals.signal_definitions (slug, active) WHERE active = TRUE;
+
+    -- Add the FK from narrative_fragments back to signal_definitions now that
+    -- signal_definitions exists.  This closes the circular reference safely
+    -- because signal_def_id is nullable.
+    DO $nf_fk$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid = 'corpus.narrative_fragments'::regclass
+          AND conname  = 'narrative_fragments_signal_def_id_fkey'
+      ) THEN
+        ALTER TABLE corpus.narrative_fragments
+          ADD CONSTRAINT narrative_fragments_signal_def_id_fkey
+          FOREIGN KEY (signal_def_id)
+          REFERENCES signals.signal_definitions(id)
+          ON DELETE SET NULL;
+      END IF;
+    END $nf_fk$;
+
+    -- Idempotent UNIQUE constraint: used as the ON CONFLICT target by
+    -- activateSignalFragment (replay-safe UPSERT guarantee).
+    DO $nf_uniq$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid = 'corpus.narrative_fragments'::regclass
+          AND conname  = 'narrative_fragments_signal_unique'
+      ) THEN
+        ALTER TABLE corpus.narrative_fragments
+          ADD CONSTRAINT narrative_fragments_signal_unique
+          UNIQUE (signal_def_id, geo_scope, observed_window);
+      END IF;
+    END $nf_uniq$;
+
+    -- Index on signal_def_id placed AFTER the ALTER that creates the column.
+    CREATE INDEX IF NOT EXISTS idx_corpus_nf_signal_def
+      ON corpus.narrative_fragments (signal_def_id)
+      WHERE signal_def_id IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_corpus_nf_freshness
+      ON corpus.narrative_fragments (freshness);
+
+    -- Tall-narrow event table. One row per (signal_def x series x geo x window).
+    -- UNIQUE constraint is the ON CONFLICT target for Write-Last UPSERT.
+    CREATE TABLE IF NOT EXISTS signals.signal_events (
+      id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      signal_def_id      UUID NOT NULL REFERENCES signals.signal_definitions(id),
+      series_id          UUID REFERENCES substrate.series_metadata(id),
+      geo_id             UUID NOT NULL REFERENCES substrate.geo_dimension(id),
+      observed_window    DATERANGE NOT NULL,
+      fired_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      event_type         TEXT NOT NULL,
+      magnitude          NUMERIC(12,4),
+      direction          TEXT,
+      confidence         NUMERIC(4,3),
+      evidence_refs      UUID[] NOT NULL DEFAULT '{}',
+      corpus_fragment_id UUID REFERENCES corpus.narrative_fragments(id),
+      metadata           JSONB NOT NULL DEFAULT '{}',
+      UNIQUE NULLS NOT DISTINCT (signal_def_id, series_id, geo_id, observed_window)
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_events_def_geo_fired
+      ON signals.signal_events (signal_def_id, geo_id, fired_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_signals_events_corpus_fragment
+      ON signals.signal_events (corpus_fragment_id) WHERE corpus_fragment_id IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_signals_events_evidence_refs
+      ON signals.signal_events USING GIN (evidence_refs);
+
+    -- Outbox queue. Written by collector in same TX as observation upsert.
+    -- Drained by processSignalQueue workflow.  FOR UPDATE SKIP LOCKED on
+    -- claim query prevents double-processing across concurrent workers.
+    CREATE TABLE IF NOT EXISTS signals.signal_queue (
+      id           BIGSERIAL PRIMARY KEY,
+      series_id    UUID NOT NULL REFERENCES substrate.series_metadata(id),
+      geo_id       UUID NOT NULL REFERENCES substrate.geo_dimension(id),
+      period       DATE NOT NULL,
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      claimed_at   TIMESTAMPTZ,
+      processed_at TIMESTAMPTZ,
+      UNIQUE (series_id, geo_id, period)
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_queue_pending
+      ON signals.signal_queue (collected_at) WHERE processed_at IS NULL;
+
+    -- Audit trail for scheduled signal-compute runs.
+    -- run_type values: 'scheduled' | 'statistical' | 'agentic' | 'backfill'
+    -- status values:   'running' | 'done' | 'failed' | 'candidate'
+    CREATE TABLE IF NOT EXISTS signals.discovery_runs (
+      id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      signal_def_id     UUID NOT NULL REFERENCES signals.signal_definitions(id),
+      run_type          TEXT NOT NULL,
+      promise_id        TEXT,
+      started_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      completed_at      TIMESTAMPTZ,
+      status            TEXT NOT NULL DEFAULT 'running',
+      events_fired      INTEGER DEFAULT 0,
+      events_suppressed INTEGER DEFAULT 0,
+      wall_ms           INTEGER,
+      cost_cents        INTEGER DEFAULT 0,
+      error_detail      TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_discovery_runs_def_started
+      ON signals.discovery_runs (signal_def_id, started_at DESC);
+
+    -- Per-step progress writer (parallel to answer_progress pattern).
+    -- UNIQUE (workflow_id, stage) used as ON CONFLICT DO NOTHING target
+    -- for replay-safe writes.
+    CREATE TABLE IF NOT EXISTS signals.signal_progress (
+      id          BIGSERIAL PRIMARY KEY,
+      workflow_id TEXT NOT NULL,
+      stage       TEXT NOT NULL,
+      payload     JSONB,
+      emitted_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (workflow_id, stage)
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_progress_workflow
+      ON signals.signal_progress (workflow_id, emitted_at);
+
+    -- Run-level summary for observability dashboards + alert queries.
+    CREATE TABLE IF NOT EXISTS signals.signal_run_log (
+      workflow_id         TEXT PRIMARY KEY,
+      run_date            DATE NOT NULL,
+      total_signals       INTEGER,
+      total_geos          INTEGER,
+      succeeded           INTEGER,
+      failed              INTEGER,
+      skipped_incremental INTEGER,
+      wall_ms             INTEGER,
+      status              TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_run_log_date
+      ON signals.signal_run_log (run_date DESC);
+
+    -- Entity-resolution alias table (operator panel).
+    -- GIN trigram index on alias_string requires pg_trgm (created above).
+    CREATE TABLE IF NOT EXISTS signals.operator_aliases (
+      id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      canonical_id   UUID NOT NULL,
+      canonical_name TEXT NOT NULL,
+      alias_string   TEXT NOT NULL,
+      source         TEXT NOT NULL,
+      source_row_id  TEXT,
+      confidence     NUMERIC(4,3) NOT NULL,
+      match_method   TEXT NOT NULL,
+      resolved_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (alias_string, source)
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_operator_aliases_canonical
+      ON signals.operator_aliases (canonical_id);
+    DO $trgm_idx$ BEGIN
+      IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm')
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE schemaname = 'signals'
+          AND tablename  = 'operator_aliases'
+          AND indexname  = 'idx_signals_operator_aliases_alias_trgm'
+      ) THEN
+        CREATE INDEX idx_signals_operator_aliases_alias_trgm
+          ON signals.operator_aliases
+          USING GIN (alias_string gin_trgm_ops);
+      END IF;
+    END $trgm_idx$;
+
+    -- Nightly MV — wide pivot for planner reads.
+    -- UNIQUE INDEX enables REFRESH MATERIALIZED VIEW CONCURRENTLY.
+    -- The WHERE clause (fired_at > NOW() - 90 days) is intentional:
+    -- planner queries use this view for "current" anomaly state.
+    -- Historical signal_events are always accessible from the base table.
+    CREATE MATERIALIZED VIEW IF NOT EXISTS signals.geo_signal_digest AS
+    SELECT
+      se.geo_id,
+      g.slug                                     AS geo_slug,
+      g.name                                     AS geo_name,
+      g.geo_type,
+      sd.slug                                    AS signal_slug,
+      sd.signal_type,
+      date_trunc('month', se.fired_at)::DATE     AS period_month,
+      MAX(se.fired_at)                           AS latest_event_at,
+      AVG(se.magnitude)                          AS avg_magnitude,
+      MAX(se.magnitude)                          AS max_magnitude,
+      COUNT(*)                                   AS event_count,
+      bool_or(se.event_type = 'anomaly')         AS has_anomaly,
+      MAX(se.confidence)                         AS max_confidence,
+      jsonb_agg(DISTINCT se.metadata)
+        FILTER (WHERE se.metadata != '{}'::jsonb) AS metadata_agg
+    FROM signals.signal_events se
+    JOIN signals.signal_definitions sd
+      ON se.signal_def_id = sd.id AND sd.active = TRUE
+    JOIN substrate.geo_dimension g
+      ON se.geo_id = g.id
+    WHERE se.fired_at > NOW() - INTERVAL '90 days'
+    GROUP BY
+      se.geo_id, g.slug, g.name, g.geo_type,
+      sd.slug, sd.signal_type,
+      date_trunc('month', se.fired_at)::DATE
+    WITH NO DATA;
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_signals_geo_digest_unique
+      ON signals.geo_signal_digest (geo_id, signal_slug, period_month);
+    CREATE INDEX IF NOT EXISTS idx_signals_geo_digest_anomaly
+      ON signals.geo_signal_digest (has_anomaly) WHERE has_anomaly = TRUE;
+
+    -- Seed the MV once if it has never been refreshed (empty but unpopulated
+    -- differs from populated-empty on pg_class.relispopulated).
+    DO $digest_seed$ BEGIN
+      IF NOT (
+        SELECT relispopulated
+        FROM pg_class
+        WHERE relnamespace = 'signals'::regnamespace
+          AND relname = 'geo_signal_digest'
+      ) THEN
+        REFRESH MATERIALIZED VIEW signals.geo_signal_digest;
+      END IF;
+    END $digest_seed$;
+
+    -- ============================================================
+    -- Edmonton business panel — materialized enrichment table
+    -- Wide-row enrichment keyed on (licence_id, period).
+    -- Refreshed daily by computeSignals.
+    -- All numeric enrichment columns are nullable: the first daily run
+    -- populates what exists in substrate; gaps are NULL until upstream
+    -- data lands.
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS signals.edmonton_business_panel (
+      -- Natural key
+      licence_id               TEXT NOT NULL,
+      period                   DATE NOT NULL,
+
+      -- Identity
+      trade_name               TEXT,
+      legal_name               TEXT,
+      geo_id                   UUID REFERENCES substrate.geo_dimension(id),
+      neighbourhood            TEXT,
+      address                  TEXT,
+      naics_code               TEXT,
+      category                 TEXT,
+
+      -- Tenure
+      issue_date               DATE,
+      expiry_date              DATE,
+      tenure_months            NUMERIC(8,2),
+      is_active                BOOLEAN NOT NULL DEFAULT TRUE,
+
+      -- Entity context
+      entity_id                UUID REFERENCES substrate.entities(id),
+      is_single_location       BOOLEAN,
+
+      -- Neighbourhood vitality (from neighbourhood vitality signal once available; NULL until then)
+      neighbourhood_vitality   NUMERIC(6,3),
+      neighbourhood_net_change INTEGER,
+      neighbourhood_rank       INTEGER,
+
+      -- Sector momentum (from sector momentum signal once available; NULL until then)
+      sector_closure_rate      NUMERIC(6,4),
+      sector_momentum_score    NUMERIC(6,3),
+
+      -- Parcel intelligence (from parcel intelligence signal once available; NULL until then)
+      parcel_id                TEXT,
+      assessed_value           NUMERIC(14,2),
+      tax_class                TEXT,
+      permit_count_5yr         INTEGER,
+
+      -- Dietary enrichment (from licence_dietary_taxonomy)
+      dietary_category         TEXT,
+      dietary_confidence       NUMERIC(3,2),
+
+      -- Acquisition score (populated after acquisition score signal is computed)
+      acquisition_score        NUMERIC(6,2),
+
+      -- Bookkeeping
+      computed_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+      PRIMARY KEY (licence_id, period)
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_ebp_geo_period
+      ON signals.edmonton_business_panel (geo_id, period DESC);
+    CREATE INDEX IF NOT EXISTS idx_signals_ebp_naics_period
+      ON signals.edmonton_business_panel (naics_code, period DESC)
+      WHERE naics_code IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_signals_ebp_neighbourhood_period
+      ON signals.edmonton_business_panel (neighbourhood, period DESC)
+      WHERE neighbourhood IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_signals_ebp_single_location
+      ON signals.edmonton_business_panel (period, is_single_location)
+      WHERE is_single_location = TRUE;
+    CREATE INDEX IF NOT EXISTS idx_signals_ebp_active_period
+      ON signals.edmonton_business_panel (period, is_active)
+      WHERE is_active = TRUE;
+    -- Additional indexes for signal pipeline queries (idempotent IF NOT EXISTS).
+    CREATE INDEX IF NOT EXISTS idx_signals_ebp_neighbourhood
+      ON signals.edmonton_business_panel (neighbourhood, period DESC);
+    CREATE INDEX IF NOT EXISTS idx_signals_ebp_category
+      ON signals.edmonton_business_panel (category, period DESC);
+    CREATE INDEX IF NOT EXISTS idx_signals_ebp_dietary
+      ON signals.edmonton_business_panel (dietary_category, period DESC)
+      WHERE dietary_category != 'unknown';
+
+    -- ============================================================
+    -- series_metadata CHECK constraints.
+    -- ADD CONSTRAINT isn't idempotent, so gate on pg_constraint.
+    -- Must come AFTER the ALTER TABLE substrate.series_metadata block
+    -- above (which adds storage_kind and entity_kind columns).
+    -- ============================================================
+    DO $series_meta_checks$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'series_metadata_storage_kind_check'
+          AND conrelid = 'substrate.series_metadata'::regclass
+      ) THEN
+        ALTER TABLE substrate.series_metadata
+          ADD CONSTRAINT series_metadata_storage_kind_check
+          CHECK (storage_kind IN ('observation', 'entity', 'entity+observation'));
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'series_metadata_entity_kind_required'
+          AND conrelid = 'substrate.series_metadata'::regclass
+      ) THEN
+        ALTER TABLE substrate.series_metadata
+          ADD CONSTRAINT series_metadata_entity_kind_required
+          CHECK (storage_kind = 'observation' OR entity_kind IS NOT NULL);
+      END IF;
+    END $series_meta_checks$;
+
+    -- ============================================================
+    -- Well-licence intelligence layer (2026-06-04)
+    --
+    -- Promotes the raw well_licences mirror into the substrate/signals
+    -- data model so licence activity becomes a queryable time series.
+    --
+    -- Three additions:
+    --   1. substrate.sources row for AER well licences.
+    --   2. substrate.series_metadata rows for three derived observation
+    --      series (daily new-licence counts by substance, classification,
+    --      operator/licensee).
+    --   3. substrate.entities rows for distinct licensees/operators
+    --      (kind = 'well-operator').
+    --
+    -- These are seeded via the collector (collectWellLicences) and the
+    -- new deriveWellLicenceIntelligence() function in collector.ts.
+    -- All writes are idempotent (ON CONFLICT DO UPDATE / DO NOTHING).
+    -- ============================================================
+
+    -- Source record
+    INSERT INTO substrate.sources (name, base_url, auth_type)
+    VALUES (
+      'AER Well Licences',
+      'https://static.aer.ca/prd/data/well-lic',
+      'none'
+    )
+    ON CONFLICT (name) DO NOTHING;
+
+    -- Series: daily new-licence counts by substance (oil/gas/bitumen/etc.)
+    INSERT INTO substrate.series_metadata
+      (slug, domain, name, unit, unit_type, cadence, description, tags,
+       is_derived, derivation_lineage, storage_kind)
+    VALUES (
+      'well-licences-new-by-substance',
+      'energy',
+      'New Well Licences — Daily Count by Substance',
+      'licences',
+      'count',
+      'daily',
+      'Count of new AER well licences issued per day, broken down by substance type (oil, gas, bitumen, etc.). Derived from well_licences and well_licence_daily.',
+      ARRAY['wells','drilling','aer','substance','alberta'],
+      TRUE,
+      '{"v":1,"kind":"rollup","upstream":[{"table":"well_licences","filter":{}},{"table":"well_licence_daily","filter":{}}]}'::jsonb,
+      'observation'
+    )
+    ON CONFLICT (slug) DO UPDATE SET
+      name               = EXCLUDED.name,
+      description        = EXCLUDED.description,
+      tags               = EXCLUDED.tags;
+
+    -- Series: daily new-licence counts by classification (new, reactivation, etc.)
+    INSERT INTO substrate.series_metadata
+      (slug, domain, name, unit, unit_type, cadence, description, tags,
+       is_derived, derivation_lineage, storage_kind)
+    VALUES (
+      'well-licences-new-by-classification',
+      'energy',
+      'New Well Licences — Daily Count by Classification',
+      'licences',
+      'count',
+      'daily',
+      'Count of new AER well licences issued per day, broken down by licence classification (New, Reactivation, Recompletion, etc.). Derived from well_licences.',
+      ARRAY['wells','drilling','aer','classification','alberta'],
+      TRUE,
+      '{"v":1,"kind":"rollup","upstream":[{"table":"well_licences","filter":{}}]}'::jsonb,
+      'observation'
+    )
+    ON CONFLICT (slug) DO UPDATE SET
+      name               = EXCLUDED.name,
+      description        = EXCLUDED.description,
+      tags               = EXCLUDED.tags;
+
+    -- Series: daily new-licence counts by operator/licensee
+    INSERT INTO substrate.series_metadata
+      (slug, domain, name, unit, unit_type, cadence, description, tags,
+       is_derived, derivation_lineage, storage_kind)
+    VALUES (
+      'well-licences-new-by-operator',
+      'energy',
+      'New Well Licences — Daily Count by Operator',
+      'licences',
+      'count',
+      'daily',
+      'Count of new AER well licences issued per day, broken down by licensee/operator. Paired with substrate.entities (kind=well-operator). Derived from well_licences.',
+      ARRAY['wells','drilling','aer','operator','licensee','alberta'],
+      TRUE,
+      '{"v":1,"kind":"rollup","upstream":[{"table":"well_licences","filter":{}}]}'::jsonb,
+      'observation'
+    )
+    ON CONFLICT (slug) DO UPDATE SET
+      name               = EXCLUDED.name,
+      description        = EXCLUDED.description,
+      tags               = EXCLUDED.tags;
+
+    -- ============================================================
+    -- Named business licences — per-business entity records from
+    -- Edmonton and Calgary open data (Socrata). Feeds entity
+    -- resolution. Natural key: (source, licence_id).
+    --
+    -- licence_id nullability: Edmonton externalid and Calgary
+    -- getbusid are stable IDs present on all rows. If a row somehow
+    -- arrives with an empty id, COALESCE falls back to a synthetic
+    -- key so the UNIQUE constraint never collides on blank strings.
+    -- ============================================================
+    CREATE TABLE IF NOT EXISTS business_licences (
+      id           SERIAL PRIMARY KEY,
+      source       TEXT NOT NULL,
+      licence_id   TEXT NOT NULL,
+      trade_name   TEXT NOT NULL,
+      legal_name   TEXT,
+      address      TEXT,
+      city         TEXT,
+      locality     TEXT,
+      category     TEXT,
+      status       TEXT,
+      issue_date   TEXT,
+      expiry_date  TEXT,
+      latitude     DOUBLE PRECISION,
+      longitude    DOUBLE PRECISION,
+      collected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (source, licence_id)
+    );
+
+    -- ALTER before index: on a pre-existing business_licences table the
+    -- CREATE TABLE above is a no-op; new columns must arrive via ALTER.
+    ALTER TABLE business_licences ADD COLUMN IF NOT EXISTS legal_name TEXT;
+    ALTER TABLE business_licences ADD COLUMN IF NOT EXISTS city TEXT;
+    ALTER TABLE business_licences ADD COLUMN IF NOT EXISTS locality TEXT;
+    ALTER TABLE business_licences ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
+    ALTER TABLE business_licences ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
+
+    CREATE INDEX IF NOT EXISTS idx_biz_lic_source_status
+      ON business_licences (source, status);
+    CREATE INDEX IF NOT EXISTS idx_biz_lic_trade_name_lower
+      ON business_licences (LOWER(trade_name));
+
+    DO $biz_trgm$ BEGIN
+      IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm')
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE schemaname = 'public'
+          AND tablename  = 'business_licences'
+          AND indexname  = 'idx_biz_lic_trade_name_trgm'
+      ) THEN
+        CREATE INDEX idx_biz_lic_trade_name_trgm
+          ON business_licences
+          USING GIN (trade_name gin_trgm_ops);
+      END IF;
+    END $biz_trgm$;
 `;
 
 /**
@@ -1006,11 +2633,16 @@ export async function upsertWellLicence(
   licensee: string
 ) {
   const pool = await getDb();
+  // Conflict target: (licence_number, filing_date) — preserves one row per
+  // (licence, day) so history accumulates. See 2026-06-04 boot migration.
   await pool.query(
     `INSERT INTO well_licences (filing_date, licence_number, well_name, unique_id, surface_location, projected_depth, classification, substance, licensee)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-     ON CONFLICT(licence_number)
-     DO UPDATE SET well_name = EXCLUDED.well_name, collected_at = NOW()`,
+     ON CONFLICT(licence_number, filing_date)
+     DO UPDATE SET well_name = EXCLUDED.well_name, unique_id = EXCLUDED.unique_id,
+       surface_location = EXCLUDED.surface_location, projected_depth = EXCLUDED.projected_depth,
+       classification = EXCLUDED.classification, substance = EXCLUDED.substance,
+       licensee = EXCLUDED.licensee, collected_at = NOW()`,
     [filingDate, licenceNumber, wellName, uniqueId, surfaceLocation, projectedDepth, classification, substance, licensee]
   );
 }
@@ -1019,16 +2651,17 @@ export async function upsertWellLicenceDaily(
   filingDate: string,
   totalCount: number,
   bySubstance: string,
-  byClassification: string
+  byClassification: string,
+  byLicensee: string = "{}"
 ) {
   const pool = await getDb();
   await pool.query(
-    `INSERT INTO well_licence_daily (filing_date, total_count, by_substance, by_classification)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO well_licence_daily (filing_date, total_count, by_substance, by_classification, by_licensee)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT(filing_date)
      DO UPDATE SET total_count = EXCLUDED.total_count, by_substance = EXCLUDED.by_substance,
-                   by_classification = EXCLUDED.by_classification`,
-    [filingDate, totalCount, bySubstance, byClassification]
+                   by_classification = EXCLUDED.by_classification, by_licensee = EXCLUDED.by_licensee`,
+    [filingDate, totalCount, bySubstance, byClassification, byLicensee]
   );
 }
 
@@ -1067,6 +2700,62 @@ export async function getImmigrationTimeSeries(
     [province]
   );
   return rows;
+}
+
+/**
+ * Permanent-resident landings by immigration category for the most recent
+ * stored year (province-level rows, where cma = ''). Optionally pin a year.
+ */
+export async function getImmigrationByCategory(
+  province: string = "Alberta",
+  year?: number
+): Promise<{ year: number; category: string; total: number }[]> {
+  const pool = await getDb();
+  const { rows } = await pool.query(
+    `SELECT year, category, SUM(count) AS total
+       FROM immigration_records
+      WHERE LOWER(province) = LOWER($1)
+        AND cma = ''
+        AND category <> ''
+        AND year = COALESCE($2, (
+          SELECT MAX(year) FROM immigration_records
+           WHERE LOWER(province) = LOWER($1) AND cma = ''
+        ))
+      GROUP BY year, category
+      ORDER BY total DESC`,
+    [province, year ?? null]
+  );
+  return rows.map((r) => ({
+    year: Number(r.year),
+    category: r.category as string,
+    total: Number(r.total),
+  }));
+}
+
+/**
+ * Permanent-resident landings by Census Metropolitan Area (Edmonton/Calgary)
+ * for the most recent stored year. Optionally pin a year.
+ */
+export async function getImmigrationByCMA(
+  year?: number
+): Promise<{ year: number; cma: string; total: number }[]> {
+  const pool = await getDb();
+  const { rows } = await pool.query(
+    `SELECT year, cma, SUM(count) AS total
+       FROM immigration_records
+      WHERE cma <> ''
+        AND year = COALESCE($1, (
+          SELECT MAX(year) FROM immigration_records WHERE cma <> ''
+        ))
+      GROUP BY year, cma
+      ORDER BY total DESC`,
+    [year ?? null]
+  );
+  return rows.map((r) => ({
+    year: Number(r.year),
+    cma: r.cma as string,
+    total: Number(r.total),
+  }));
 }
 
 // ============================================================

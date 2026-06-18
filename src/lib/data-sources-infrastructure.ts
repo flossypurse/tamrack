@@ -1,6 +1,8 @@
 // Federal and provincial infrastructure, energy, wildfire, tourism, and tax data sources
 // Mixed formats: JSON, CSV, fixed-width text, CKAN APIs
 
+import { getDb } from "./db";
+
 // ============================================================
 // Endpoints
 // ============================================================
@@ -188,6 +190,11 @@ export async function fetchInfrastructureProjects(
 
 /**
  * Alberta major projects inventory (projects over $5M).
+ *
+ * The upstream payload is Socrata's `rows.json` shape:
+ *   { meta: { view: { columns: [{ name, ... }, ...] } }, data: [[...], ...] }
+ * where each `data[i]` is a positional array indexed by column position.
+ * We build a name → index map from `meta.view.columns` and read fields by name.
  */
 export async function fetchAlbertaMajorProjects(): Promise<MajorProject[]> {
   try {
@@ -198,18 +205,42 @@ export async function fetchAlbertaMajorProjects(): Promise<MajorProject[]> {
       console.error(`Alberta Major Projects fetch failed: ${res.status}`);
       return [];
     }
-    const data = await res.json();
-    const rows = Array.isArray(data) ? data : data?.data ?? data?.rows ?? [];
+    const payload = await res.json();
+    const columns: { name?: string }[] =
+      payload?.meta?.view?.columns ?? [];
+    const rows: unknown[][] = Array.isArray(payload?.data) ? payload.data : [];
+    if (columns.length === 0 || rows.length === 0) return [];
 
-    return rows.map((r: Record<string, unknown>) => ({
-      name: String(r["Project Name"] ?? r["project_name"] ?? r["name"] ?? ""),
-      sector: String(r["Sector"] ?? r["sector"] ?? ""),
-      type: String(r["Type"] ?? r["type"] ?? r["Project Type"] ?? ""),
-      stage: String(r["Stage"] ?? r["stage"] ?? r["Status"] ?? ""),
-      cost: parseFloat(String(r["Estimated Cost"] ?? r["cost"] ?? r["Cost ($Million)"] ?? "0")) || 0,
-      location: String(r["Location"] ?? r["location"] ?? r["Region"] ?? ""),
-      municipality: String(r["Municipality"] ?? r["municipality"] ?? r["Nearest Municipality"] ?? ""),
-    }));
+    const idx: Record<string, number> = {};
+    columns.forEach((c, i) => {
+      if (c?.name) idx[c.name] = i;
+    });
+
+    const get = (row: unknown[], col: string): unknown =>
+      idx[col] === undefined ? undefined : row[idx[col]];
+
+    return rows
+      .map((r) => {
+        // Location is a Socrata `location` cell: [human, lat, lon, ..., needs_recoding]
+        const loc = get(r, "Location");
+        const locationStr =
+          Array.isArray(loc) && loc[1] && loc[2]
+            ? `${loc[1]},${loc[2]}`
+            : "";
+
+        return {
+          name: String(get(r, "Name") ?? ""),
+          sector: String(get(r, "Sector") ?? ""),
+          type: String(get(r, "Sector") ?? ""), // dataset has no separate Type column
+          stage: String(get(r, "Stage") ?? ""),
+          cost: parseFloat(String(get(r, "Cost") ?? "0")) || 0,
+          location: locationStr,
+          municipality: String(
+            get(r, "From Municipality") ?? get(r, "To Municipality") ?? ""
+          ),
+        };
+      })
+      .filter((p) => p.name.length > 0);
   } catch (err) {
     console.error("Alberta Major Projects fetch error:", err);
     return [];
@@ -220,53 +251,151 @@ export async function fetchAlbertaMajorProjects(): Promise<MajorProject[]> {
 // AER Well Licences (Daily fixed-width text)
 // ============================================================
 
+/** Marker thrown when AER's static directory rejects the request. */
+export class AERAccessBlockedError extends Error {
+  constructor(url: string, status: number) {
+    super(`AER static directory blocked (${status}) at ${url}`);
+    this.name = "AERAccessBlockedError";
+  }
+}
+
 /**
  * Fetch AER well licences for a given date (defaults to today).
- * File format is fixed-width text at static.aer.ca.
+ *
+ * The historical source — `static.aer.ca/prd/data/well-lic/WELLS{MMDD}.TXT` —
+ * started returning HTTP 403 around 2026-03-14 and the entire `prd/data/`
+ * tree is now access-walled. No public Open Alberta dataset currently
+ * exposes the daily licence flow as a parseable file; only quarterly PDFs
+ * are published. Until a replacement source is identified, this fetcher
+ * throws AERAccessBlockedError on 403 so the collector can log a real
+ * error row instead of misleading "ok with no data".
  */
 export async function fetchAERWellLicences(
   date?: Date
 ): Promise<WellLicence[]> {
+  const d = date ?? new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const url = `${AER_WELL_BASE}/WELLS${mm}${dd}.TXT`;
+
+  let res: Response;
   try {
-    const d = date ?? new Date();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    const url = `${AER_WELL_BASE}/WELLS${mm}${dd}.TXT`;
-
-    const res = await fetch(url, { next: { revalidate: 86400 } });
-    if (!res.ok) {
-      console.error(`AER well licences fetch failed: ${res.status} for ${url}`);
-      return [];
-    }
-    const text = await res.text();
-    const lines = text.split("\n");
-
-    // Skip header lines (typically first 2-3 lines are headers/dashes)
-    const dataLines = lines.filter(
-      (l) =>
-        l.trim().length > 0 &&
-        !l.startsWith("-") &&
-        !l.startsWith("=") &&
-        !l.toLowerCase().includes("well name") &&
-        !l.toLowerCase().includes("licence")
-    );
-
-    // AER fixed-width format — approximate column positions
-    // Columns vary by year; these are common widths
-    return dataLines.map((line) => ({
-      licenceNumber: line.substring(0, 10).trim(),
-      wellName: line.substring(10, 50).trim(),
-      uniqueId: line.substring(50, 66).trim(),
-      surfaceLocation: line.substring(66, 100).trim(),
-      projectedDepth: parseInt(line.substring(100, 110).trim(), 10) || 0,
-      classification: line.substring(110, 125).trim(),
-      substance: line.substring(125, 145).trim(),
-      licensee: line.substring(145).trim(),
-    }));
+    res = await fetch(url, { next: { revalidate: 86400 } });
   } catch (err) {
     console.error("AER well licences fetch error:", err);
     return [];
   }
+
+  if (res.status === 403) {
+    throw new AERAccessBlockedError(url, res.status);
+  }
+  if (!res.ok) {
+    console.error(`AER well licences fetch failed: ${res.status} for ${url}`);
+    return [];
+  }
+
+  const text = await res.text();
+
+  // The file uses CRLF — strip \r from every line.
+  const rawLines = text.split("\n").map((l) => l.replace(/\r$/, ""));
+
+  // ── Locate the data section ──────────────────────────────────────────────
+  // The header block opens with a legend delimited by two "----" divider
+  // lines.  Data records start immediately after the second divider.
+  let dataStart = 0;
+  let dividerCount = 0;
+  for (let i = 0; i < rawLines.length; i++) {
+    if (rawLines[i].trim().startsWith("----")) {
+      dividerCount++;
+      if (dividerCount === 2) {
+        dataStart = i + 1;
+        break;
+      }
+    }
+  }
+
+  // If the legend dividers aren't found, the header layout changed upstream.
+  // Bail rather than scan the whole file and risk parsing headers as records.
+  if (dividerCount < 2) return [];
+
+  // Data ends at the "AMENDMENTS OF WELL LICENCES" sub-section header or at
+  // the "-------- END OF WELL LICENCES DAILY LIST --------" footer.
+  let dataEnd = rawLines.length;
+  for (let i = dataStart; i < rawLines.length; i++) {
+    const t = rawLines[i].trim();
+    if (
+      t.includes("AMENDMENTS OF WELL LICENCES") ||
+      t.startsWith("-------- END OF WELL")
+    ) {
+      dataEnd = i;
+      break;
+    }
+  }
+
+  // ── Group lines into per-record blocks ──────────────────────────────────
+  // A record-start line has a 6–7 digit licence number in columns [40,51)
+  // and a non-empty well name in columns [4,40).  Everything from one
+  // record-start up to (but not including) the next is one block.
+  const isRecordStart = (line: string): boolean => {
+    if (line.length < 51) return false;
+    const licField = line.substring(40, 51).trim();
+    const wellField = line.substring(4, 40).trim();
+    return /^\d{6,7}$/.test(licField) && wellField.length > 0;
+  };
+
+  const blocks: string[][] = [];
+  let current: string[] | null = null;
+  for (let i = dataStart; i < dataEnd; i++) {
+    const line = rawLines[i];
+    if (isRecordStart(line)) {
+      if (current) blocks.push(current);
+      current = [line];
+    } else if (current !== null) {
+      current.push(line);
+    }
+  }
+  if (current) blocks.push(current);
+
+  // ── Parse each block ────────────────────────────────────────────────────
+  // Each standard well-licence record consists of exactly 5 content lines
+  // (non-blank), using fixed column ranges confirmed against the live file:
+  //
+  //   Line A (record-start): wellName=[4,40)  licenceNumber=[40,51)
+  //   Line B:                uniqueId=[4,25)  projectedDepth=[72,end)
+  //   Line C:                classification=[4,28)
+  //   Line D:                substance=[72,end)
+  //   Line E:                licensee=[4,72)  surfaceLocation=[72,end)
+  //
+  // Some records are followed by WELL NAME:/BOTTOMHOLE continuation lines;
+  // those are ignored by taking only the first 5 non-blank lines.
+  const parseDepth = (raw: string): number => {
+    const m = raw.trim().match(/^([0-9]+(?:\.[0-9]+)?)/);
+    return m ? parseFloat(m[1]) : 0;
+  };
+
+  return blocks.map((block) => {
+    const content = block.filter((l) => l.trim().length > 0);
+    const A = content[0] ?? "";
+    const B = content[1] ?? "";
+    const C = content[2] ?? "";
+    const D = content[3] ?? "";
+    const E = content[4] ?? "";
+
+    // uniqueId: the UWI portion sits in [4,25); [25,28) bleeds into the
+    // surface-coordinate direction indicator (e.g. "  S" / "  N").
+    const rawUniqueId = B.length > 4 ? B.substring(4, 25).trim() : "";
+
+    return {
+      wellName: A.substring(4, 40).trim(),
+      licenceNumber: A.substring(40, 51).trim(),
+      uniqueId: rawUniqueId,
+      projectedDepth: parseDepth(B.substring(72)),
+      classification: C.substring(4, 28).trim(),
+      substance: D.substring(72).trim(),
+      licensee: E.substring(4, 72).trim(),
+      surfaceLocation: E.substring(72).trim(),
+    };
+  });
 }
 
 // ============================================================
@@ -317,25 +446,11 @@ export async function fetchWildfireHistorical(): Promise<WildfireRecord[]> {
 }
 
 // ============================================================
-// CWFIS Active Fires (Natural Resources Canada)
+// Wildfire data (Natural Resources Canada / Alberta Open Data)
 // ============================================================
-
-const CWFIS_ACTIVE_FIRES_URL =
-  "https://cwfis.cfs.nrcan.gc.ca/downloads/activefires/activefires.csv";
 
 const HISTORICAL_WILDFIRE_CSV_URL =
   "https://open.alberta.ca/dataset/a221e7a0-4f46-4be7-9c5a-e29de9a3447e/resource/80480824-0c50-456c-9723-f9d4fc136141/download/fp-historical-wildfire-data-2006-2025.csv";
-
-export interface CWFISFire {
-  agency: string;
-  firename: string;
-  lat: number;
-  lon: number;
-  startdate: string;
-  hectares: number;
-  stageOfControl: string;
-  responseType: string;
-}
 
 export interface HistoricalWildfire {
   year: number;
@@ -358,37 +473,6 @@ export interface WildfireCauseBreakdown {
   cause: string;
   count: number;
   totalHectares: number;
-}
-
-/**
- * Fetch active fires from CWFIS (Canadian Wildland Fire Information System),
- * filtered to Alberta (agency === "ab").
- */
-export async function fetchCWFISActiveFires(): Promise<CWFISFire[]> {
-  try {
-    const rows = await fetchCSV(CWFIS_ACTIVE_FIRES_URL);
-    return rows
-      .filter(
-        (r) =>
-          (r["agency"] ?? r["Agency"] ?? "").toLowerCase() === "ab"
-      )
-      .map((r) => ({
-        agency: r["agency"] ?? r["Agency"] ?? "",
-        firename: r["firename"] ?? r["FireName"] ?? r["fire_name"] ?? "",
-        lat: parseFloat(r["lat"] ?? r["Lat"] ?? r["latitude"] ?? "0") || 0,
-        lon: parseFloat(r["lon"] ?? r["Lon"] ?? r["longitude"] ?? "0") || 0,
-        startdate: r["startdate"] ?? r["StartDate"] ?? r["start_date"] ?? "",
-        hectares:
-          parseFloat(r["hectares"] ?? r["Hectares"] ?? r["ha"] ?? "0") || 0,
-        stageOfControl:
-          r["stage_of_control"] ?? r["StageOfControl"] ?? r["status"] ?? "",
-        responseType:
-          r["response_type"] ?? r["ResponseType"] ?? r["type"] ?? "",
-      }));
-  } catch (err) {
-    console.error("CWFIS active fires fetch error:", err);
-    return [];
-  }
 }
 
 /**
@@ -544,6 +628,176 @@ export async function fetchCRATaxStats(
     return await fetchCSV(url);
   } catch (err) {
     console.error(`CRA tax stats fetch error for table ${table}:`, err);
+    return [];
+  }
+}
+
+// ============================================================
+// Accumulated well-licence reads (Postgres)
+// ============================================================
+
+export interface WellLicenceRecord {
+  licenceNumber: string;
+  wellName: string;
+  licensee: string;
+  substance: string;
+  classification: string;
+  surfaceLocation: string;
+  filingDate: string;
+}
+
+export interface WellLicenceDailyPoint {
+  date: string;
+  totalCount: number;
+  bySubstance: Record<string, number>;
+  byClassification: Record<string, number>;
+  byLicensee: Record<string, number>;
+}
+
+export interface WellOperator {
+  name: string;
+  slug: string;
+  firstSeen: string | null;
+  lastSeen: string | null;
+  licenceCount: number;
+}
+
+/**
+ * Well licences accumulated in Postgres from AER daily files.
+ * Optionally filtered by filing_date range; ordered newest first.
+ */
+export async function fetchWellLicenceRecords(
+  limit: number = 100,
+  range?: { from?: string; to?: string }
+): Promise<WellLicenceRecord[]> {
+  try {
+    const db = await getDb();
+    const params: (string | number)[] = [];
+    const conditions: string[] = [];
+
+    if (range?.from) {
+      params.push(range.from);
+      conditions.push(`filing_date >= $${params.length}`);
+    }
+    if (range?.to) {
+      params.push(range.to);
+      conditions.push(`filing_date <= $${params.length}`);
+    }
+
+    params.push(limit);
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const sql = `
+      SELECT licence_number, well_name, licensee, substance, classification,
+             surface_location, filing_date
+      FROM well_licences
+      ${where}
+      ORDER BY filing_date DESC, id DESC
+      LIMIT $${params.length}
+    `;
+
+    const result = await db.query(sql, params);
+    return result.rows.map((r) => ({
+      licenceNumber: r.licence_number as string,
+      wellName: r.well_name as string,
+      licensee: r.licensee as string,
+      substance: r.substance as string,
+      classification: r.classification as string,
+      surfaceLocation: r.surface_location as string,
+      filingDate: r.filing_date as string,
+    }));
+  } catch (err) {
+    console.error("fetchWellLicenceRecords error:", err);
+    return [];
+  }
+}
+
+function safeJsonParse(text: string): Record<string, number> {
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, number>;
+    }
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Daily well-licence summary rows from Postgres, returned in ascending date order.
+ * Useful for trend charts (total licences issued per filing day).
+ */
+export async function fetchWellLicenceDaily(
+  days: number = 90,
+  range?: { from?: string; to?: string }
+): Promise<WellLicenceDailyPoint[]> {
+  try {
+    const db = await getDb();
+    // When an explicit {from,to} window is given, filter by filing_date so the
+    // result is the requested window (not just the most-recent N days).
+    const conds: string[] = [];
+    const params: (string | number)[] = [];
+    if (range?.from) {
+      params.push(range.from);
+      conds.push(`filing_date >= $${params.length}`);
+    }
+    if (range?.to) {
+      params.push(range.to);
+      conds.push(`filing_date <= $${params.length}`);
+    }
+    const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
+    params.push(days);
+    const result = await db.query(
+      `SELECT filing_date, total_count, by_substance, by_classification, by_licensee
+       FROM well_licence_daily
+       ${where}
+       ORDER BY filing_date DESC
+       LIMIT $${params.length}`,
+      params
+    );
+    // Reverse so the caller receives ascending (oldest → newest) order.
+    return result.rows.reverse().map((r) => ({
+      date: r.filing_date as string,
+      totalCount: r.total_count as number,
+      bySubstance: safeJsonParse(r.by_substance as string),
+      byClassification: safeJsonParse(r.by_classification as string),
+      byLicensee: safeJsonParse(r.by_licensee as string),
+    }));
+  } catch (err) {
+    console.error("fetchWellLicenceDaily error:", err);
+    return [];
+  }
+}
+
+/**
+ * Well operators from the substrate entity directory, joined to their
+ * accumulated licence count. Ordered by total licences issued, descending.
+ */
+export async function fetchWellOperators(
+  limit: number = 100
+): Promise<WellOperator[]> {
+  try {
+    const db = await getDb();
+    const result = await db.query(
+      `SELECT e.name, e.slug, e.first_seen, e.last_seen,
+              COUNT(w.id)::int AS licence_count
+       FROM substrate.entities e
+       LEFT JOIN well_licences w ON w.licensee = e.name
+       WHERE e.kind = 'well-operator'
+       GROUP BY e.name, e.slug, e.first_seen, e.last_seen
+       ORDER BY licence_count DESC, e.last_seen DESC NULLS LAST
+       LIMIT $1`,
+      [limit]
+    );
+    return result.rows.map((r) => ({
+      name: r.name as string,
+      slug: r.slug as string,
+      firstSeen: r.first_seen != null ? String(r.first_seen) : null,
+      lastSeen: r.last_seen != null ? String(r.last_seen) : null,
+      licenceCount: r.licence_count as number,
+    }));
+  } catch (err) {
+    console.error("fetchWellOperators error:", err);
     return [];
   }
 }

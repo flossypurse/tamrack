@@ -11,10 +11,13 @@ export const FIRE_ENDPOINTS = {
   // ~927K records from 2015-present, daily updates
   EDMONTON_FIRE: "https://data.edmonton.ca/resource/7hsn-idqi.json",
 
-  // Canadian Wildland Fire Information System — active fires CSV
-  // Updated daily during fire season
+  // Canadian Wildland Fire Information System — active fires CSV.
+  // The legacy /downloads/activefires/activefires.csv path was removed by
+  // NRCan in early 2026; the canonical replacement is the cwfif geoserver
+  // WFS endpoint, sourced from the .url shortcut in /downloads/reportedfires/
+  // and filtered server-side via CQL to currently-active records.
   CWFIS_ACTIVE_FIRES:
-    "https://cwfis.cfs.nrcan.gc.ca/downloads/activefires/activefires.csv",
+    "https://geoserver.cwfif.nrcan.gc.ca/geoserver/wfs?service=WFS&version=2.0.1&request=GetFeature&outputFormat=csv&typeName=public:cwfif_national_activefires&sortBy=agency_code+A,record_start+D&CQL_FILTER=now()%3E=record_start%20AND%20now()%3C=record_end",
 
   // 511 Alberta road/emergency alerts — JSON API
   // Rate limit: 10 requests per 60 seconds
@@ -332,21 +335,36 @@ export async function fetchCWFISActiveFires(): Promise<ActiveFireCWFIS[]> {
     const text = await res.text();
     const rows = parseCsv(text);
 
-    // Filter to Alberta fires only
+    // Filter to Alberta fires only. The new cwfif schema uses uppercase
+    // agency codes ("AB"); fall back to legacy column names so any cached
+    // mock responses or upstream re-roll continues to work during the
+    // schema transition.
     return rows
-      .filter(
-        (row) =>
-          (row.agency || "").toLowerCase() === "ab" ||
-          (row.Agency || "").toLowerCase() === "ab"
-      )
+      .filter((row) => {
+        const agency = (row.agency_code || row.agency || row.Agency || "").toUpperCase();
+        return agency === "AB";
+      })
       .map((row) => ({
-        agency: row.agency || row.Agency || "",
-        fireName: row.firename || row.Firename || row.fire_name || "",
-        lat: num(row.lat || row.Lat || row.latitude),
-        lon: num(row.lon || row.Lon || row.longitude),
-        startDate: row.startdate || row.StartDate || row.start_date || "",
-        hectares: num(row.hectares || row.Hectares),
+        agency: row.agency_code || row.agency || row.Agency || "",
+        fireName:
+          row.agency_fire_id ||
+          row.national_fire_id ||
+          row.firename ||
+          row.Firename ||
+          row.fire_name ||
+          "",
+        lat: num(row.latitude || row.lat || row.Lat),
+        lon: num(row.longitude || row.lon || row.Lon),
+        startDate:
+          row.record_start ||
+          row.situation_report_date ||
+          row.startdate ||
+          row.StartDate ||
+          row.start_date ||
+          "",
+        hectares: num(row.fire_size || row.hectares || row.Hectares),
         stageOfControl:
+          row.stage_of_control_status ||
           row.stage_of_control ||
           row.Stage_of_Control ||
           row.stageofcontrol ||

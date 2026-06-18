@@ -172,6 +172,9 @@
 /* ── Base ── */
 html {
   overflow-x: hidden;
+  /* Lift the 16px browser default to ~17px so rem-based type reads a touch
+     larger site-wide. Intentional px micro-labels (10–11px mono) are unaffected. */
+  font-size: 106.25%;
 }
 
 body {

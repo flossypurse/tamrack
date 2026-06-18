@@ -4,12 +4,21 @@ import { registerBusinessTool } from "./tools/business";
 import { registerCatalogTool } from "./tools/catalog";
 import { registerEnergyTool } from "./tools/energy";
 import { registerEntitiesTool } from "./tools/entities";
+import { registerHiringTool } from "./tools/hiring";
 import { registerHousingTool } from "./tools/housing";
+import { registerImmigrationTool } from "./tools/immigration";
+import { registerLeadsTool } from "./tools/leads";
 import { registerMacroTool } from "./tools/macro";
 import { registerMunicipalityTool } from "./tools/municipality";
+import { registerOpportunitiesTool } from "./tools/opportunities";
 import { registerRealEstateTool } from "./tools/real-estate";
 import { registerRegionalTool } from "./tools/regional";
 import { registerSearchTool } from "./tools/search";
+import { registerHealthTool } from "./tools/health";
+import { registerSafetyTool } from "./tools/safety";
+import { registerPoliticsTool } from "./tools/politics";
+import { registerFiscalTool } from "./tools/fiscal";
+import { registerEnvironmentTool } from "./tools/environment";
 
 /**
  * Server identity advertised in `InitializeResult.serverInfo`.
@@ -35,10 +44,15 @@ export const MCP_SERVER_INFO = {
  * request, and pairing 1:1 keeps server state isolated too. Tool registration
  * is fast (no I/O) so per-request instantiation is cheap.
  *
- * Tamrack v1 ships 10 tools: tamrack_catalog (discovery) + 8 typed surfaces
- * + tamrack_entities (chamber-of-commerce operator directory). Per-tool
- * scope checks run inside each handler against the AsyncLocalStorage
- * auth context (`lib/auth-context.ts`).
+ * Tamrack ships 19 tools: tamrack_catalog (discovery) + 8 typed surfaces
+ * + tamrack_entities (chamber-of-commerce operator directory)
+ * + tamrack_opportunities (demand-side contract feed)
+ * + tamrack_hiring (latent-demand hiring signals)
+ * + tamrack_leads (per-geo demand-heat composite ranking)
+ * + 6 breadth verticals (immigration, health, safety, politics, fiscal,
+ *   environment), each reading a daily-collected table. Per-tool scope
+ * checks run inside each handler against the AsyncLocalStorage auth
+ * context (`lib/auth-context.ts`).
  */
 export function createMcpServer(): McpServer {
   const server = new McpServer(MCP_SERVER_INFO, {
@@ -57,6 +71,15 @@ export function createMcpServer(): McpServer {
   registerEnergyTool(server);
   registerSearchTool(server);
   registerEntitiesTool(server);
+  registerOpportunitiesTool(server);
+  registerHiringTool(server);
+  registerLeadsTool(server);
+  registerImmigrationTool(server);
+  registerHealthTool(server);
+  registerSafetyTool(server);
+  registerPoliticsTool(server);
+  registerFiscalTool(server);
+  registerEnvironmentTool(server);
 
   return server;
 }

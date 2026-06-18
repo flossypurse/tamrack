@@ -1,0 +1,17 @@
+# Excluded for both webui (Dockerfile) and worker (Dockerfile.worker) builds.
+# worker.ts imports from src/lib/ so src/ must be included.
+# content/ and public/ are excluded from worker builds but needed for webui;
+# they are small (<400K combined) so including them in the build context is fine.
+node_modules
+.next
+.git
+.claude
+*.log
+handoffs
+docs
+data
+tsconfig.tsbuildinfo
+.source
+.env.local
+.env*.local
+.github

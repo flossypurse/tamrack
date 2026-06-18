@@ -1,14 +1,9 @@
 /**
  * Access-request DAO.
  *
- * Charter: tamrack/handoffs/2026-05-19-access-request-resonate-charter.md
- *   - §5 schema (table created in MIGRATION_SQL in db.ts)
- *   - §6 integration points — these are the functions the Resonate workflow
- *     (iter 3) calls via ctx.run, and the API route (iter 4) calls inline
- *     for the rate-limit check.
- *
- * Iter 1 scope: pure data layer. No Resonate import here; the workflow
- * wires these in iter 3. No Mailgun here; iter 2 owns that.
+ * Pure data layer for the access_requests table (schema in MIGRATION_SQL
+ * in db.ts). These functions are called by the Resonate approval workflow
+ * via ctx.run and by the API route for the rate-limit check.
  *
  * Email handling: every function that takes an email lower-cases + trims
  * it before querying. The UNIQUE constraint is on email_lower, so all
@@ -63,8 +58,8 @@ function normalizeEmail(email: string): string {
  * validation point; this is depth-of-defense for the DAO so a bad row
  * never lands in `access_requests`.
  *
- * Charter §1 says RFC-5322-ish; this is the same loose shape the auth
- * layer uses elsewhere — local-part + @ + domain with a TLD.
+ * RFC-5322-ish validation matching the loose shape the auth layer uses
+ * elsewhere — local-part + @ + domain with a TLD.
  */
 function isPlausibleEmail(email: string): boolean {
   if (email.length === 0 || email.length > 320) return false;
@@ -73,7 +68,7 @@ function isPlausibleEmail(email: string): boolean {
 }
 
 // ============================================================
-// DAO functions (charter §6)
+// DAO functions
 // ============================================================
 
 export interface UpsertAccessRequestInput {
@@ -88,8 +83,7 @@ export interface UpsertAccessRequestInput {
  *
  * - New row: inserted with status='pending' and a fresh UUID.
  * - Existing row: name/intent/source_ip refreshed; status untouched
- *   (charter §2 step 2: "Sets status='pending' for new rows, leaves
- *   existing status untouched").
+ *   (existing status is never reset by a re-submission).
  *
  * Returns the canonical row in either case. The workflow uses this as
  * the row-level idempotency anchor (the Resonate workflow ID is the
@@ -138,9 +132,9 @@ export async function upsertAccessRequest(
 
 /**
  * Look up a user by email. Used by the workflow's check-existing-user
- * step (charter §2 step 3). Returns just the id — callers don't need
- * the whole user row and the workflow doesn't want to drag PII through
- * Resonate's durable promise serialization.
+ * step. Returns just the id — callers don't need the whole user row and
+ * the workflow doesn't want to drag PII through durable promise
+ * serialization.
  */
 export async function findUserByEmail(
   email: string,
@@ -177,8 +171,8 @@ export async function markApproved(
 }
 
 /**
- * Deny: set status, decided_at, decided_by. No invite minted, no
- * requester email (charter §2 step 8b).
+ * Deny: set status, decided_at, decided_by. No invite is minted and no
+ * requester notification is sent on denial.
  */
 export async function markDenied(
   id: string,
@@ -197,8 +191,8 @@ export async function markDenied(
 }
 
 /**
- * Expire: set status, decided_at. Triggered by the durable promise's
- * TTL firing (charter §2 step 8c). No decided_by — there's no actor.
+ * Expire: set status, decided_at. Triggered when the durable promise's
+ * TTL fires. No decided_by — there's no human actor on an expiry.
  */
 export async function markExpired(id: string): Promise<void> {
   const pool = await getDb();
@@ -213,10 +207,10 @@ export async function markExpired(id: string): Promise<void> {
 }
 
 /**
- * Existing-user short-circuit: charter §7 "Email already has an
- * account". Workflow short-circuits before any human-in-the-loop gate;
- * the FYI admin email still fires but no invite is minted and no
- * requester email is sent. status='existing_user' so the admin UI can
+ * Existing-user short-circuit: the email already has an account.
+ * The workflow short-circuits before any human-in-the-loop gate — the
+ * FYI admin email still fires but no invite is minted and no requester
+ * notification is sent. status='existing_user' so the admin UI can
  * filter these out of the pending queue.
  */
 export async function markExistingUser(
@@ -236,7 +230,7 @@ export async function markExistingUser(
 }
 
 /**
- * IP rate-limit check. Charter §7: max 5 submissions per IP per 24h.
+ * IP rate-limit check: max 5 submissions per IP per 24h.
  *
  * - `sourceIp` null/empty → `{ allowed: true, count: 0 }`. Server-side
  *   IP extraction is best-effort; behind some proxies it may be absent.

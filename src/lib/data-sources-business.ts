@@ -45,6 +45,7 @@ export const BUSINESS_ENDPOINTS = {
 // ============================================================
 
 export interface EdmontonBusinessLicenceRecord {
+  licenceId: string;
   tradeName: string;
   category: string;
   neighbourhood: string;
@@ -53,6 +54,20 @@ export interface EdmontonBusinessLicenceRecord {
   issueDate: string;
   expiryDate: string;
   ward: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface CalgaryBusinessLicenceRecord {
+  licenceId: string;
+  tradeName: string;
+  licenceTypes: string;
+  communityDistrictCode: string;
+  communityDistrictName: string;
+  address: string;
+  firstIssuedDate: string;
+  expiryDate: string;
+  status: string;
   latitude: number;
   longitude: number;
 }
@@ -202,25 +217,25 @@ function col(row: Record<string, string>, ...candidates: string[]): string {
 
 /**
  * Fetches detailed Edmonton business licence records.
- * Returns top active licences with full detail.
+ * Returns active licences with full detail including stable licence ID.
  */
 export async function fetchEdmontonBusinessLicenceRecordDetails(
   limit: number = 1000
 ): Promise<EdmontonBusinessLicenceRecord[]> {
   try {
     const data = await fetchEdmontonData(EDMONTON_DATASETS.BUSINESS_LICENCES, {
-      $select: "trade_name,category,neighbourhood,address,status,most_recent_issue_date,expiry_date,ward,latitude,longitude",
-      $where: "status='ISSUED'",
+      $select: "externalid,business_name,business_licence_category,neighbourhood,business_address,most_recent_issue_date,expiry_date,ward,latitude,longitude",
       $order: "most_recent_issue_date DESC",
       $limit: String(limit),
     });
     if (!Array.isArray(data)) return [];
     return (data as Record<string, string>[]).map((row) => ({
-      tradeName: row.trade_name || "",
-      category: row.category || "",
+      licenceId: row.externalid || "",
+      tradeName: row.business_name || "",
+      category: row.business_licence_category || "",
       neighbourhood: row.neighbourhood || "",
-      address: row.address || "",
-      status: row.status || "",
+      address: row.business_address || "",
+      status: "ISSUED",
       issueDate: row.most_recent_issue_date || "",
       expiryDate: row.expiry_date || "",
       ward: row.ward || "",
@@ -334,6 +349,51 @@ export async function fetchCalgaryBusinessCount(): Promise<number> {
   });
   if (data.length === 0) return 0;
   return parseInt(data[0].cnt || "0");
+}
+
+/**
+ * Fetches per-business Calgary licence records (named entities).
+ * Returns active licences with stable getbusid, trade name, address, and geo.
+ */
+export async function fetchCalgaryBusinessLicenceRecords(
+  limit: number = 1000
+): Promise<CalgaryBusinessLicenceRecord[]> {
+  const data = await fetchCalgarySocrata({
+    $select: "getbusid,tradename,licencetypes,comdistcd,comdistnm,address,first_iss_dt,exp_dt,jobstatusdesc,point",
+    $where: "jobstatusdesc='Licensed'",
+    $order: "getbusid DESC",
+    $limit: String(limit),
+  });
+  // fetchCalgarySocrata types rows as Record<string, string> but Socrata
+  // returns the geometry `point` field as a pre-parsed JSON object.
+  // Cast to unknown-value map for safe access.
+  return (data as Record<string, unknown>[]).map((row) => {
+    let lat = 0;
+    let lon = 0;
+    try {
+      const pt = row.point as { coordinates?: number[] } | null | undefined;
+      if (pt?.coordinates && pt.coordinates.length >= 2) {
+        lon = pt.coordinates[0] ?? 0;
+        lat = pt.coordinates[1] ?? 0;
+      }
+    } catch {
+      // Geometry parse failure is non-fatal
+    }
+    const str = (v: unknown): string => (v != null ? String(v) : "");
+    return {
+      licenceId: str(row.getbusid),
+      tradeName: str(row.tradename),
+      licenceTypes: str(row.licencetypes),
+      communityDistrictCode: str(row.comdistcd),
+      communityDistrictName: str(row.comdistnm),
+      address: str(row.address),
+      firstIssuedDate: str(row.first_iss_dt),
+      expiryDate: str(row.exp_dt),
+      status: str(row.jobstatusdesc),
+      latitude: lat,
+      longitude: lon,
+    };
+  });
 }
 
 /**

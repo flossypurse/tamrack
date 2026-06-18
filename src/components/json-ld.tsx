@@ -7,13 +7,17 @@ export function OrganizationJsonLd() {
     name: "Tamrack",
     url: SITE_URL,
     description:
-      "Real-time economic intelligence dashboard for Alberta — live data from 8+ government sources across 22 municipalities.",
+      "A data agent for Alberta. 180+ live feeds across 16 Alberta government sources, rendered on demand.",
     foundingDate: "2026",
     areaServed: {
       "@type": "AdministrativeArea",
       name: "Alberta, Canada",
     },
-    sameAs: [],
+    sameAs: [
+      "https://x.com/flossypurse",
+      "https://bsky.app/profile/flossypurse.bsky.social",
+      "https://www.linkedin.com/in/cullywakelin/",
+    ],
   };
 
   return (
@@ -31,58 +35,14 @@ export function WebsiteJsonLd() {
     name: "Tamrack",
     url: SITE_URL,
     description:
-      "Real-time economic, real estate, and municipal data for Alberta.",
+      "A data agent for Alberta — 180+ live feeds across 16 government sources.",
     potentialAction: {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: `${SITE_URL}/municipalities?q={search_term_string}`,
+        urlTemplate: `${SITE_URL}/charts?q={search_term_string}`,
       },
       "query-input": "required name=search_term_string",
-    },
-  };
-
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
-    />
-  );
-}
-
-export function DatasetJsonLd({
-  name,
-  description,
-  url,
-  keywords,
-}: {
-  name: string;
-  description: string;
-  url: string;
-  keywords: string[];
-}) {
-  const data = {
-    "@context": "https://schema.org",
-    "@type": "Dataset",
-    name,
-    description,
-    url,
-    keywords,
-    license: `${SITE_URL}/terms`,
-    creator: {
-      "@type": "Organization",
-      name: "Tamrack",
-      url: SITE_URL,
-    },
-    spatialCoverage: {
-      "@type": "Place",
-      name: "Alberta, Canada",
-    },
-    isAccessibleForFree: false,
-    distribution: {
-      "@type": "DataDownload",
-      encodingFormat: "application/json",
-      contentUrl: `${SITE_URL}/api`,
     },
   };
 
@@ -127,30 +87,14 @@ export function SoftwareApplicationJsonLd() {
     operatingSystem: "Web",
     url: SITE_URL,
     description:
-      "Community intelligence dashboard for Alberta — real-time data on permits, assessments, energy, labour, migration, and more.",
-    offers: [
-      {
-        "@type": "Offer",
-        price: "0",
-        priceCurrency: "CAD",
-        name: "Explorer (Free)",
-        description: "Macro economy pages and municipality explorer",
-      },
-      {
-        "@type": "Offer",
-        price: "29",
-        priceCurrency: "CAD",
-        name: "Pro",
-        description:
-          "Municipality deep-dives, API access, and full dashboard",
-        priceSpecification: {
-          "@type": "UnitPriceSpecification",
-          price: "29",
-          priceCurrency: "CAD",
-          billingDuration: "P1M",
-        },
-      },
-    ],
+      "A data agent for Alberta — type a question, get the chart. 180+ feeds across 16 government sources.",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "CAD",
+      name: "Chart catalogue (Free)",
+      description: "Live charts and embeds across 16 Alberta government sources.",
+    },
   };
 
   return (

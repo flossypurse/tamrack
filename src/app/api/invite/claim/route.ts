@@ -29,7 +29,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { createApiKey } from "@/lib/api-keys";
 import { getDb } from "@/lib/db";
-import { redeemInvite, lookupInvite, ONCE_KEY_COOKIE } from "@/lib/invites";
+import { redeemInvite, lookupInvite } from "@/lib/invites";
+import { ONCE_KEY_COOKIE } from "@/lib/key-cookies";
 
 const FULL_READ_SCOPES = [
   "tamrack:macro:read",
@@ -83,12 +84,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   );
 
   // Stash the plaintext key in a short-lived HttpOnly cookie scoped to the
-  // page that will display it. HttpOnly keeps it out of JS; path=/account/keys
-  // means it isn't sent on any other request; SameSite=Strict blocks cross-
-  // site CSRF reads. The /account/keys page reads it via cookies(), renders
-  // once, and clears it via a server action when the user confirms saving.
-  const dest = new URL("/account/keys", req.url);
-  dest.searchParams.set("invite_redeemed", "1");
+  // workspace. HttpOnly keeps it out of JS; path=/account confines it to the
+  // workspace (where the left rail reads + reveals it once); SameSite=Strict
+  // blocks cross-site CSRF reads. The rail clears it via a server action when
+  // the user confirms saving.
+  const dest = new URL("/account/chat", req.url);
   const res = NextResponse.redirect(dest);
   res.cookies.set({
     name: ONCE_KEY_COOKIE,
@@ -96,7 +96,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     httpOnly: true,
     secure: req.nextUrl.protocol === "https:",
     sameSite: "strict",
-    path: "/account/keys",
+    path: "/account",
     maxAge: 60 * 5, // 5 minutes — long enough to copy, short enough to fail-safe
   });
   return res;

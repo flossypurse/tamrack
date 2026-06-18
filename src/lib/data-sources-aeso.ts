@@ -1,6 +1,12 @@
-// Data fetching modules for AESO (Alberta Electric System Operator)
-// Requires free API key from https://api.aeso.ca — set AESO_API_KEY env var
-
+// Data fetching modules for AESO (Alberta Electric System Operator).
+//
+// STATUS: The legacy api.aeso.ca host is decommissioned (CNAME api.gtm.aeso.ca
+// has no A record as of 2026-05-27, confirmed from Fly yyz + public DNS).
+// AESO migrated its API to an Azure APIM gateway at https://apimgw.aeso.ca,
+// with the developer portal at https://developer-apim.aeso.ca. The new gateway
+// requires a re-registered subscription key sent as Ocp-Apim-Subscription-Key,
+// and endpoint paths may differ. Until that migration lands, every fetcher
+// below resolves to null/[] and the electricity surface returns empty results.
 const AESO_BASE = "https://api.aeso.ca";
 
 // ============================================================

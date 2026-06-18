@@ -78,17 +78,18 @@ const apiEndpoints: Endpoint[] = [
 ];
 
 // ─── MCP tools ─────────────────────────────────────────────────────
+const MCP_TOOLS_DIR = `mcp/${"tools"}`;
 const mcpTools: McpTool[] = [
-  { file: "mcp/tools/catalog.mdx",      toolName: "tamrack_catalog",      title: "tamrack_catalog",      description: "List available Tamrack MCP tools and their cost.", scopeArea: "unscoped" },
-  { file: "mcp/tools/macro.mdx",        toolName: "tamrack_macro",        title: "tamrack_macro",        description: "Province-level macro indicators (matches GET /api/macro).", scopeArea: "macro" },
-  { file: "mcp/tools/regional.mdx",     toolName: "tamrack_regional",     title: "tamrack_regional",     description: "Regional rollups (matches GET /api/regional).", scopeArea: "regional" },
-  { file: "mcp/tools/municipality.mdx", toolName: "tamrack_municipality", title: "tamrack_municipality", description: "Municipality-level slice (matches GET /api/regional with filters).", scopeArea: "regional" },
-  { file: "mcp/tools/real-estate.mdx",  toolName: "tamrack_real_estate",  title: "tamrack_real_estate",  description: "Real-estate signals across permits/assessments/pipeline.", scopeArea: "real-estate" },
-  { file: "mcp/tools/housing.mdx",      toolName: "tamrack_housing",      title: "tamrack_housing",      description: "Housing market detail (matches GET /api/housing).", scopeArea: "real-estate" },
-  { file: "mcp/tools/business.mdx",     toolName: "tamrack_business",     title: "tamrack_business",     description: "Business formation and economy slice.", scopeArea: "economy" },
-  { file: "mcp/tools/energy.mdx",       toolName: "tamrack_energy",       title: "tamrack_energy",       description: "Upstream + electricity (matches /api/energy + /api/electricity).", scopeArea: "energy" },
-  { file: "mcp/tools/search.mdx",       toolName: "tamrack_search",       title: "tamrack_search",       description: "Free-text search across the Tamrack corpus.", scopeArea: "economy" },
-  { file: "mcp/tools/entities.mdx",     toolName: "tamrack_entities",     title: "tamrack_entities",     description: "Resolve and look up entities (municipalities, projects, operators).", scopeArea: "economy" },
+  { file: `${MCP_TOOLS_DIR}/catalog.mdx`,      toolName: "tamrack_catalog",      title: "tamrack_catalog",      description: "List available Tamrack MCP tools and their cost.", scopeArea: "unscoped" },
+  { file: `${MCP_TOOLS_DIR}/macro.mdx`,        toolName: "tamrack_macro",        title: "tamrack_macro",        description: "Province-level macro indicators (matches GET /api/macro).", scopeArea: "macro" },
+  { file: `${MCP_TOOLS_DIR}/regional.mdx`,     toolName: "tamrack_regional",     title: "tamrack_regional",     description: "Regional rollups (matches GET /api/regional).", scopeArea: "regional" },
+  { file: `${MCP_TOOLS_DIR}/municipality.mdx`, toolName: "tamrack_municipality", title: "tamrack_municipality", description: "Municipality-level slice (matches GET /api/regional with filters).", scopeArea: "regional" },
+  { file: `${MCP_TOOLS_DIR}/real-estate.mdx`,  toolName: "tamrack_real_estate",  title: "tamrack_real_estate",  description: "Real-estate signals across permits/assessments/pipeline.", scopeArea: "real-estate" },
+  { file: `${MCP_TOOLS_DIR}/housing.mdx`,      toolName: "tamrack_housing",      title: "tamrack_housing",      description: "Housing market detail (matches GET /api/housing).", scopeArea: "real-estate" },
+  { file: `${MCP_TOOLS_DIR}/business.mdx`,     toolName: "tamrack_business",     title: "tamrack_business",     description: "Business formation and economy slice.", scopeArea: "economy" },
+  { file: `${MCP_TOOLS_DIR}/energy.mdx`,       toolName: "tamrack_energy",       title: "tamrack_energy",       description: "Upstream + electricity (matches /api/energy + /api/electricity).", scopeArea: "energy" },
+  { file: `${MCP_TOOLS_DIR}/search.mdx`,       toolName: "tamrack_search",       title: "tamrack_search",       description: "Free-text search across the Tamrack corpus.", scopeArea: "economy" },
+  { file: `${MCP_TOOLS_DIR}/entities.mdx`,     toolName: "tamrack_entities",     title: "tamrack_entities",     description: "Resolve and look up entities (municipalities, projects, operators).", scopeArea: "economy" },
 ];
 
 // ─── Start section (small handful, generated) ───────────────────────

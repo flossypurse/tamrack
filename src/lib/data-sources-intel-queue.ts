@@ -109,16 +109,28 @@ export async function markQueueFailed(operatorId: string, error: string): Promis
 
 /**
  * Reap rows stuck in 'running' for too long (worker crashed mid-batch).
- * Returns them to 'pending' so the next claim picks them up.
+ * Increments `attempts` so a crash consumes retry budget, then returns the row
+ * to 'pending' for re-claim — UNLESS it has now hit `maxAttempts`, in which
+ * case it is dead-lettered to 'failed'. Without the attempt bump + cap, a row
+ * that crashes the worker every run would cycle forever, burning paid research
+ * calls (claimQueueBatch claims any 'pending' row regardless of attempts).
  */
-export async function reapStaleRunning(maxRunningMinutes: number = 30): Promise<number> {
+export async function reapStaleRunning(
+  maxRunningMinutes: number = 30,
+  maxAttempts: number = 3,
+): Promise<number> {
   const pool = await getDb();
   const { rowCount } = await pool.query(
     `UPDATE intel_research_queue
-        SET status = 'pending', started_at = NULL
+        SET attempts = attempts + 1,
+            started_at = NULL,
+            status = CASE WHEN attempts + 1 >= $2 THEN 'failed' ELSE 'pending' END,
+            last_error = CASE WHEN attempts + 1 >= $2
+                              THEN 'reaped: exceeded max attempts while stuck in running'
+                              ELSE last_error END
       WHERE status = 'running'
         AND started_at < NOW() - ($1 || ' minutes')::interval`,
-    [String(maxRunningMinutes)],
+    [String(maxRunningMinutes), maxAttempts],
   );
   return rowCount ?? 0;
 }

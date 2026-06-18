@@ -110,9 +110,6 @@ Every page follows the same pattern (see any existing page like `/energy/page.ts
 Continue building the Tamrack audience expansion (Phase 2).
 
 Context:
-- Read /money-workspace/research/audience-expansion-plan.md for the full plan
-- Read /money-workspace/research/HANDOFF-PHASE1.md for what was built in Phase 1
-- The codebase is at /money-workspace/tamrack/
 - All pages follow the same pattern — read /energy/page.tsx as the template
 - Data sources are in src/lib/data-sources.ts
 - Municipality data in src/lib/municipality-data.ts + municipality-registry.ts

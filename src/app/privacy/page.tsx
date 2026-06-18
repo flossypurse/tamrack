@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   description: "Privacy Policy for Tamrack. We respect your data privacy under PIPEDA and Alberta PIPA.",
 };
 
+const LAST_UPDATED = "May 2026";
+
 export default function PrivacyPage() {
   return (
     <main className="min-h-screen p-4 sm:p-6 max-w-3xl mx-auto">
@@ -19,7 +21,7 @@ export default function PrivacyPage() {
 
       <article className="prose prose-invert prose-sm max-w-none space-y-6 text-muted [&_h1]:text-foreground [&_h2]:text-foreground [&_h3]:text-foreground [&_strong]:text-foreground">
         <h1 className="text-2xl font-bold text-foreground">Privacy Policy</h1>
-        <p className="text-xs text-muted/60">Last updated: March 2026</p>
+        <p className="text-xs text-muted/60">Last updated: {LAST_UPDATED}</p>
 
         <h2 className="text-lg font-semibold">1. Information We Collect</h2>
 
@@ -66,7 +68,8 @@ export default function PrivacyPage() {
 
         <h2 className="text-lg font-semibold">3. Data Storage</h2>
         <p>
-          Account and subscription data is stored in a SQLite database hosted on Railway (Canada/US infrastructure).
+          Account and subscription data is stored in a PostgreSQL database hosted on Crunchy Bridge
+          (Canada — ca-central-1 / Montreal region). Application servers run on Fly.io (Canada — yyz / Toronto region).
           All data is transmitted over HTTPS. API keys are stored as SHA-256 hashes — we cannot recover your API
           key after creation.
         </p>
@@ -79,7 +82,8 @@ export default function PrivacyPage() {
           <li><strong>Stripe</strong> — for payment processing</li>
           <li><strong>Mailgun</strong> — for transactional emails (sign-in links)</li>
           <li><strong>Google Analytics</strong> — for anonymized usage analytics (when enabled)</li>
-          <li><strong>Railway</strong> — infrastructure hosting provider</li>
+          <li><strong>Fly.io</strong> — application hosting (Canada / Toronto region)</li>
+          <li><strong>Crunchy Bridge</strong> — managed PostgreSQL database (Canada / Montreal region)</li>
           <li><strong>Law enforcement</strong> — if required by Canadian law</li>
         </ul>
 

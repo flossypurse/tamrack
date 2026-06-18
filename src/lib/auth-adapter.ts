@@ -2,10 +2,14 @@ import { randomUUID } from "crypto";
 import type { Adapter, AdapterUser, AdapterAccount } from "next-auth/adapters";
 import { getDb } from "./db";
 
+// Debug logging only in development. Production logs go to Fly drains and
+// would otherwise leak user emails + verification-token prefixes downstream.
+const DEBUG = process.env.NODE_ENV === "development";
+
 export function PostgresAdapter(): Adapter {
   return {
     async createUser(user) {
-      console.log(`[auth-adapter] createUser: email=${user.email}`);
+      if (DEBUG) console.log(`[auth-adapter] createUser: email=${user.email}`);
       const pool = await getDb();
       const id = randomUUID();
       await pool.query(
@@ -40,7 +44,7 @@ export function PostgresAdapter(): Adapter {
     async getUserByEmail(email) {
       const pool = await getDb();
       const { rows } = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]);
-      console.log(`[auth-adapter] getUserByEmail: email=${email}, found=${!!rows[0]}`);
+      if (DEBUG) console.log(`[auth-adapter] getUserByEmail: email=${email}, found=${!!rows[0]}`);
       if (!rows[0]) return null;
       return toAdapterUser(rows[0]);
     },
@@ -112,7 +116,7 @@ export function PostgresAdapter(): Adapter {
     },
 
     async createSession(session) {
-      console.log(`[auth-adapter] createSession: userId=${session.userId}`);
+      if (DEBUG) console.log(`[auth-adapter] createSession: userId=${session.userId}`);
       const pool = await getDb();
       await pool.query(
         `INSERT INTO sessions (session_token, user_id, expires) VALUES ($1, $2, $3)`,
@@ -157,7 +161,7 @@ export function PostgresAdapter(): Adapter {
     },
 
     async createVerificationToken(token) {
-      console.log(`[auth-adapter] createVerificationToken: identifier=${token.identifier}, expires=${token.expires.toISOString()}`);
+      if (DEBUG) console.log(`[auth-adapter] createVerificationToken: identifier=${token.identifier}, expires=${token.expires.toISOString()}`);
       const pool = await getDb();
       await pool.query(
         `INSERT INTO verification_tokens (identifier, token, expires) VALUES ($1, $2, $3)`,
@@ -167,14 +171,14 @@ export function PostgresAdapter(): Adapter {
     },
 
     async useVerificationToken({ identifier, token }) {
-      console.log(`[auth-adapter] useVerificationToken: identifier=${identifier}, token=${token.substring(0, 8)}...`);
+      if (DEBUG) console.log(`[auth-adapter] useVerificationToken: identifier=${identifier}, token=${token.substring(0, 8)}...`);
       const pool = await getDb();
       const { rows } = await pool.query(
         `SELECT * FROM verification_tokens WHERE identifier = $1 AND token = $2`,
         [identifier, token]
       );
       const row = rows[0] as { identifier: string; token: string; expires: string } | undefined;
-      console.log(`[auth-adapter] useVerificationToken result: ${row ? `found, expires=${row.expires}` : "NOT FOUND"}`);
+      if (DEBUG) console.log(`[auth-adapter] useVerificationToken result: ${row ? `found, expires=${row.expires}` : "NOT FOUND"}`);
       if (!row) return null;
       await pool.query(
         `DELETE FROM verification_tokens WHERE identifier = $1 AND token = $2`,

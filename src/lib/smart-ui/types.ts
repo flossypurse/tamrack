@@ -20,6 +20,17 @@ export interface QueryPlan {
   tools_to_call: PlannedToolCall[];
   /** 0–1 self-rated confidence; v1 just logs it. */
   confidence: number;
+  /**
+   * Story template selected by the planner's keyword decision tree.
+   * null = narrative-only fallback (safe default; uncertainty favors null).
+   *
+   * Decision tree:
+   *   "which X" / "top N" / "rank" / "best" / "recommend N" → "ranking"
+   *   "where" / "which area" / "hotspot" / "cluster"         → "geo_distribution"
+   *   "what share" / "breakdown" / "composition" / "%"       → "part_to_whole"
+   *   anything else / uncertain                              → null
+   */
+  story_template: StoryTemplateSlug | null;
 }
 
 export interface PlannedToolCall {
@@ -56,7 +67,7 @@ export interface DashboardConfig {
   sources: SourceCitation[];
 }
 
-export type Card = LineCard | ScorecardCard;
+export type Card = LineCard | ScorecardCard | StoryCard | TableCard;
 
 export interface LineCard {
   id: string;
@@ -76,6 +87,126 @@ export interface ScorecardCard {
   unit?: string;
   data: DataBinding;
   delta?: { yoy?: boolean };
+}
+
+/**
+ * One row in a TableCard. Column values are always strings for render
+ * simplicity; numeric values should be pre-formatted by the composer
+ * (e.g. "2026-06-30", "147 postings").
+ */
+export interface TableRow {
+  /** Ordered cell values matching `columns`. */
+  cells: string[];
+  /** Optional URL for the first-column link (e.g. a tender notice URL). */
+  link_url?: string;
+}
+
+/**
+ * Which tamrack_hiring breakdown the composer chose for a table card.
+ * Drives the renderer so it uses the same breakdown the composer used
+ * to pick column headers — eliminates the fixed-precedence guess.
+ */
+export type HiringBreakdownKey = "byNoc" | "bySector" | "byCity";
+
+/**
+ * Table card — a labelled column set plus an array of data rows.
+ * Sourced from list-shape tool payloads (opportunities rows, hiring
+ * breakdowns) rather than time-series points.
+ *
+ * The composer picks which columns to surface and which payload array
+ * to use; the renderer handles truncation and mobile collapse.
+ *
+ * `empty_message` is shown when `rows` is empty — the composer should
+ * set this to a meaningful "no results" note (e.g. "no open tenders
+ * found for this filter").
+ *
+ * `breakdown_key` is set by the composer on tamrack_hiring cards to
+ * record which breakdown (byNoc / bySector / byCity) matches the
+ * columns it chose. The renderer uses this when present; when absent
+ * it falls back to the fixed byNoc > bySector > byCity precedence so
+ * existing cards without the field continue to render correctly.
+ */
+export interface TableCard {
+  id: string;
+  type: "table";
+  title: string;
+  caption?: string;
+  /** Column header labels, matching `rows[].cells` by index. */
+  columns: string[];
+  rows: TableRow[];
+  empty_message?: string;
+  data: DataBinding;
+  /**
+   * For tamrack_hiring cards: which breakdown the composer chose.
+   * Absent on tamrack_opportunities cards (not applicable there).
+   */
+  breakdown_key?: HiringBreakdownKey;
+}
+
+/**
+ * Story template slugs — closed list matching corpus.chart_templates.
+ * The planner selects one via keyword matching; null triggers narrative-only fallback.
+ */
+export type StoryTemplateSlug =
+  | "ranking"
+  | "geo_distribution"
+  | "part_to_whole"
+  | "outlier_reveal"
+  | "trend_reveal"
+  | "comparison";
+
+/**
+ * Trust provenance block attached to every story card.
+ * All elements are mandatory — none may be omitted in the renderer.
+ */
+export interface StoryTrust {
+  /** Source dataset labels (verbatim from corpus.narrative_fragments.source_ids). */
+  sources: string[];
+  /** Number of observations underlying the chart or narrative claim. */
+  sample_n: number;
+  /** Human-readable labels for each derived signal that contributed. */
+  derived_signals: string[];
+  /** ISO date of the most recent observation window start. */
+  signal_period: string;
+  /** Non-null when the chart uses a per-capita or rate normalization. */
+  normalization_note: string | null;
+  /** Definition of the "whole" for part-to-whole templates; null otherwise. */
+  whole_definition: string | null;
+  /** True on Tier-3 comparison blocks — gates render on human_review_approved. */
+  requires_human_review: boolean;
+}
+
+/**
+ * Story card — a Vega-Lite chart assembled from a named template plus
+ * trust-disclosure metadata. The `spec` field is assembled by
+ * `assembleStorySpec`; the composer never writes to it directly.
+ */
+export interface StoryCard {
+  id: string;
+  type: "story";
+  /** Canonical slug matching corpus.chart_templates. */
+  template_slug: StoryTemplateSlug;
+  /** UUID of the chart_templates row. */
+  template_id: string;
+  /** Active-voice title stating the conclusion, not the dimensions. */
+  title: string;
+  /** Named reference key into the dashboard's data payload. */
+  data_ref: string;
+  /** Narrative prose body; may be null for chart-only blocks. */
+  body: string | null;
+  /**
+   * [start, end] character offsets within `body` that were LLM-generated.
+   * Renderer italicises + dims these spans. Empty array if body is null.
+   */
+  generated_prose_spans: [number, number][];
+  /**
+   * Tier-3 comparison blocks start false; admin flips to true via PATCH.
+   * All other templates: always false, renderer ignores this field.
+   */
+  human_review_approved: boolean;
+  /** Assembled Vega-Lite spec — null when narrative-only fallback is active. */
+  spec: Record<string, unknown> | null;
+  trust: StoryTrust;
 }
 
 export interface DataBinding {

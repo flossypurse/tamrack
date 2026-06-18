@@ -56,7 +56,9 @@ export default function ChartCataloguePage() {
           {CHART_REGISTRY.length} live data charts pulled from {sourceCount}+ government
           sources.{" "}
           <span className="text-[var(--mid)]">
-            Free to view, embed, and share. No account, no trial, no card.
+            This is the open layer — every chart here is public, free to embed
+            and free to share. The agent that turns a plain-English question
+            into a chart like these is invite-only.
           </span>
         </p>
       </header>

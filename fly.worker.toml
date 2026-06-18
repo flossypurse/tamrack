@@ -1,0 +1,14 @@
+app = "tamrack-collector-worker"
+primary_region = "yyz"
+
+[build]
+  dockerfile = "Dockerfile.worker"
+
+# This is a worker process — no HTTP services exposed.
+# It connects outbound to tamrack-resonate-server via Fly Proxy HTTPS.
+# Do NOT add [[services]] here.
+
+[vm]
+  memory = "1024mb"
+  cpu_kind = "shared"
+  cpus = 1

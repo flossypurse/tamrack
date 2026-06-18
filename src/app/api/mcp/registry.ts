@@ -38,6 +38,9 @@ export type ToolDomain =
   | "energy"
   | "search"
   | "municipality"
+  | "opportunities"
+  | "hiring"
+  | "leads"
   // v2-deferred domains follow
   | "entities"
   | "safety"
@@ -146,6 +149,21 @@ export const TOOL_DOMAINS: DomainDescriptor[] = [
     name: "municipality",
     description:
       "Municipality registry entries — population, region, capabilities, available datasets — for any Alberta municipality in the registry.",
+  },
+  {
+    name: "opportunities",
+    description:
+      "Demand-side feed — concrete contract opportunities with a buyer and a deadline (CanadaBuys federal tenders, IT/software/AI/data, Alberta + nationally-deliverable). Not macro time-series.",
+  },
+  {
+    name: "hiring",
+    description:
+      "Latent-demand hiring signals — Alberta postings for manual-process/automatable back-office roles (Canada Job Bank), with NOC/sector/city breakdowns and month-over-month momentum. Aggregate strain signal, not per-company leads.",
+  },
+  {
+    name: "leads",
+    description:
+      "Per-geo demand-heat composite — municipalities ranked by a weighted aggregate of hiring momentum, permit expansion, business formation, and provincial procurement backdrop. Directional signal, not per-company leads.",
   },
   // Deferred to v2 — the domains exist conceptually so the catalog can
   // advertise them and so Parcel 6's docs read coherently.
@@ -429,6 +447,67 @@ const TOOL_ENTRIES_BY_NAME: Record<string, ToolEntry> = {
     ],
   },
 
+  tamrack_opportunities: {
+    name: "tamrack_opportunities",
+    status: "planned",
+    domain: "opportunities",
+    description:
+      "Demand-side feed — CanadaBuys federal open tender notices (IT/software/AI/data, Alberta + nationally-deliverable), soonest-closing first. Flipped to live by tools/opportunities.ts.",
+    parameters_summary:
+      "dataset (enum: tenders); optional open_only; optional closing_before (YYYY-MM-DD); optional limit.",
+    response_summary:
+      "Envelope with data.payload.rows[] — each a tender with buyer, closingDate, gsin/unspsc, noticeUrl, matchedTerms.",
+    indicators: ["tenders"],
+    example_invocations: [
+      {
+        description: "Federal IT tenders still open, soonest-closing first.",
+        arguments: { dataset: "tenders", open_only: true, limit: 20 },
+      },
+    ],
+  },
+
+  tamrack_hiring: {
+    name: "tamrack_hiring",
+    status: "planned",
+    domain: "hiring",
+    description:
+      "Latent-demand hiring signals — Alberta postings for manual-process/automatable back-office roles (Canada Job Bank, ESDC open data), with NOC/sector/city breakdowns + month-over-month momentum. Flipped to live by tools/hiring.ts.",
+    parameters_summary:
+      "dataset (enum: signals); optional month (YYYY-MM, defaults to latest stored).",
+    response_summary:
+      "Envelope with data.payload.summary — { month, totalAlbertaPostings, tierBPostings, byNoc[], bySector[], byCity[], momentum, sampleRows[] } (null until first collection).",
+    indicators: ["signals"],
+    example_invocations: [
+      {
+        description: "Latest Alberta hiring-strain summary (automatable roles).",
+        arguments: { dataset: "signals" },
+      },
+    ],
+  },
+
+  tamrack_leads: {
+    name: "tamrack_leads",
+    status: "planned",
+    domain: "leads",
+    description:
+      "Per-geo demand-heat composite — ranks Alberta municipalities by a weighted aggregate of hiring momentum (Job Bank Tier-B postings + MoM growth), permit expansion (municipality permit volume + growth), business formation (Incorporations from Alberta Regional Dashboard), and provincial procurement backdrop (open CanadaBuys tenders). Compute-on-read, no DB writes. Flipped to live by tools/leads.ts.",
+    parameters_summary:
+      "dataset (enum: ranking; default ranking); optional limit (1-100, trims output after full-set normalization).",
+    response_summary:
+      "Envelope with data.payload.rankings[] — each geo has { geo, slug, csduid, rank, score, subScores, raw, coverage } — plus meta { computedAt, hiringMonth, permitSnapshotDate, formationPeriod, openTenderCount, geoCount, caveats[] }.",
+    indicators: ["ranking"],
+    example_invocations: [
+      {
+        description: "Top 10 Alberta municipalities by demand-heat composite score.",
+        arguments: { dataset: "ranking", limit: 10 },
+      },
+      {
+        description: "Full geo ranking for all registry municipalities.",
+        arguments: { dataset: "ranking" },
+      },
+    ],
+  },
+
   // ── v2-deferred tools ──────────────────────────────────────────────────
 
   tamrack_entities: {
@@ -534,6 +613,9 @@ const TOOL_ORDER: readonly string[] = [
   "tamrack_energy",
   "tamrack_search",
   "tamrack_entities",
+  "tamrack_opportunities",
+  "tamrack_hiring",
+  "tamrack_leads",
   "tamrack_safety",
   "tamrack_immigration",
   "tamrack_politics",
