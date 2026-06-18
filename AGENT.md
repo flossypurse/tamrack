@@ -33,21 +33,22 @@ Deployed live. Invite-only access. Focus is on growing early-access usage.
 
 There is **no deploy CI**. `flyctl deploy --local-only` builds the image from your **local working tree**, not from a git ref — so nothing keeps git and production in sync except discipline. The invariants:
 
-- **The deploy line is `fly-migration`, NOT `main`.** (AGENT.md elsewhere says "merge to main goes live" — that is aspirational; ignore it. `main` is far behind and only used as the GitHub default branch for scheduled Actions.) Deploy from `fly-migration` (or a branch you immediately fast-forward it to).
+- **The deploy line is `main`.** (Was `fly-migration` historically; realigned 2026-06-18 — `main` now reflects what's shipped and is the branch to deploy from. `fly-migration` is retired as a deploy target.) Deploy from `main` (or a branch you immediately fast-forward it to).
 - **Always deploy from a clean tree at a committed SHA**, and **deploy webui AND worker together** — they share `src/lib/collector.ts`, `src/lib/db.ts`, `package.json`, and the lockfile, so a half-deploy splits the code across the two apps.
-- **After deploying, immediately `git push origin fly-migration`** so `origin/fly-migration` == the deployed source. A direct push to `fly-migration` triggers no CI (build.yml only runs on PRs targeting it), so it is safe.
+- **Always pass `--build-arg GIT_SHA=$(git rev-parse HEAD)`** — `/api/health` exposes it and it's the definitive in-sync check. Omitting it bakes an empty `git_sha` and blinds the verification below.
+- **After deploying, immediately `git push origin main`** so `origin/main` == the deployed source. A direct push to `main` triggers no deploy CI, so it is safe — but it is the only thing keeping git and prod in sync.
 
 **Deploy checklist (run in order):**
 ```bash
 git status                                  # MUST be clean
-git rev-parse --abbrev-ref HEAD             # on fly-migration (or FF it after)
+git rev-parse --abbrev-ref HEAD             # on main (or FF it after)
 npx tsc --noEmit                            # type gate
 # If you changed dependencies: re-sync the lockfile or `npm ci` fails in Docker:
 npm install --package-lock-only && git add package-lock.json && git commit -m "build: sync lockfile"
 flyctl deploy --local-only -c fly.toml        -a tamrack-webui         --build-arg GIT_SHA=$(git rev-parse HEAD)
 flyctl deploy --local-only -c fly.worker.toml -a tamrack-collector-worker --build-arg GIT_SHA=$(git rev-parse HEAD)
 curl -s https://tamrack-webui.fly.dev/api/health    # {"status":"ok",...}
-git push origin fly-migration               # origin now == deployed
+git push origin main                        # origin now == deployed
 ```
 
 **To VERIFY git matches what's running:**
@@ -55,11 +56,11 @@ git push origin fly-migration               # origin now == deployed
 Definitive check — one command:
 ```bash
 curl -s https://tamrack-webui.fly.dev/api/health
-# compare git_sha to: git rev-parse origin/fly-migration
+# compare git_sha to: git rev-parse origin/main
 ```
-If `git_sha` matches `origin/fly-migration` the deployed image is in sync. If it differs (or is `null` on an old image), fall back to:
-1. `git rev-parse HEAD` must equal `git rev-parse origin/fly-migration` and the tree must be clean.
-2. `flyctl releases -a tamrack-webui` / `-a tamrack-collector-worker` — the latest release time should be ≥ the latest `fly-migration` commit time. An older release ⇒ unpushed/undeployed local commits exist.
+If `git_sha` matches `origin/main` the deployed image is in sync. If it differs (or is `null`/empty on an old image), fall back to:
+1. `git rev-parse HEAD` must equal `git rev-parse origin/main` and the tree must be clean.
+2. `flyctl releases -a tamrack-webui` / `-a tamrack-collector-worker` — the latest release time should be ≥ the latest `main` commit time. An older release ⇒ unpushed/undeployed local commits exist.
 
 ## Auth
 
@@ -159,7 +160,7 @@ Owner prefers to start dev servers themselves — don't auto-start.
 
 ## Rules
 
-- This is a **public, deployed application**. Every change goes live on merge to `main`.
+- This is a **public, deployed application**. `main` is the deploy line — it is what's shipped to prod — but there is **no auto-deploy CI**: code goes live only when someone runs `flyctl deploy` from `main` (see "Deploy = git sync" above). Landing on `main` ≠ live.
 - Don't break the build. Run `npx tsc --noEmit` to type-check; the full `npm run build` is run by CI.
 - Don't hardcode municipality data. Use the registry (`src/lib/municipality-registry.ts`).
 - Prefer live API calls over static data. If an upstream is down, that's what the fallback layer is for.
