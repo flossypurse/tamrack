@@ -90,8 +90,8 @@ import {
   MunicipalitySlugSchema,
   SCHEMA_VERSION,
   TimeRangeSchema,
-  type TimeRange,
 } from "../schemas";
+import { clipByRange, periodsForRange } from "../lib/time-range";
 import { updateToolEntry } from "../registry";
 import { requireScopes } from "../lib/auth-context";
 
@@ -144,43 +144,9 @@ const BusinessInputShape = {
   limit: LimitSchema.optional(),
 };
 
-// ---------------------------------------------------------------------------
-// Time range helpers
-// ---------------------------------------------------------------------------
-
-function periodsForRange(
-  range: TimeRange | undefined,
-  defaultPeriods: number,
-): number {
-  if (!range) return defaultPeriods;
-  if (typeof range === "string") {
-    switch (range) {
-      case "last_30d":
-        return Math.max(3, defaultPeriods);
-      case "last_year":
-        return Math.max(12, defaultPeriods);
-      case "last_5y":
-        return Math.max(60, defaultPeriods);
-      case "ytd": {
-        const now = new Date();
-        const startOfYear = Date.UTC(now.getUTCFullYear(), 0, 1);
-        const months = Math.floor(
-          (now.getTime() - startOfYear) / (30 * 86_400_000),
-        ) + 1;
-        return Math.max(months, defaultPeriods);
-      }
-    }
-  }
-  return Math.max(60, defaultPeriods);
-}
-
-function withinRange(date: string, range: TimeRange | undefined): boolean {
-  if (!range || typeof range === "string") return true;
-  if (!date) return true;
-  if (range.from && date < range.from) return false;
-  if (range.to && date > range.to) return false;
-  return true;
-}
+// Business categories are monthly/annual StatsCan series — tell the shared
+// `periodsForRange` hint to size its LATEST-N fetch for ~monthly cadence.
+const BUSINESS_PERIODS_PER_YEAR = 12;
 
 // ---------------------------------------------------------------------------
 // Row schemas (pass-through from the substrate)
@@ -517,9 +483,11 @@ const CATEGORY_META: Record<BusinessCategory, CategoryMeta> = {
     defaultPeriods: 0,
   },
   edmonton_licences_trend: {
+    // A real monthly time series — the handler clips its rows by time_range,
+    // so advertise that honestly (don't emit the "ignored" note).
     source: "open.edmonton.ca (Socrata SODA, monthly aggregate)",
-    respectsTimeRange: false,
-    defaultPeriods: 0,
+    respectsTimeRange: true,
+    defaultPeriods: 12,
   },
 };
 
@@ -586,7 +554,11 @@ export function registerBusinessTool(server: McpServer): void {
       const meta = CATEGORY_META[category];
       const municipality = args.municipality;
       const timeRange = args.time_range;
-      const periods = periodsForRange(timeRange, meta.defaultPeriods);
+      const periods = periodsForRange(
+        timeRange,
+        meta.defaultPeriods,
+        BUSINESS_PERIODS_PER_YEAR,
+      );
       const limit = args.limit;
 
       let payload: z.infer<typeof BusinessPayloadSchema>;
@@ -609,9 +581,7 @@ export function registerBusinessTool(server: McpServer): void {
               fetchCalgaryBusinessByDistrict(limit ?? 30).catch(() => []),
               fetchCalgaryBusinessTrend().catch(() => []),
             ]);
-            const filteredTrend = trend.filter((t) =>
-              withinRange(t.date, timeRange),
-            );
+            const filteredTrend = clipByRange(trend, timeRange);
             servedFrom =
               byType.length + byDistrict.length + filteredTrend.length > 0
                 ? "upstream"
@@ -627,9 +597,7 @@ export function registerBusinessTool(server: McpServer): void {
           case "business_count_statscan": {
             void periods; // StatsCan counts substrate ignores periods (latestN=5 hardcoded)
             const rows = await fetchStatCanBusinessCounts();
-            const filtered = rows.filter((r) =>
-              withinRange(r.period, timeRange),
-            );
+            const filtered = clipByRange(rows, timeRange, (r) => r.period);
             const capped = limit != null ? filtered.slice(-limit) : filtered;
             servedFrom = capped.length > 0 ? "upstream" : "empty";
             payload = { category: "business_count_statscan", rows: capped };
@@ -663,7 +631,7 @@ export function registerBusinessTool(server: McpServer): void {
           }
           case "retail_subsectors": {
             const rows = await fetchRetailSubsectors(periods);
-            const filtered = rows.filter((r) => withinRange(r.date, timeRange));
+            const filtered = clipByRange(rows, timeRange);
             const capped = limit != null ? filtered.slice(-limit) : filtered;
             servedFrom = capped.length > 0 ? "upstream" : "empty";
             payload = { category: "retail_subsectors", rows: capped };
@@ -671,7 +639,7 @@ export function registerBusinessTool(server: McpServer): void {
           }
           case "ecommerce": {
             const rows = await fetchEcommerceSales(periods);
-            const filtered = rows.filter((r) => withinRange(r.date, timeRange));
+            const filtered = clipByRange(rows, timeRange);
             const capped = limit != null ? filtered.slice(-limit) : filtered;
             servedFrom = capped.length > 0 ? "upstream" : "empty";
             payload = { category: "ecommerce", rows: capped };
@@ -679,7 +647,7 @@ export function registerBusinessTool(server: McpServer): void {
           }
           case "food_services": {
             const rows = await fetchFoodServices(periods);
-            const filtered = rows.filter((r) => withinRange(r.date, timeRange));
+            const filtered = clipByRange(rows, timeRange);
             const capped = limit != null ? filtered.slice(-limit) : filtered;
             servedFrom = capped.length > 0 ? "upstream" : "empty";
             payload = { category: "food_services", rows: capped };
@@ -687,7 +655,7 @@ export function registerBusinessTool(server: McpServer): void {
           }
           case "business_dynamics": {
             const rows = await fetchBusinessDynamics(periods);
-            const filtered = rows.filter((r) => withinRange(r.date, timeRange));
+            const filtered = clipByRange(rows, timeRange);
             const capped = limit != null ? filtered.slice(-limit) : filtered;
             servedFrom = capped.length > 0 ? "upstream" : "empty";
             payload = { category: "business_dynamics", rows: capped };
@@ -695,7 +663,7 @@ export function registerBusinessTool(server: McpServer): void {
           }
           case "retail_business_dynamics": {
             const rows = await fetchRetailBusinessDynamics(periods);
-            const filtered = rows.filter((r) => withinRange(r.date, timeRange));
+            const filtered = clipByRange(rows, timeRange);
             const capped = limit != null ? filtered.slice(-limit) : filtered;
             servedFrom = capped.length > 0 ? "upstream" : "empty";
             payload = { category: "retail_business_dynamics", rows: capped };
@@ -703,7 +671,7 @@ export function registerBusinessTool(server: McpServer): void {
           }
           case "food_business_dynamics": {
             const rows = await fetchFoodBusinessDynamics(periods);
-            const filtered = rows.filter((r) => withinRange(r.date, timeRange));
+            const filtered = clipByRange(rows, timeRange);
             const capped = limit != null ? filtered.slice(-limit) : filtered;
             servedFrom = capped.length > 0 ? "upstream" : "empty";
             payload = { category: "food_business_dynamics", rows: capped };
@@ -744,7 +712,7 @@ export function registerBusinessTool(server: McpServer): void {
           }
           case "edmonton_licences_trend": {
             const rows = await fetchEdmontonLicenceMonthlyTrend();
-            const filtered = rows.filter((r) => withinRange(r.date, timeRange));
+            const filtered = clipByRange(rows, timeRange);
             const capped = limit != null ? filtered.slice(-limit) : filtered;
             servedFrom = capped.length > 0 ? "upstream" : "empty";
             payload = { category: "edmonton_licences_trend", rows: capped };

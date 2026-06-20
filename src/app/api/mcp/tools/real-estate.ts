@@ -72,6 +72,7 @@ import {
   TimeRangeSchema,
   type TimeRange,
 } from "../schemas";
+import { clipByRange } from "../lib/time-range";
 import { updateToolEntry } from "../registry";
 import { requireScopes } from "../lib/auth-context";
 
@@ -306,25 +307,6 @@ function checkCapability(
 }
 
 // ---------------------------------------------------------------------------
-// Time-range filter (post-fetch; substrate fetchers don't accept ranges)
-// ---------------------------------------------------------------------------
-
-function withinRange(date: string, range: TimeRange | undefined): boolean {
-  if (!range) return true;
-  if (typeof range === "string") {
-    // Named buckets: substrate fetchers already return the dominant recent
-    // window for each muni. We don't translate named buckets into upstream
-    // queries here (same reasoning as the macro tool's D12) — let the
-    // substrate's revalidate cache stay hot.
-    return true;
-  }
-  if (!date) return true;
-  if (range.from && date < range.from) return false;
-  if (range.to && date > range.to) return false;
-  return true;
-}
-
-// ---------------------------------------------------------------------------
 // Per-dataset fetchers
 // ---------------------------------------------------------------------------
 
@@ -359,7 +341,7 @@ async function fetchPermitsPayload(
     fetchPermitsByGroup(config).catch(() => [] as PermitSummary[]),
   ]);
   return {
-    recent: recent.filter((p) => withinRange(p.date, range)),
+    recent: clipByRange(recent, range),
     by_group: byGroup,
   };
 }
@@ -382,12 +364,12 @@ async function fetchDevPermitsPayload(
   // expose richer fields than the generic ArcGIS query path does, so we
   // prefer them and tag the shape so the agent can branch.
   if (config.slug === "edmonton") {
-    const rows = (
+    const rows = clipByRange(
       await fetchRecentResidentialDevPermits(limit).catch(
         () => [] as ResidentialDevPermit[],
-      )
+      ),
+      range,
     )
-      .filter((p) => withinRange(p.date, range))
       .map(
         (r): DevPermitRow => ({
           shape: "edmonton",
@@ -403,12 +385,12 @@ async function fetchDevPermitsPayload(
     return { shape: "edmonton", rows };
   }
   if (config.slug === "st-albert") {
-    const rows = (
+    const rows = clipByRange(
       await fetchStAlbertDevPermits(limit).catch(
         () => [] as StAlbertDevPermit[],
-      )
+      ),
+      range,
     )
-      .filter((p) => withinRange(p.date, range))
       .map(
         (r): DevPermitRow => ({
           shape: "st-albert",
@@ -422,12 +404,12 @@ async function fetchDevPermitsPayload(
     return { shape: "st-albert", rows };
   }
   if (config.slug === "strathcona") {
-    const rows = (
+    const rows = clipByRange(
       await fetchStrathconaResidentialPermits(limit).catch(
         () => [] as StrathconaPermit[],
-      )
+      ),
+      range,
     )
-      .filter((p) => withinRange(p.date, range))
       .map(
         (r): DevPermitRow => ({
           shape: "strathcona",
@@ -448,10 +430,10 @@ async function fetchDevPermitsPayload(
   // endpoint + the relevant field mappings gets a best-effort query via
   // `fetchRecentPermits` (which prefers `devPermits` over `permits` when
   // both exist — see municipality-data.ts).
-  const rows = (
-    await fetchRecentPermits(config, limit).catch(() => [] as RecentPermit[])
+  const rows = clipByRange(
+    await fetchRecentPermits(config, limit).catch(() => [] as RecentPermit[]),
+    range,
   )
-    .filter((p) => withinRange(p.date, range))
     .map(
       (r): DevPermitRow => ({
         shape: "generic",
@@ -485,7 +467,7 @@ const TOOL_DESCRIPTION =
 updateToolEntry(TOOL_NAME, {
   status: "live",
   parameters_summary:
-    "municipality (registry slug); dataset (one of: assessments, permits, dev_permits); optional limit (1..1000, default 25); optional time_range ({from,to} applied to dated rows; named buckets pass through).",
+    "municipality (registry slug); dataset (one of: assessments, permits, dev_permits); optional limit (1..1000, default 25); optional time_range (named bucket or {from,to}; clipped to a real window relative to the latest dated row).",
   response_summary:
     "Envelope with schema_version, tool, source; data is either {available:false, reason} or {available:true, municipality{slug,name,region,region_label}, dataset, source, payload{...}}. Payload shape depends on dataset: assessments→{by_group[], top_properties[]}; permits→{recent[], by_group[]}; dev_permits→{shape, rows[]} where shape∈{edmonton,st-albert,strathcona,generic}.",
   indicators: [...REAL_ESTATE_DATASETS],

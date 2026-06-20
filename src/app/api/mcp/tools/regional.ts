@@ -19,13 +19,15 @@
  *   lookup always succeeds for a schema-valid input.
  *
  * Upstream + fallback policy:
- *   `fetchRegionalTimeSeries` -> `fetchRegionalIndicatorForMunicipality` ->
- *   `fetchRegionalIndicator` already has retry-once + Postgres fallback
- *   baked into the substrate. We do NOT layer a second fallback here — that
- *   would double-query Postgres on the failure path. `served_from` is
- *   reported as "upstream" on non-empty result; on empty we attempt the
- *   fallback query directly (via the same substrate path) and report
- *   "fallback" if rows came back, else "empty".
+ *   `fetchRegionalIndicatorForMunicipality` -> `fetchRegionalIndicator` already
+ *   has retry-once + an UNFILTERED Postgres fallback baked into the substrate.
+ *   `served_from` is reported as "upstream" on a non-empty result whose rows
+ *   carry a csduid; "fallback" when every row's csduid is blank (the substrate
+ *   fell back internally). When the substrate returns zero rows for this
+ *   municipality we make ONE more, municipality-scoped fallback query here and
+ *   report "fallback"/"empty" accordingly — so on the worst-case (upstream
+ *   down + nothing for this muni) Postgres is touched twice. Acceptable: the
+ *   second query is scoped and only runs on the empty path.
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -35,6 +37,7 @@ import {
   REGIONAL_INDICATORS,
   fetchRegionalIndicatorForMunicipality,
   fetchRegionalTimeSeries,
+  isNonAdditiveIndicator,
   type RegionalDataPoint,
 } from "@/lib/data-sources-regional";
 import { fallbackRegionalIndicator } from "@/lib/data-fallback";
@@ -47,8 +50,8 @@ import {
   SCHEMA_VERSION,
   MunicipalitySlugSchema,
   TimeRangeSchema,
-  type TimeRange,
 } from "../schemas";
+import { clipByRange } from "../lib/time-range";
 import { updateToolEntry } from "../registry";
 import { requireScopes } from "../lib/auth-context";
 
@@ -114,25 +117,6 @@ type RegionalEnvelope = z.infer<typeof RegionalEnvelopeSchema>;
 // Helpers
 // ---------------------------------------------------------------------------
 
-/**
- * The regional API returns Period values like "2024", "2024-Q3", or
- * "2024-03". We compare these as strings against ISO YYYY-MM-DD bounds for
- * explicit `{from, to}` ranges; named ranges pass through unfiltered (the
- * upstream cadence varies per indicator from annual to monthly, and the
- * named bucket "last_30d" is meaningless for an annual series — let the
- * agent slice the head client-side).
- */
-function filterByRange(points: RegionalPoint[], range: TimeRange | undefined): RegionalPoint[] {
-  if (!range || typeof range === "string") return points;
-  const from = range.from ?? "";
-  const to = range.to ?? "";
-  return points.filter((p) => {
-    if (from && p.date < from) return false;
-    if (to && p.date > to) return false;
-    return true;
-  });
-}
-
 function pickDominantUnit(rows: { unit?: string }[]): string {
   for (const r of rows) {
     if (r.unit && r.unit.trim().length > 0) return r.unit;
@@ -141,20 +125,57 @@ function pickDominantUnit(rows: { unit?: string }[]): string {
 }
 
 /**
- * Aggregate raw `RegionalDataPoint[]` (which may have multiple dimension
- * rows per period — e.g. housing starts by dwelling type) into a clean
- * time series. Mirrors `fetchRegionalTimeSeries` aggregation but preserves
- * the unit string so we can surface it on the envelope.
+ * Fallback units for indicators the upstream/snapshot leaves blank. After the
+ * averaging fix above the values are interpretable; we still surface a unit so
+ * a bare decimal like 0.13 reads as a ratio (proportion), not an index.
+ * Consulted only when the upstream unit is empty.
  */
-function aggregatePoints(raw: RegionalDataPoint[]): RegionalPoint[] {
+const REGIONAL_UNIT_DEFAULTS: Record<string, string> = {
+  "Unemployment Rate": "ratio",
+  "Vacancy Rates": "ratio",
+  "Residential Share of Property Assessments": "ratio",
+  "Percent of Small Businesses": "ratio",
+  "Percent Visible Minority": "ratio",
+  "Percent Aboriginal": "ratio",
+  "Percent Official Language Speakers": "ratio",
+  "Percent Single Family Houses": "ratio",
+  "Life Expectancy": "years",
+  "Population": "count",
+  "Dwelling Units": "count",
+  "Labour Force": "count",
+};
+
+/** Resolve the unit to surface: prefer the upstream's, else a curated
+ * default for the indicator, else empty. */
+function unitFor(indicator: string, upstreamUnit: string): string {
+  if (upstreamUnit && upstreamUnit.trim().length > 0) return upstreamUnit;
+  return REGIONAL_UNIT_DEFAULTS[indicator] ?? "";
+}
+
+/**
+ * Aggregate raw `RegionalDataPoint[]` (which may have multiple dimension
+ * rows per period) into a clean time series. Additive indicators sum their
+ * dimension rows; non-additive ones (rates/prices/averages — see
+ * `NON_ADDITIVE_REGIONAL_INDICATORS`) average them so the value stays
+ * meaningful. Preserves the unit string so we can surface it on the envelope.
+ */
+function aggregatePoints(
+  raw: RegionalDataPoint[],
+  indicator: string,
+): RegionalPoint[] {
   const unit = pickDominantUnit(raw);
-  const byPeriod = new Map<string, number>();
+  const average = isNonAdditiveIndicator(indicator);
+  const byPeriod = new Map<string, { sum: number; count: number }>();
   for (const r of raw) {
     if (!r.period) continue;
-    byPeriod.set(r.period, (byPeriod.get(r.period) ?? 0) + (r.value ?? 0));
+    const acc = byPeriod.get(r.period) ?? { sum: 0, count: 0 };
+    acc.sum += r.value ?? 0;
+    acc.count += 1;
+    byPeriod.set(r.period, acc);
   }
   const out: RegionalPoint[] = [];
-  for (const [period, value] of byPeriod) {
+  for (const [period, { sum, count }] of byPeriod) {
+    const value = average && count > 0 ? sum / count : sum;
     out.push({ date: period, value, unit });
   }
   out.sort((a, b) => a.date.localeCompare(b.date));
@@ -182,22 +203,23 @@ const TOOL_DESCRIPTION =
 updateToolEntry(TOOL_NAME, {
   status: "live",
   parameters_summary:
-    "indicator (enum: one of 54 human-readable names from regionaldashboard.alberta.ca); municipality (registry slug); optional time_range ({from,to}; named buckets pass through unfiltered since indicator cadence varies).",
+    "indicator (enum: one of 54 human-readable names from regionaldashboard.alberta.ca); municipality (registry slug); optional time_range (named bucket or {from,to}; named buckets clip to a real window relative to the latest observation, so e.g. last_5y on an annual series returns ~5 points).",
   response_summary:
     "Envelope with schema_version, tool, source; data.{indicator, municipality{slug,name,region,region_label}, source, unit, last_observation, served_from, points[{date,value,unit}]}.",
   indicators: REGIONAL_INDICATOR_NAMES,
+  // NB: the 54 × ~340 indicator×municipality surface is very sparse — many
+  // pairs simply have no rows upstream or in the snapshot (e.g. Population is
+  // currently empty for every municipality). The canonical examples below are
+  // chosen to be populated so they never return an empty envelope; agents
+  // should still branch on `served_from`/`points.length` for arbitrary pairs.
   example_invocations: [
     {
-      description: "Edmonton population from the regional dashboard.",
-      arguments: { indicator: "Population", municipality: "edmonton" },
+      description: "Edmonton building permit values from the regional dashboard.",
+      arguments: { indicator: "Building Permits", municipality: "edmonton" },
     },
     {
-      description:
-        "Average residential sale price in Calgary, no time filter (annual cadence).",
-      arguments: {
-        indicator: "Average Residential Sale Price",
-        municipality: "calgary",
-      },
+      description: "Edmonton dwelling units, annual (no time filter).",
+      arguments: { indicator: "Dwelling Units", municipality: "edmonton" },
     },
     {
       description:
@@ -276,11 +298,18 @@ export function registerRegionalTool(server: McpServer): void {
         servedFrom = "fallback";
       }
 
-      const aggregated = aggregatePoints(rawPoints);
-      const filtered = filterByRange(aggregated, timeRange);
+      const aggregated = aggregatePoints(rawPoints, indicator);
+      // Period labels ("2024", "2024-Q3", "2024-03") are anchored to a
+      // comparable ISO date inside clipByRange; named ranges become real
+      // windows relative to the latest period in the series.
+      const clipped = clipByRange(aggregated, timeRange);
+
+      // Resolve a non-empty unit (BUG 5) and stamp it on every point so the
+      // envelope unit and the per-point unit can't disagree.
+      const unit = unitFor(indicator, pickDominantUnit(rawPoints));
+      const filtered = clipped.map((p) => ({ ...p, unit: p.unit || unit }));
 
       const last = filtered.length > 0 ? filtered[filtered.length - 1] : null;
-      const unit = filtered[0]?.unit ?? pickDominantUnit(rawPoints);
 
       // Cross-check what we'd return against `fetchRegionalTimeSeries` for
       // consistency: this tool is deliberately NOT calling that fn (we

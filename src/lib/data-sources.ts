@@ -1,6 +1,8 @@
 // Data fetching modules for Alberta economic data sources
 // All free, no API keys required (except where noted)
 
+import { toIsoDate } from "./iso-date";
+
 const STATCAN_BASE = "https://www150.statcan.gc.ca/t1/wds/rest";
 const BOC_BASE = "https://www.bankofcanada.ca/valet";
 const EDMONTON_BASE = "https://data.edmonton.ca/resource";
@@ -303,19 +305,12 @@ export async function fetchAlbertaActivityIndex(): Promise<TimeSeriesPoint[]> {
       const dateVal = row[0];
       const value = parseFloat(String(row[1]));
       if (isNaN(value)) continue;
-      // Parse date — could be Excel serial or date string
-      let dateStr: string;
-      if (typeof dateVal === "string" && dateVal.includes("-")) {
-        dateStr = dateVal.slice(0, 10);
-      } else if (typeof dateVal === "string" && dateVal.includes("/")) {
-        const parts = dateVal.split("/");
-        dateStr = `${parts[2]}-${parts[0].padStart(2, "0")}-${parts[1].padStart(2, "0")}`;
-      } else {
-        // Try parsing as a date string
-        const d = new Date(String(dateVal));
-        if (isNaN(d.getTime())) continue;
-        dateStr = d.toISOString().slice(0, 10);
-      }
+      // AAX dates arrive as monthly/quarter labels ("Jan-2010", "2010-01"),
+      // slash dates, or Excel serials — never a clean ISO date. Anchor them
+      // all to a strict YYYY-MM-DD so the downstream MCP output schema can't
+      // reject the envelope (BUG 1). Drop rows we can't anchor.
+      const dateStr = toIsoDate(dateVal);
+      if (!dateStr) continue;
       points.push({ date: dateStr, value });
     }
     return points;

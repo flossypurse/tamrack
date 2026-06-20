@@ -44,8 +44,9 @@ import { fallbackMacroTimeSeries } from "@/lib/data-fallback";
 import {
   SCHEMA_VERSION,
   TimeRangeSchema,
-  type TimeRange,
 } from "../schemas";
+import { clipByRange, periodsForRange } from "../lib/time-range";
+import { toIsoDate } from "@/lib/iso-date";
 import { updateToolEntry, MACRO_INDICATORS } from "../registry";
 import { requireScopes } from "../lib/auth-context";
 
@@ -70,6 +71,13 @@ interface MacroIndicatorSpec {
    * match the dominant query shape the substrate already serves the products.
    */
   defaultPeriods: number;
+  /**
+   * Rows per year for this series' cadence (≈365 daily, 52 weekly, 12
+   * monthly, 1 annual). Feeds `periodsForRange` so a named window asks the
+   * upstream for enough rows WITHOUT over-fetching a monthly/annual series
+   * (asking 1826 rows of a monthly StatsCan table pulled the entire history).
+   */
+  periodsPerYear: number;
   /** Human-readable provenance string for the response envelope. */
   source: string;
   /** Unit returned by the upstream (best-effort). */
@@ -86,6 +94,7 @@ const MACRO_INDICATOR_SPECS: Record<
     kind: "boc",
     bocSeries: BOC_SERIES.POLICY_RATE,
     defaultPeriods: 365,
+    periodsPerYear: 365,
     source: "Bank of Canada Valet API",
     unit: "percent",
     label: "BoC overnight policy rate",
@@ -94,6 +103,7 @@ const MACRO_INDICATOR_SPECS: Record<
     kind: "boc",
     bocSeries: BOC_SERIES.CAD_USD,
     defaultPeriods: 365,
+    periodsPerYear: 365,
     source: "Bank of Canada Valet API",
     unit: "CAD per USD",
     label: "CAD/USD exchange rate",
@@ -102,6 +112,7 @@ const MACRO_INDICATOR_SPECS: Record<
     kind: "boc",
     bocSeries: BOC_SERIES.MORTGAGE_5Y_FIXED,
     defaultPeriods: 52,
+    periodsPerYear: 52,
     source: "Bank of Canada Valet API",
     unit: "percent",
     label: "Conventional 5-year fixed mortgage rate",
@@ -111,6 +122,7 @@ const MACRO_INDICATOR_SPECS: Record<
     statcanTableId: STATSCAN_SERIES.AB_UNEMPLOYMENT_RATE.tableId,
     statcanCoordinate: STATSCAN_SERIES.AB_UNEMPLOYMENT_RATE.coordinate,
     defaultPeriods: 24,
+    periodsPerYear: 12,
     source: "Statistics Canada WDS (Table 14-10-0287)",
     unit: "percent",
     label: "Alberta unemployment rate, monthly",
@@ -120,6 +132,7 @@ const MACRO_INDICATOR_SPECS: Record<
     statcanTableId: STATSCAN_SERIES.AB_CPI.tableId,
     statcanCoordinate: STATSCAN_SERIES.AB_CPI.coordinate,
     defaultPeriods: 24,
+    periodsPerYear: 12,
     source: "Statistics Canada WDS (Table 18-10-0004)",
     unit: "index 2002=100",
     label: "Alberta CPI, monthly",
@@ -129,6 +142,7 @@ const MACRO_INDICATOR_SPECS: Record<
     statcanTableId: STATSCAN_SERIES.AB_GDP.tableId,
     statcanCoordinate: STATSCAN_SERIES.AB_GDP.coordinate,
     defaultPeriods: 10,
+    periodsPerYear: 1,
     source: "Statistics Canada WDS (Table 36-10-0402)",
     unit: "chained 2017 CAD, millions",
     label: "Alberta real GDP, annual",
@@ -138,6 +152,7 @@ const MACRO_INDICATOR_SPECS: Record<
     statcanTableId: STATSCAN_SERIES.EDMONTON_HOUSING_STARTS.tableId,
     statcanCoordinate: STATSCAN_SERIES.EDMONTON_HOUSING_STARTS.coordinate,
     defaultPeriods: 24,
+    periodsPerYear: 12,
     source: "Statistics Canada WDS (Table 34-10-0154, Edmonton CMA)",
     unit: "dwelling units",
     label: "Edmonton CMA housing starts, monthly",
@@ -145,6 +160,7 @@ const MACRO_INDICATOR_SPECS: Record<
   aax: {
     kind: "aax",
     defaultPeriods: 36,
+    periodsPerYear: 12,
     source: "Government of Alberta — Alberta Activity Index (open.alberta.ca)",
     unit: "index",
     label: "Alberta Activity Index, monthly",
@@ -194,65 +210,19 @@ type MacroEnvelope = z.infer<typeof MacroEnvelopeSchema>;
 // ---------------------------------------------------------------------------
 
 /**
- * Translate a `time_range` into the LATEST-N count we ask the upstream for.
- * `last_30d`  → 30 (caps to spec's defaultPeriods if smaller)
- * `last_year` → 365 (daily) / 12 (monthly) — we don't know cadence here, so
- *               we use a generous upper bound and rely on the substrate's
- *               post-fetch filtering. The substrate fetchers de-dupe in-flight
- *               and revalidate hourly, so over-asking is cheap.
- * `last_5y`   → 1825 daily / 60 monthly equivalent — same logic.
- * `ytd`       → days since Jan 1.
- * explicit    → defer to default; explicit windows filter post-fetch.
- */
-function periodsForRange(range: TimeRange | undefined, defaultPeriods: number): number {
-  if (!range) return defaultPeriods;
-  if (typeof range === "string") {
-    switch (range) {
-      case "last_30d":
-        return Math.max(30, defaultPeriods);
-      case "last_year":
-        return Math.max(365, defaultPeriods);
-      case "last_5y":
-        return Math.max(1825, defaultPeriods);
-      case "ytd": {
-        const now = new Date();
-        const startOfYear = Date.UTC(now.getUTCFullYear(), 0, 1);
-        const days = Math.floor((now.getTime() - startOfYear) / 86_400_000) + 1;
-        return Math.max(days, defaultPeriods);
-      }
-    }
-  }
-  // Explicit { from, to }: we ask for a wide window (5y default) and filter.
-  return Math.max(1825, defaultPeriods);
-}
-
-function filterByRange(points: MacroPoint[], range: TimeRange | undefined): MacroPoint[] {
-  if (!range || typeof range === "string") {
-    // Named ranges are best-effort enforced by `periodsForRange`. We don't
-    // additionally clip here because monthly cadence + a "last_30d" range
-    // would otherwise return zero rows when the most recent obs is older
-    // than 30 days. Substrate's cadence varies per indicator; let the agent
-    // decide if the head of the series is fresh enough.
-    return points;
-  }
-  const fromMs = range.from ? Date.parse(range.from) : Number.NEGATIVE_INFINITY;
-  const toMs = range.to ? Date.parse(range.to) : Number.POSITIVE_INFINITY;
-  return points.filter((p) => {
-    const t = Date.parse(p.date);
-    return Number.isFinite(t) && t >= fromMs && t <= toMs;
-  });
-}
-
-/**
  * Coerce a substrate `TimeSeriesPoint[]` to the validated MacroPoint shape.
- * Drops rows missing a date or numeric value — defensive against upstream
- * shape drift.
+ *
+ * Every date is normalised to a strict `YYYY-MM-DD` via `toIsoDate`, which
+ * absorbs the non-ISO labels some upstreams emit (e.g. the Alberta Activity
+ * Index XLSX yields `Jan-2010` / `2010-01` — BUG 1). Rows that still can't be
+ * anchored to a real ISO date are dropped, so the output schema
+ * (`MacroPointSchema.date = z.iso.date()`) can never fail on date shape.
  */
 function normalisePoints(raw: TimeSeriesPoint[]): MacroPoint[] {
   const out: MacroPoint[] = [];
   for (const r of raw) {
     if (!r) continue;
-    const date = typeof r.date === "string" ? r.date.slice(0, 10) : "";
+    const date = toIsoDate(r.date);
     const value = typeof r.value === "number" ? r.value : Number(r.value);
     if (!date || !Number.isFinite(value)) continue;
     out.push({ date, value });
@@ -349,7 +319,11 @@ export function registerMacroTool(server: McpServer): void {
       const timeRange = args.time_range;
       const spec = MACRO_INDICATOR_SPECS[indicator];
 
-      const periods = periodsForRange(timeRange, spec.defaultPeriods);
+      const periods = periodsForRange(
+        timeRange,
+        spec.defaultPeriods,
+        spec.periodsPerYear,
+      );
 
       // Try upstream first.
       let raw: TimeSeriesPoint[] = [];
@@ -369,7 +343,7 @@ export function registerMacroTool(server: McpServer): void {
       }
 
       const normalised = normalisePoints(raw);
-      const filtered = filterByRange(normalised, timeRange);
+      const filtered = clipByRange(normalised, timeRange);
 
       const last = filtered.length > 0 ? filtered[filtered.length - 1] : null;
 

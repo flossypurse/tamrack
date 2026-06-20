@@ -24,12 +24,12 @@
  * Municipality parameter:
  *   The substrate only knows about Edmonton and Calgary CMAs at this
  *   surface. For `dataset=snapshot` we REQUIRE a municipality, mapping
- *   "edmonton" → "Edmonton" CMA and "calgary" → "Calgary" CMA. For every
- *   other dataset the municipality slug is silently ignored — the
- *   substrate's CMA-merged shape already carries both cities. This
- *   matches the substrate's surface; expanding to per-municipality
- *   filtering would require extending `src/lib/data-sources-cmhc.ts`,
- *   which is out of scope.
+ *   "edmonton" → "Edmonton" CMA and "calgary" → "Calgary" CMA. Every other
+ *   dataset returns the CMA-merged shape (both cities) and therefore CANNOT
+ *   scope to one municipality — passing `municipality` to those datasets is
+ *   rejected with an error rather than silently ignored (least surprise).
+ *   Expanding to true per-municipality filtering would require extending
+ *   `src/lib/data-sources-cmhc.ts`, which is out of scope.
  *
  * Time range:
  *   Substrate fetchers accept a `latestN` periods count. We translate the
@@ -65,8 +65,8 @@ import {
   MunicipalitySlugSchema,
   SCHEMA_VERSION,
   TimeRangeSchema,
-  type TimeRange,
 } from "../schemas";
+import { clipByRange, periodsForRange } from "../lib/time-range";
 import { updateToolEntry } from "../registry";
 import { requireScopes } from "../lib/auth-context";
 
@@ -115,41 +115,20 @@ const DATASET_DEFAULT_PERIODS: Record<HousingDataset, number> = {
   mortgage_rate: 60,
 };
 
-function periodsForRange(
-  range: TimeRange | undefined,
-  defaultPeriods: number,
-): number {
-  if (!range) return defaultPeriods;
-  if (typeof range === "string") {
-    switch (range) {
-      case "last_30d":
-        return Math.max(30, defaultPeriods);
-      case "last_year":
-        return Math.max(12, defaultPeriods);
-      case "last_5y":
-        return Math.max(60, defaultPeriods);
-      case "ytd": {
-        const now = new Date();
-        const startOfYear = Date.UTC(now.getUTCFullYear(), 0, 1);
-        const months = Math.floor(
-          (now.getTime() - startOfYear) / (30 * 86_400_000),
-        ) + 1;
-        return Math.max(months, defaultPeriods);
-      }
-    }
-  }
-  // Explicit { from, to }: ask for a wide enough window and filter
-  // post-fetch (same convention as tamrack_macro D12).
-  return Math.max(60, defaultPeriods);
-}
-
-function withinRange(date: string, range: TimeRange | undefined): boolean {
-  if (!range || typeof range === "string") return true;
-  if (!date) return true;
-  if (range.from && date < range.from) return false;
-  if (range.to && date > range.to) return false;
-  return true;
-}
+// Cadence (rows/year) per dataset, so the shared `periodsForRange` hint asks
+// the substrate for enough rows to cover a named window. Mortgage is weekly,
+// vacancy/rents are annual, the rest monthly. The authoritative clip happens
+// in `clipByRange` post-fetch.
+const DATASET_PERIODS_PER_YEAR: Record<HousingDataset, number> = {
+  starts: 12,
+  completions: 12,
+  under_construction: 12,
+  snapshot: 12,
+  vacancy: 1,
+  rents: 1,
+  absorptions: 12,
+  mortgage_rate: 52,
+};
 
 // ---------------------------------------------------------------------------
 // Row schemas (pass-through from the substrate)
@@ -301,13 +280,14 @@ const TOOL_DESCRIPTION =
   "(starts/completions/UC/absorptions/mortgage) or year (vacancy/rents). " +
   "Edmonton and Calgary CMAs are returned together except for 'snapshot', " +
   "which requires municipality=edmonton|calgary and returns one CMA's " +
-  "starts+completions+UC together. The municipality parameter is silently " +
-  "ignored for every dataset except 'snapshot'.";
+  "starts+completions+UC together. The municipality parameter is ONLY valid " +
+  "for 'snapshot'; passing it to any other dataset is rejected (those datasets " +
+  "return the merged CMAs and can't scope to one city).";
 
 updateToolEntry(TOOL_NAME, {
   status: "live",
   parameters_summary:
-    "dataset (enum: starts, completions, under_construction, snapshot, vacancy, rents, absorptions, mortgage_rate); optional municipality (only used by 'snapshot' — edmonton|calgary; silently ignored elsewhere); optional time_range (named bucket or {from,to}); optional limit (1..1000).",
+    "dataset (enum: starts, completions, under_construction, snapshot, vacancy, rents, absorptions, mortgage_rate); optional municipality (ONLY valid for 'snapshot' — edmonton|calgary; rejected for every other dataset); optional time_range (named bucket or {from,to}); optional limit (1..1000).",
   response_summary:
     "Envelope with schema_version, tool, source='CMHC via StatsCan'; data.{dataset, source, unit, served_from, payload}. Payload shape depends on dataset: starts/completions/under_construction/vacancy → {rows: [{date, edmonton, calgary}]}; rents → {rows: [{date, edmontonBachelor, edmontonOneBed, ..., calgaryThreeBed}]}; snapshot → {snapshot: {cma, starts[], completions[], underConstruction[]}}; absorptions → {absorptions: {absorbed[], unabsorbed[]}}; mortgage_rate → {rows: [{date, value}]}.",
   indicators: [...HOUSING_DATASETS],
@@ -349,9 +329,24 @@ export function registerHousingTool(server: McpServer): void {
       const dataset = args.dataset;
       const municipality = args.municipality;
       const timeRange = args.time_range;
+
+      // Reject municipality for datasets that can't honour it, rather than
+      // silently ignoring it (least surprise — the surface no longer implies a
+      // scoping it doesn't apply). Only `snapshot` is per-CMA; every other
+      // dataset returns Edmonton+Calgary merged. The SDK turns this throw into
+      // a JSON-RPC error so the agent learns to drop the param.
+      if (dataset !== "snapshot" && municipality != null) {
+        throw new Error(
+          `tamrack_housing: dataset "${dataset}" does not support municipality ` +
+            `scoping — CMHC data is returned as merged Edmonton+Calgary CMAs. ` +
+            `Only dataset="snapshot" accepts municipality (edmonton|calgary). ` +
+            `Omit municipality for "${dataset}".`,
+        );
+      }
       const periods = periodsForRange(
         timeRange,
         DATASET_DEFAULT_PERIODS[dataset],
+        DATASET_PERIODS_PER_YEAR[dataset],
       );
       const limit = args.limit;
       const meta = DATASET_META[dataset];
@@ -364,7 +359,7 @@ export function registerHousingTool(server: McpServer): void {
         switch (dataset) {
           case "starts": {
             const rows: CMASeriesPoint[] = await fetchHousingStarts(periods);
-            const filtered = rows.filter((r) => withinRange(r.date, timeRange));
+            const filtered = clipByRange(rows, timeRange);
             const capped = limit != null ? filtered.slice(-limit) : filtered;
             servedFrom = capped.length > 0 ? "upstream" : "empty";
             payload = { dataset: "starts", rows: capped };
@@ -373,7 +368,7 @@ export function registerHousingTool(server: McpServer): void {
           case "completions": {
             const rows: CMASeriesPoint[] =
               await fetchHousingCompletions(periods);
-            const filtered = rows.filter((r) => withinRange(r.date, timeRange));
+            const filtered = clipByRange(rows, timeRange);
             const capped = limit != null ? filtered.slice(-limit) : filtered;
             servedFrom = capped.length > 0 ? "upstream" : "empty";
             payload = { dataset: "completions", rows: capped };
@@ -382,7 +377,7 @@ export function registerHousingTool(server: McpServer): void {
           case "under_construction": {
             const rows: CMASeriesPoint[] =
               await fetchUnderConstruction(periods);
-            const filtered = rows.filter((r) => withinRange(r.date, timeRange));
+            const filtered = clipByRange(rows, timeRange);
             const capped = limit != null ? filtered.slice(-limit) : filtered;
             servedFrom = capped.length > 0 ? "upstream" : "empty";
             payload = { dataset: "under_construction", rows: capped };
@@ -390,7 +385,7 @@ export function registerHousingTool(server: McpServer): void {
           }
           case "vacancy": {
             const rows: CMASeriesPoint[] = await fetchVacancyRates(periods);
-            const filtered = rows.filter((r) => withinRange(r.date, timeRange));
+            const filtered = clipByRange(rows, timeRange);
             const capped = limit != null ? filtered.slice(-limit) : filtered;
             servedFrom = capped.length > 0 ? "upstream" : "empty";
             payload = { dataset: "vacancy", rows: capped };
@@ -399,17 +394,17 @@ export function registerHousingTool(server: McpServer): void {
           case "rents": {
             const rows: RentComparisonPoint[] =
               await fetchRentComparison(periods);
-            const filtered = rows.filter((r) => withinRange(r.date, timeRange));
+            const filtered = clipByRange(rows, timeRange);
             const capped = limit != null ? filtered.slice(-limit) : filtered;
             servedFrom = capped.length > 0 ? "upstream" : "empty";
             payload = { dataset: "rents", rows: capped };
             break;
           }
           case "snapshot": {
-            // Snapshot requires a CMA. Default to Edmonton if none was given
-            // — the brief said it's fine to silently ignore the param for
-            // other datasets, so for consistency we default rather than
-            // error here.
+            // Snapshot requires a CMA. edmonton|calgary map to their CMAs;
+            // any other (schema-valid) slug defaults to Edmonton with a note,
+            // since snapshot is the one dataset that consumes municipality and
+            // we'd rather return data than error on an unmapped-but-valid slug.
             const cma: "Edmonton" | "Calgary" =
               municipality === "calgary" ? "Calgary" : "Edmonton";
             const snap: HousingSnapshot = await fetchHousingSnapshot(
@@ -417,7 +412,7 @@ export function registerHousingTool(server: McpServer): void {
               periods,
             );
             const filterSeries = (s: TimeSeriesPoint[]): TimeSeriesPoint[] =>
-              s.filter((p) => withinRange(p.date, timeRange));
+              clipByRange(s, timeRange);
             const filtered: HousingSnapshot = {
               cma: snap.cma,
               starts: filterSeries(snap.starts),
@@ -439,7 +434,7 @@ export function registerHousingTool(server: McpServer): void {
           case "absorptions": {
             const { absorbed, unabsorbed } = await fetchAbsorptions(periods);
             const filterSeries = (s: TimeSeriesPoint[]): TimeSeriesPoint[] =>
-              s.filter((p) => withinRange(p.date, timeRange));
+              clipByRange(s, timeRange);
             const fAbs = filterSeries(absorbed);
             const fUnabs = filterSeries(unabsorbed);
             servedFrom = fAbs.length + fUnabs.length > 0 ? "upstream" : "empty";
@@ -451,7 +446,7 @@ export function registerHousingTool(server: McpServer): void {
           }
           case "mortgage_rate": {
             const rows: TimeSeriesPoint[] = await fetchMortgageRate(periods);
-            const filtered = rows.filter((r) => withinRange(r.date, timeRange));
+            const filtered = clipByRange(rows, timeRange);
             const capped = limit != null ? filtered.slice(-limit) : filtered;
             servedFrom = capped.length > 0 ? "upstream" : "empty";
             payload = { dataset: "mortgage_rate", rows: capped };
@@ -472,17 +467,6 @@ export function registerHousingTool(server: McpServer): void {
           err instanceof Error ? err.message : String(err)
         }`;
         payload = emptyPayloadFor(dataset);
-      }
-
-      // Silent-ignore note for non-snapshot datasets that received a
-      // municipality. Useful for the agent to know why their input was
-      // dropped.
-      if (
-        municipality != null &&
-        dataset !== "snapshot" &&
-        notes == null
-      ) {
-        notes = `municipality parameter is silently ignored for dataset "${dataset}" (substrate only exposes Edmonton + Calgary CMAs merged)`;
       }
 
       const envelope: HousingEnvelope = {

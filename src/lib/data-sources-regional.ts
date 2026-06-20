@@ -110,6 +110,50 @@ export const REGIONAL_INDICATORS: Record<string, string> = {
 
 const BASE_URL = "https://regionaldashboard.alberta.ca/export/opendata";
 
+/** Per-attempt upstream timeout. The cold path on this host can hang for a
+ * minute; we'd rather fail fast and serve the Postgres fallback (BUG 3). */
+const REGIONAL_FETCH_TIMEOUT_MS = 8000;
+
+/**
+ * Indicators whose per-dimension upstream rows must NOT be summed when
+ * collapsed to a single series — rates, prices, shares, indices and averages.
+ * Summing them inflates the value several-fold (Life Expectancy came back as
+ * 245 "Years", Average Rent as ~$5,485, Unemployment as 0.39). For these we
+ * AVERAGE the dimension rows instead. Everything else is an additive count or
+ * dollar total where summing yields the period total.
+ *
+ * Single source of truth: both the MCP `tamrack_regional` tool and the
+ * `/api/regional` REST path (`fetchRegionalTimeSeries`) consult this, so the
+ * two aggregators can't drift. Compared via `canonicalIndicatorName` so the
+ * encoded/human forms both match.
+ */
+export const NON_ADDITIVE_REGIONAL_INDICATORS = new Set<string>([
+  "Unemployment Rate",
+  "Average Weekly Earnings",
+  "Median Household Income",
+  "Crime Severity Index",
+  "Average Residential Sale Price",
+  "Percent of Small Businesses",
+  "Residential Share of Property Assessments",
+  "Municipal Tax Rates",
+  "Percent Visible Minority",
+  "Average Rent",
+  "Percent Aboriginal",
+  "Life Expectancy",
+  "Median Income",
+  "Vacancy Rates",
+  "Air Quality Index",
+  "Percent Official Language Speakers",
+  "Percent Single Family Houses",
+  "Daily Vehicles per KM",
+]);
+
+/** True when the indicator's dimension rows must be averaged, not summed,
+ * to collapse to one series. Normalises to the canonical name first. */
+export function isNonAdditiveIndicator(indicator: string): boolean {
+  return NON_ADDITIVE_REGIONAL_INDICATORS.has(canonicalIndicatorName(indicator));
+}
+
 function buildUrl(indicatorEncoded: string): string {
   return `${BASE_URL}/${indicatorEncoded}/jsons`;
 }
@@ -216,7 +260,14 @@ export async function fetchRegionalIndicator(
       if (attempt > 0) {
         await new Promise((r) => setTimeout(r, 2000));
       }
-      const res = await fetch(url, { next: { revalidate: 86400 } });
+      // Bound the upstream fetch. regionaldashboard.alberta.ca's cold path
+      // routinely takes 40-60s and has twice blown past a 60s client timeout
+      // (BUG 3). Fail fast at 8s so the DB fallback below serves stored data
+      // quickly instead of hanging the whole MCP call.
+      const res = await fetch(url, {
+        next: { revalidate: 86400 },
+        signal: AbortSignal.timeout(REGIONAL_FETCH_TIMEOUT_MS),
+      });
       if (!res.ok) {
         console.warn(`[regional] ${canonical}: HTTP ${res.status} (attempt ${attempt + 1})`);
         continue;
@@ -248,6 +299,10 @@ export async function fetchRegionalIndicator(
       return parsed;
     } catch (err) {
       console.warn(`[regional] ${canonical}: fetch error (attempt ${attempt + 1}):`, err);
+      // A timeout means the host is slow, not flaky — retrying just doubles
+      // the wait (8s + 2s + 8s). Go straight to the DB fallback so the whole
+      // call stays under ~10s (BUG 3).
+      if (err instanceof Error && err.name === "TimeoutError") break;
     }
   }
 
@@ -341,22 +396,27 @@ export async function fetchRegionalTimeSeries(
 ): Promise<TimeSeriesPoint[]> {
   const points = await fetchRegionalIndicatorForMunicipality(indicator, municipalityName);
 
-  // Aggregate by period
-  const byPeriod = new Map<string, { total: number; label: string }>();
+  // Aggregate by period. Additive indicators sum their dimension rows; rates/
+  // prices/averages (NON_ADDITIVE_REGIONAL_INDICATORS) average them, otherwise
+  // summing inflates the value several-fold. Same rule the MCP tool applies, so
+  // /api/regional and tamrack_regional agree.
+  const average = isNonAdditiveIndicator(indicator);
+  const byPeriod = new Map<string, { total: number; count: number; label: string }>();
   for (const pt of points) {
     const existing = byPeriod.get(pt.period);
     if (existing) {
       existing.total += pt.value;
+      existing.count += 1;
     } else {
-      byPeriod.set(pt.period, { total: pt.value, label: pt.indicator });
+      byPeriod.set(pt.period, { total: pt.value, count: 1, label: pt.indicator });
     }
   }
 
   const series: TimeSeriesPoint[] = [];
-  for (const [period, { total, label }] of byPeriod) {
+  for (const [period, { total, count, label }] of byPeriod) {
     series.push({
       date: period,
-      value: total,
+      value: average && count > 0 ? total / count : total,
       label,
     });
   }
