@@ -294,9 +294,13 @@ export async function fetchAlbertaActivityIndex(): Promise<TimeSeriesPoint[]> {
     const XLSX = await import("xlsx");
     const workbook = XLSX.read(buffer, { type: "array" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    // raw: true — keep the date column as its underlying Excel serial number.
+    // With raw: false SheetJS localises the date to a "M/D/YY" string that
+    // `toIsoDate` then misreads (2026-03-01 → 2001-03-26). The serial path is
+    // unambiguous (UTC epoch) and round-trips 1981→2026 correctly.
     const rows = XLSX.utils.sheet_to_json(sheet, {
       header: 1,
-      raw: false,
+      raw: true,
     }) as unknown as unknown[][];
     const points: TimeSeriesPoint[] = [];
     for (let i = 1; i < rows.length; i++) {
